@@ -9,9 +9,9 @@
 
 class AudioHandler {
 private:
-    AudioPlayQueue queue_outR;
-    AudioPlayQueue queue_outL;
-    AudioOutputI2S i2s1;
+    AudioPlayQueue  queue_outR;
+    AudioPlayQueue  queue_outL;
+    AudioOutputI2S  i2s1;
     AudioConnection patchCord1, patchCord2;
 
     static constexpr float SAMPLE_RATE = 44100.0;

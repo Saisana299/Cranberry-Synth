@@ -1,17 +1,22 @@
 #include <Arduino.h>
 
-#include <audio_handler.h>
-#include <midi_handler.h>
+#include <handlers/audio.h>
+#include <handlers/midi.h>
+#include <display/gfx.h>
 
-AudioHandler audio;
-MIDIHandler midih;
+AudioHandler audio_hdl;
+MIDIHandler  midi_hdl;
+
+GFX_SSD1351 display;
 
 void setup() {
-    audio.init();
-    midih.init();
+    audio_hdl.init();
+    midi_hdl.init();
+
+    display.init();
 }
 
 void loop() {
-    audio.process();
-    midih.process();
+    audio_hdl.process();
+    midi_hdl.process();
 }

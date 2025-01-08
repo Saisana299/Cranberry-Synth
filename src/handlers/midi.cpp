@@ -1,4 +1,4 @@
-#include <midi_handler.h>
+#include <handlers/midi.h>
 
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
 
