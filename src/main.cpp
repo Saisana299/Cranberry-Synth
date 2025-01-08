@@ -1,18 +1,17 @@
 #include <Arduino.h>
 
-// put function declarations here:
-int myFunction(int, int);
+#include <audio_handler.h>
+#include <midi_handler.h>
+
+AudioHandler audio;
+MIDIHandler midih;
 
 void setup() {
-  // put your setup code here, to run once:
-  int result = myFunction(2, 3);
+    audio.init();
+    midih.init();
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-}
-
-// put function definitions here:
-int myFunction(int x, int y) {
-  return x + y;
+    audio.process();
+    midih.process();
 }
