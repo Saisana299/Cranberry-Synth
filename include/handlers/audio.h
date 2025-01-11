@@ -7,13 +7,14 @@
 #include <SD.h>
 #include <SerialFlash.h>
 
+extern AudioSynthWaveformSine sine1;
+// extern AudioPlayQueue queue_outL, queue_outR;
+extern AudioOutputI2S2 i2s2;
+extern AudioConnection patchCord1;
+extern AudioConnection patchCord2;
+
 class AudioHandler {
 private:
-    AudioPlayQueue  queue_outR;
-    AudioPlayQueue  queue_outL;
-    AudioOutputI2S  i2s1;
-    AudioConnection patchCord1, patchCord2;
-
     static constexpr float SAMPLE_RATE = 44100.0;
     static constexpr int   BUFFER_SIZE = 128;
 

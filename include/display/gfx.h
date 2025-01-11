@@ -15,9 +15,13 @@ private:
     static constexpr int8_t CS_PIN  = 38;
     static constexpr int8_t RST_PIN = 41;
 
+    // MOSI1_PIN = 26
+    // SCK1_PIN  = 27
+
 public:
     GFX_SSD1351();
     void init();    // 初期化
+    void testdrawtext(char *text, uint16_t color);
 };
 
 #endif
