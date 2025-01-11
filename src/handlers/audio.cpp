@@ -1,30 +1,33 @@
 #include <handlers/audio.h>
 
-AudioSynthWaveformSine sine1;
-// AudioPlayQueue queue_outL, queue_outR;
+AudioPlayQueue queue_L, queue_R;
 AudioOutputI2S2 i2s2;
-AudioConnection patchCord1(sine1, 0, i2s2, 1);
-AudioConnection patchCord2(sine1, 0, i2s2, 0);
-// AudioConnection patchCord1(queue_outR, 0, i2s2, 1);
-// AudioConnection patchCord2(queue_outL, 0, i2s2, 0);
+AudioConnection patchCord1(queue_R, 0, i2s2, 1);
+AudioConnection patchCord2(queue_L, 0, i2s2, 0);
 
 void AudioHandler::init() {
-    //patchCord1 = AudioConnection(queue_outR, 0, i2s2, 1);
-    //patchCord2 = AudioConnection(queue_outL, 0, i2s2, 0);
-    AudioMemory(12);
-    sine1.frequency(1000);
-    sine1.amplitude(0.5);
+    phase = 0;
+    delta = 440.0 / SAMPLE_RATE;
+    AudioMemory(40);
 }
 
 void AudioHandler::update() {
-    // memcpy(queue_outL.getBuffer(), buffer              , BUFFER_SIZE * sizeof(int16_t));
-    // memcpy(queue_outR.getBuffer(), buffer + BUFFER_SIZE, BUFFER_SIZE * sizeof(int16_t));
-    // queue_outR.playBuffer();
-    // queue_outL.playBuffer();
+    for(size_t i = 0; i < BLOCK_SIZE; i++) {
+        samples_L[i] = triangle(phase);
+        samples_R[i] = triangle(phase);
+        phase += delta;
+        if (phase >= 1.0) phase -= 1.0;
+    }
+    queue_R.play(samples_L, BLOCK_SIZE);
+    queue_L.play(samples_R, BLOCK_SIZE);
 }
 
 void AudioHandler::process() {
-    // if(queue_outL.available() && queue_outR.available()) {
-    //     update();
-    // }
+    if(queue_L.available() && queue_R.available()) {
+        update();
+    }
+}
+
+int16_t AudioHandler::triangle(float phase) {
+    return static_cast<int16_t>((1.0 - fabs(2.0 * phase - 1.0)) * 32767);
 }
