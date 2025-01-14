@@ -1,4 +1,4 @@
-#include <handlers/audio.h>
+#include "handlers/audio.h"
 
 AudioPlayQueue queue_L, queue_R;
 AudioOutputI2S2 i2s2;
@@ -8,7 +8,7 @@ AudioConnection patchCord2(queue_L, 0, i2s2, 0);
 void AudioHandler::init() {
     phase = 0;
     delta = 440.0 / SAMPLE_RATE;
-    AudioMemory(40);
+    AudioMemory(162+2); // max:162
 }
 
 void AudioHandler::update() {

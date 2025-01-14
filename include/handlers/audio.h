@@ -23,12 +23,15 @@ private:
     int16_t samples_L[BLOCK_SIZE];
     int16_t samples_R[BLOCK_SIZE];
 
-    void update();  // 更新
+    void init();
+    void update();
     int16_t triangle(float phase);
 
 public:
-    void init();    // 初期化
-    void process(); // 処理
+    AudioHandler() {
+        init();
+    }
+    void process();
 };
 
 #endif

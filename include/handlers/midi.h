@@ -4,14 +4,16 @@
 #include <Audio.h>
 #include <MIDI.h>
 
-#include <handlers/audio.h>
+extern MIDI_NAMESPACE::MidiInterface<MIDI_NAMESPACE::SerialMIDI<HardwareSerial>> MIDI;
 
 class MIDIHandler {
 private:
-    AudioHandler audio_hdl;
+    void init();
 public:
-    void init(AudioHandler &audio);    // 初期化
-    void process(); // 処理
+    MIDIHandler() {
+        init();
+    }
+    void process();
 };
 
 #endif
