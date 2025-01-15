@@ -3,10 +3,10 @@
 
 class Debug {
 private:
-    static constexpr HardwareSerial& DebugSerial = Serial1;
-    static bool initialized;
+    static constexpr HardwareSerial& DebugSerial = Serial6;
+    static inline bool initialized = false;
 
-    static void initialize() {
+    static inline void init() {
         if (!initialized) {
             DebugSerial.begin(115200);
             initialized = true;
@@ -14,17 +14,19 @@ private:
     }
 
 public:
-    static void println(const String& msg) {
-        initialize();
+    static inline void enable() {
+        init();
+    }
+
+    static inline void println(const String& msg) {
+        if(!initialized) return;
         DebugSerial.println(msg);
     }
 
-    static void print(const String& msg) {
-        initialize();
+    static inline void print(const String& msg) {
+        if(!initialized) return;
         DebugSerial.print(msg);
     }
 };
-
-bool Debug::initialized = false;
 
 #endif

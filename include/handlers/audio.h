@@ -7,22 +7,20 @@
 #include <SD.h>
 #include <SerialFlash.h>
 
-extern AudioPlayQueue queue_L, queue_R;
-extern AudioOutputI2S2 i2s2;
-extern AudioConnection patchCord1;
-extern AudioConnection patchCord2;
+extern int16_t samples_L[];
+extern int16_t samples_R[];
+extern bool samples_ready;
+
+#define SAMPLE_RATE 44100.0
+#define BLOCK_SIZE 128
 
 class AudioHandler {
 private:
-    float phase;
-    float delta;
-
-    static constexpr float SAMPLE_RATE = 44100.0;
-    static constexpr int   BLOCK_SIZE = 128;
-
-    int16_t samples_L[BLOCK_SIZE];
-    int16_t samples_R[BLOCK_SIZE];
-
+    AudioPlayQueue queue_L, queue_R;
+    AudioOutputI2S2 i2s2;
+    AudioConnection patchCord1, patchCord2;
+    float phase, delta;
+    int counter;
     void init();
     void update();
     int16_t triangle(float phase);
