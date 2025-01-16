@@ -4,7 +4,8 @@
 #include <Audio.h>
 #include <MIDI.h>
 
-#include "utils/queue.h"
+#include "modules/synth.h"
+#include "utils/debug.h"
 
 struct NoteQueue {
     uint8_t note;
@@ -12,8 +13,6 @@ struct NoteQueue {
     uint8_t channel;
 };
 #define NOTE_QUEUE_SIZE 16
-extern Queue<NoteQueue> note_on_queue;
-extern Queue<NoteQueue> note_off_queue;
 
 class MIDIHandler {
 private:
@@ -29,6 +28,8 @@ public:
     }
     void process();
     void queueMode(bool enable);
+    void queueReset(bool enable = false);
+    bool queueStatus();
 };
 
 #endif

@@ -1,50 +1,27 @@
 #include "handlers/audio.h"
 
-#include "handlers/midi.h"
-#include "utils/math.h"
-#include "utils/state.h"
-
-int16_t samples_L[BLOCK_SIZE];
-int16_t samples_R[BLOCK_SIZE];
+int16_t samples_L[BUFFER_SIZE];
+int16_t samples_R[BUFFER_SIZE];
 bool samples_ready = false;
 
 void AudioHandler::init() {
+    queue_L.setMaxBuffers(QUEUE_BLOCKS);
+    queue_R.setMaxBuffers(QUEUE_BLOCKS);
     patchCord1.connect(queue_R, 0, i2s2, 1);
     patchCord2.connect(queue_L, 0, i2s2, 0);
-    queue_L.setMaxBuffers(BLOCK_SIZE);
-    queue_R.setMaxBuffers(BLOCK_SIZE);
-    AudioMemory(162+2); // max:162
-    phase = 0;
-    delta = 440.0 / SAMPLE_RATE;
-    counter = 0;
-}
-
-void AudioHandler::update() {
-    for(size_t i = 0; i < BLOCK_SIZE; i++) {
-        samples_L[i] = triangle(phase);
-        samples_R[i] = triangle(phase);
-        phase += delta;
-        if (phase >= 1.0) phase -= 1.0;
-    }
-    if(counter < 1000){
-        samples_ready = true;
-        counter++;
-    }
-}
-
-int16_t AudioHandler::triangle(float phase) {
-    return static_cast<int16_t>((1.0 - fabs(2.0 * phase - 1.0)) * 32767);
+    AudioMemory(QUEUE_BLOCKS*2 + 2);
 }
 
 void AudioHandler::process() {
-    update();
+    auto& led_state = State::led_state;
+
     if(samples_ready && queue_L.available() && queue_R.available()) {
-        State::led_state = true;
-        queue_L.play(samples_L, BLOCK_SIZE);
-        queue_R.play(samples_R, BLOCK_SIZE);
+        led_state = true;
+        queue_L.play(samples_L, BUFFER_SIZE);
+        queue_R.play(samples_R, BUFFER_SIZE);
         samples_ready = false;
     }
     else {
-        State::led_state = false;
+        led_state = false;
     }
 }
