@@ -7,29 +7,25 @@
 #include "modules/synth.h"
 #include "utils/debug.h"
 
-struct NoteQueue {
-    uint8_t note;
-    uint8_t velocity;
-    uint8_t channel;
-};
-#define NOTE_QUEUE_SIZE 16
-
 class MIDIHandler {
 private:
     MIDI_NAMESPACE::SerialMIDI<HardwareSerial> serialMIDI;
     MIDI_NAMESPACE::MidiInterface<MIDI_NAMESPACE::SerialMIDI<HardwareSerial>> MIDI;
-    bool is_enable_queue;
+
+    static inline void handleNoteOnStatic(uint8_t ch, uint8_t note, uint8_t velocity);
+    static inline void handleNoteOffStatic(uint8_t ch, uint8_t note, uint8_t velocity);
+
+    static inline MIDIHandler* instance = nullptr;
+
     void init();
-    void pushNoteOn(uint8_t note, uint8_t velocity, uint8_t channel);
-    void pushNoteOff(uint8_t note, uint8_t velocity, uint8_t channel);
+    void handleNoteOn(uint8_t ch, uint8_t note, uint8_t velocity);
+    void handleNoteOff(uint8_t ch, uint8_t note, uint8_t velocity);
+
 public:
     MIDIHandler(): serialMIDI(Serial1), MIDI(serialMIDI) {
         init();
     }
     void process();
-    void queueMode(bool enable);
-    void queueReset(bool enable = false);
-    bool queueStatus();
 };
 
 #endif

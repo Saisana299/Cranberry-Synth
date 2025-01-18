@@ -37,7 +37,6 @@ void loop() {
         // 各モジュールの処理
         switch(mode_state) {
             case MODE_SYNTH:
-                if(!midi_hdl.queueStatus()) midi_hdl.queueReset(true);
                 synth.update();
                 break;
         }
