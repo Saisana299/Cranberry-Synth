@@ -15,7 +15,7 @@ void MIDIHandler::init() {
  * @param velocity 
  */
 void MIDIHandler::handleNoteOn(uint8_t ch, uint8_t note, uint8_t velocity) {
-    //
+    Synth::getInstance()->addNote(note, velocity, ch);
 }
 
 /**
@@ -26,7 +26,7 @@ void MIDIHandler::handleNoteOn(uint8_t ch, uint8_t note, uint8_t velocity) {
  * @param velocity 
  */
 void MIDIHandler::handleNoteOff(uint8_t ch, uint8_t note, uint8_t velocity) {
-    //
+    Synth::getInstance()->removeNote(note, ch);
 }
 
 /**

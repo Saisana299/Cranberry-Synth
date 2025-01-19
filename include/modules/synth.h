@@ -8,10 +8,7 @@
 #include "utils/debug.h"
 #include "utils/wavetable.h"
 
-extern float phase;
-extern float delta;
-
-struct SynthNote {
+struct ActiveSynthNote {
     uint8_t order;
     uint8_t note;
     uint8_t velocity;
@@ -23,14 +20,16 @@ struct SynthNote {
 class Synth {
 private:
     static inline Synth* instance = nullptr;
-    SynthNote notes[MAX_NOTES];
+    ActiveSynthNote active_notes[MAX_NOTES];
     void init();
     void generate();
 public:
     Synth() {
         init();
     }
-    static inline Synth* getInstance();
+    static inline Synth* getInstance() {
+        return instance;
+    };
     void update();
     void addNote(uint8_t note, uint8_t velocity, uint8_t channel);
     void removeNote(uint8_t note, uint8_t channel);
