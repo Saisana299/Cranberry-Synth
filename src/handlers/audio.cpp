@@ -13,15 +13,15 @@ void AudioHandler::init() {
 }
 
 void AudioHandler::process() {
-    auto& led_state = State::led_state;
+    //auto& led_state = State::led_state;
 
     if(samples_ready && queue_L.available() && queue_R.available()) {
-        led_state = true;
+        //led_state = true;
         queue_L.play(samples_L, BUFFER_SIZE);
         queue_R.play(samples_R, BUFFER_SIZE);
         samples_ready = false;
     }
     else {
-        led_state = false;
+        //led_state = false;
     }
 }

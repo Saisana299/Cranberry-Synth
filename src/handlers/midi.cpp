@@ -8,32 +8,41 @@ void MIDIHandler::init() {
 }
 
 /**
- * @brief 
- * 
- * @param ch 
- * @param note 
- * @param velocity 
+ * @brief ノートON受信時の処理
+ *
+ * @param ch チャンネル番号
+ * @param note ノート番号
+ * @param velocity ベロシティ
  */
 void MIDIHandler::handleNoteOn(uint8_t ch, uint8_t note, uint8_t velocity) {
-    Synth::getInstance()->addNote(note, velocity, ch);
+    auto& mode_state = State::mode_state;
+    if (mode_state == MODE_SYNTH)
+        Synth::getInstance()->addNote(note, velocity, ch);
 }
 
 /**
- * @brief 
- * 
- * @param ch 
- * @param note 
- * @param velocity 
+ * @brief ノートOFF受信時の処理
+ *
+ * @param ch チャンネル番号
+ * @param note ノート番号
+ * @param velocity ベロシティ
  */
 void MIDIHandler::handleNoteOff(uint8_t ch, uint8_t note, uint8_t velocity) {
-    Synth::getInstance()->removeNote(note, ch);
+    auto& mode_state = State::mode_state;
+    if (mode_state == MODE_SYNTH)
+        Synth::getInstance()->removeNote(note, ch);
 }
 
 /**
  * @brief MIDIデータ読み込み
  */
 void MIDIHandler::process() {
-    MIDI.read();
+    auto& led_state = State::led_state;
+    if(MIDI.read()){
+        led_state = true;
+    } else {
+        led_state = false;
+    }
 }
 
 // static

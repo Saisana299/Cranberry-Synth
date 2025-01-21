@@ -6,6 +6,13 @@
 
 #include "modules/synth.h"
 #include "utils/debug.h"
+#include "utils/state.h"
+
+struct MidiNote {
+    uint8_t note;
+    uint8_t velocity;
+    uint8_t channel;
+};
 
 class MIDIHandler {
 private:

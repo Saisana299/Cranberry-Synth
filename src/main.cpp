@@ -23,8 +23,8 @@ Synth synth;
 void setup() {
     pinMode(LED_BUILTIN, OUTPUT);
     // Debug::enable();
-    Debug::println("Cranberry Synth");
-    Debug::println("Mini Wavetable Synthesizer on Teensy 4.1");
+    // Debug::println("Cranberry Synth");
+    // Debug::println("Mini Wavetable Synthesizer on Teensy 4.1");
 }
 
 void loop() {
@@ -34,16 +34,16 @@ void loop() {
 
     while(true) {
 
+        // イベント監視・処理
+        midi_hdl.process();
+        audio_hdl.process();
+
         // 各モジュールの処理
         switch(mode_state) {
             case MODE_SYNTH:
                 synth.update();
                 break;
         }
-
-        // イベント監視・処理
-        audio_hdl.process();
-        midi_hdl.process();
 
         // LEDの切り替え
         if(led_state != led_state_prev) {
