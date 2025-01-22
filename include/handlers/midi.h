@@ -5,6 +5,7 @@
 
 #include "modules/synth.h"
 #include "utils/state.h"
+#include "utils/debug.h"
 
 class MIDIHandler {
 private:

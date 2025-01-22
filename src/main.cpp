@@ -24,7 +24,7 @@ Synth synth;
 
 void setup() {
     pinMode(LED_BUILTIN, OUTPUT);
-    // Debug::enable();
+    Debug::enable();
     // Debug::println("Cranberry Synth");
     // Debug::println("Mini Wavetable Synthesizer on Teensy 4.1");
 }

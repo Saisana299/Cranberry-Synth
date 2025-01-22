@@ -3,6 +3,8 @@
 /** @brief MIDIハンドラ初期化 */
 void MIDIHandler::init() {
     instance = this;
+    usbMIDI.setHandleNoteOn(handleNoteOnStatic);
+    usbMIDI.setHandleNoteOff(handleNoteOffStatic);
     MIDI.setHandleNoteOn(handleNoteOnStatic);
     MIDI.setHandleNoteOff(handleNoteOffStatic);
     MIDI.begin(MIDI_CHANNEL_OMNI);
@@ -37,6 +39,11 @@ void MIDIHandler::handleNoteOff(uint8_t ch, uint8_t note, uint8_t velocity) {
 /** @brief MIDIデータ読み込み */
 void MIDIHandler::process() {
     auto& led_state = State::led_state;
+    if(usbMIDI.read()){
+        led_state = true;
+    } else {
+        led_state = false;
+    }
     if(MIDI.read()){
         led_state = true;
     } else {
