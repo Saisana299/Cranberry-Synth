@@ -7,7 +7,9 @@
 #include "handlers/audio.h"
 #include "handlers/midi.h"
 #include "utils/debug.h"
+#include "utils/envelope.h"
 #include "utils/wavetable.h"
+#include "utils/state.h"
 
 struct ActiveSynthNote {
     uint8_t order;
@@ -16,19 +18,21 @@ struct ActiveSynthNote {
     uint8_t channel;
     float phase;
     float delta;
+    Envelope amp_env;
 };
-
-struct MidiNote;
 
 class Synth {
 private:
     static inline Synth* instance = nullptr;
     ActiveSynthNote active_notes[MAX_NOTES];
-    MidiNote* on_note = nullptr;
-    MidiNote* off_note = nullptr;
+    ADSRConfig amp_adsr;
     uint8_t order_max = 0;
+    uint8_t last_index = 0;
     void init();
     void generate();
+    void updateOrder(uint8_t removed);
+    void resetNote(uint8_t index);
+
 public:
     Synth() {
         init();
@@ -37,8 +41,8 @@ public:
         return instance;
     };
     void update();
-    void addNote(uint8_t note, uint8_t velocity, uint8_t channel);
-    void removeNote(uint8_t note, uint8_t channel);
+    void noteOn(uint8_t note, uint8_t velocity, uint8_t channel);
+    void noteOff(uint8_t note, uint8_t channel);
 };
 
 #endif

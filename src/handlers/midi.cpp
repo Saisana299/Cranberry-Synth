@@ -17,7 +17,7 @@ void MIDIHandler::init() {
 void MIDIHandler::handleNoteOn(uint8_t ch, uint8_t note, uint8_t velocity) {
     auto& mode_state = State::mode_state;
     if (mode_state == MODE_SYNTH)
-        Synth::getInstance()->addNote(note, velocity, ch);
+        Synth::getInstance()->noteOn(note, velocity, ch);
 }
 
 /**
@@ -30,7 +30,7 @@ void MIDIHandler::handleNoteOn(uint8_t ch, uint8_t note, uint8_t velocity) {
 void MIDIHandler::handleNoteOff(uint8_t ch, uint8_t note, uint8_t velocity) {
     auto& mode_state = State::mode_state;
     if (mode_state == MODE_SYNTH)
-        Synth::getInstance()->removeNote(note, ch);
+        Synth::getInstance()->noteOff(note, ch);
 }
 
 /**
