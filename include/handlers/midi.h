@@ -1,11 +1,9 @@
-#ifndef MIDI_HANDLER_H
-#define MIDI_HANDLER_H
+#pragma once
 
 #include <Audio.h>
 #include <MIDI.h>
 
 #include "modules/synth.h"
-#include "utils/debug.h"
 #include "utils/state.h"
 
 class MIDIHandler {
@@ -28,5 +26,3 @@ public:
     }
     void process();
 };
-
-#endif

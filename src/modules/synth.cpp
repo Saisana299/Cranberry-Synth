@@ -2,15 +2,16 @@
 
 //todo: 強制リリースはバッファサイズ分で振幅0まで滑らかに減衰するようにする 次のノートは減衰処理完了後に入れる（同ループ）
 
+/** @brief シンセ初期化 */
 void Synth::init() {
     instance = this;
     for(uint8_t i = 0; i < MAX_NOTES; i++) {
-        active_notes[i] = ActiveSynthNote {0, 255, 0, 0, 0.0, 0.0, Envelope()};
+        active_notes[i] = ActiveSynthNote {0, 255, 0, 0, Oscillator(), Envelope()};
     }
-    float    sustain_level   = 1.0;
-    uint32_t attack_samples  = 0.01 * SAMPLE_RATE;
-    uint32_t decay_samples   = 0.1  * SAMPLE_RATE;
-    uint32_t release_samples = 0.1  * SAMPLE_RATE;
+    float    sustain_level   = 1.0f;
+    uint32_t attack_samples  = 0.001f * SAMPLE_RATE;
+    uint32_t decay_samples   = 0.01f  * SAMPLE_RATE;
+    uint32_t release_samples = 0.01f  * SAMPLE_RATE;
     amp_adsr = ADSRConfig {
         attack_samples,
         decay_samples,
@@ -19,11 +20,9 @@ void Synth::init() {
     };
 }
 
+/** @brief シンセ生成 */
 void Synth::generate() {
     if(samples_ready) return;
-
-    auto& wavetable = Wavetable::square;
-    const size_t WAVETABLE_SIZE = sizeof(wavetable) / sizeof(wavetable[0]);
 
     // 出力バッファを初期化
     for (size_t i = 0; i < BUFFER_SIZE; ++i) {
@@ -35,22 +34,20 @@ void Synth::generate() {
     for(uint8_t n = 0; n < MAX_NOTES; ++n) {
         if(active_notes[n].order != 0) {
             auto& note = active_notes[n];
-            auto& phase = note.phase;
-            auto& delta = note.delta;
+            auto& osc = note.osc;
             auto& amp_level = State::amp_level;
             auto& amp_env = note.amp_env;
 
             // サンプル毎処理
             for(size_t i = 0; i < BUFFER_SIZE; ++i) {
-                size_t index = static_cast<size_t>(phase * WAVETABLE_SIZE) % WAVETABLE_SIZE;
-                int16_t sample = wavetable[index];
+                // サンプル入手
+                int16_t sample = osc.getSample();
 
                 // 合計を出力バッファに追加
-                samples_L[i] = samples_R[i] += sample * amp_level * amp_env.currentLevel();
+                samples_L[i] = samples_R[i] += sample * (amp_level * (1.0f / MAX_NOTES)) * amp_env.currentLevel();
 
-                phase += delta;
-                if(phase >= 1.0) phase -= 1.0;
-
+                // 位相を更新
+                osc.update();
                 amp_env.update(amp_adsr, 1);
             }
 
@@ -64,6 +61,7 @@ void Synth::generate() {
     samples_ready = true;
 }
 
+/** @brief シンセ更新 */
 void Synth::update() {
     // 有効なノートが存在すれば生成
     // エフェクト系追加したら処理内容変更？
@@ -71,9 +69,9 @@ void Synth::update() {
 }
 
 /**
- * @brief 
- * 
- * @param removed 
+ * @brief ノート整理番号の更新
+ *
+ * @param removed 削除したノートの整理番号
  */
 void Synth::updateOrder(uint8_t removed) {
     for (uint8_t i = 0; i < MAX_NOTES; ++i) {
@@ -88,10 +86,10 @@ void Synth::updateOrder(uint8_t removed) {
 
 /**
  * @brief 演奏するノートを追加します
- * 
- * @param note 
- * @param velocity 
- * @param channel 
+ *
+ * @param note MIDIノート番号
+ * @param velocity MIDIベロシティ
+ * @param channel MIDIチャンネル
  */
 void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
     // 既に演奏している場合
@@ -109,14 +107,12 @@ void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
         if (active_notes[i].order == 0) {
             auto& it = active_notes[i];
             if(order_max < MAX_NOTES) ++order_max;
-            float delta = AudioMath::noteToFrequency(note) / SAMPLE_RATE;
             it.order = order_max;
             it.note = note;
             it.velocity = velocity;
             it.channel = channel;
-            it.phase = AudioMath::randomFloat4(0.0, 1.0);
-            if(it.phase == 1.0) it.phase = 0.0;
-            it.delta = delta;
+            it.osc.setFrequency(note);
+            it.osc.resetPhase();
             it.amp_env.reset();
             break;
         }
@@ -125,9 +121,9 @@ void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
 
 /**
  * @brief ノートをリリースに移行
- * 
- * @param note 
- * @param channel 
+ *
+ * @param note MIDIノート番号
+ * @param channel MIDIチャンネル
  */
 void Synth::noteOff(uint8_t note, uint8_t channel) {
     for (uint8_t i = 0; i < MAX_NOTES; ++i) {
@@ -140,19 +136,16 @@ void Synth::noteOff(uint8_t note, uint8_t channel) {
 
 /**
  * @brief ノートをリセット
- * 
- * @param index
+ *
+ * @param index リセットするノートのインデックス
  */
 void Synth::resetNote(uint8_t index) {
-    uint8_t removed = 1;
     auto& it = active_notes[index];
-    removed = it.order;
+    uint8_t removed = it.order;
     it.order = 0;
     it.note = 255;
     it.velocity = 0;
     it.channel = 0;
-    it.phase = 0.0;
-    it.delta = 0.0;
     it.amp_env.reset();
     if(order_max > 0) --order_max;
     // 他ノートorder更新

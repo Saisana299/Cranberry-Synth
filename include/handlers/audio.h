@@ -1,5 +1,4 @@
-#ifndef AUDIO_HANDLER_H
-#define AUDIO_HANDLER_H
+#pragma once
 
 #include <Audio.h>
 #include <Wire.h>
@@ -7,8 +6,6 @@
 #include <SD.h>
 #include <SerialFlash.h>
 
-#include "handlers/midi.h"
-#include "utils/math.h"
 #include "utils/state.h"
 
 extern int16_t samples_L[];
@@ -32,5 +29,3 @@ public:
     }
     void process();
 };
-
-#endif

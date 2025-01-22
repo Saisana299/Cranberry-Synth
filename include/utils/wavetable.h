@@ -1,5 +1,6 @@
-#ifndef WAVETABLE_H
-#define WAVETABLE_H
+#pragma once
+
+#include <stdint.h>
 
 class Wavetable {
 public:
@@ -527,5 +528,3 @@ public:
 		512, 480, 448, 416, 384, 352, 320, 288, 256, 224, 192, 160, 128, 96, 64, 32,
 	};
 };
-
-#endif

@@ -1,23 +1,19 @@
-#ifndef SYNTH_H
-#define SYNTH_H
+#pragma once
 
 #define MAX_NOTES 8
-#define NOTE_BUFFER_SIZE 16
 
 #include "handlers/audio.h"
-#include "handlers/midi.h"
-#include "utils/debug.h"
-#include "utils/envelope.h"
-#include "utils/wavetable.h"
+#include "modules/envelope.h"
+#include "modules/oscillator.h"
 #include "utils/state.h"
+#include "utils/debug.h"
 
 struct ActiveSynthNote {
     uint8_t order;
     uint8_t note;
     uint8_t velocity;
     uint8_t channel;
-    float phase;
-    float delta;
+    Oscillator osc;
     Envelope amp_env;
 };
 
@@ -44,5 +40,3 @@ public:
     void noteOn(uint8_t note, uint8_t velocity, uint8_t channel);
     void noteOff(uint8_t note, uint8_t channel);
 };
-
-#endif

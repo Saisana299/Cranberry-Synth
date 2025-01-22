@@ -1,5 +1,6 @@
 #include "display/gfx.h"
 
+/** @brief SSD1351初期化 */
 void GFX_SSD1351::init() {
     display.begin();
     display.fillScreen(0x0000);

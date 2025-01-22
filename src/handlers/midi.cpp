@@ -1,5 +1,6 @@
 #include "handlers/midi.h"
 
+/** @brief MIDIハンドラ初期化 */
 void MIDIHandler::init() {
     instance = this;
     MIDI.setHandleNoteOn(handleNoteOnStatic);
@@ -33,9 +34,7 @@ void MIDIHandler::handleNoteOff(uint8_t ch, uint8_t note, uint8_t velocity) {
         Synth::getInstance()->noteOff(note, ch);
 }
 
-/**
- * @brief MIDIデータ読み込み
- */
+/** @brief MIDIデータ読み込み */
 void MIDIHandler::process() {
     auto& led_state = State::led_state;
     if(MIDI.read()){
@@ -45,10 +44,11 @@ void MIDIHandler::process() {
     }
 }
 
-// static
+/** @brief instance->handleNoteOn */
 void MIDIHandler::handleNoteOnStatic(uint8_t ch, uint8_t note, uint8_t velocity) {
     if (instance) instance->handleNoteOn(ch, note, velocity);
 }
+/** @brief instance->handleNoteOff */
 void MIDIHandler::handleNoteOffStatic(uint8_t ch, uint8_t note, uint8_t velocity) {
     if (instance) instance->handleNoteOff(ch, note, velocity);
 }

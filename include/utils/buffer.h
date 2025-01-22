@@ -1,5 +1,4 @@
-#ifndef RINGBUFFER_H
-#define RINGBUFFER_H
+#pragma once
 
 #define NEXT_IDX(idx) (((idx) + 1) % (RB_SIZE * 2))
 
@@ -51,5 +50,3 @@ template <typename T, uint16_t RB_SIZE>
 class IntervalRingBuffer {
     //
 };
-
-#endif // RINGBUFFER_H

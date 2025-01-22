@@ -1,5 +1,7 @@
 /** Cranberry Synth **/
 /** Mini Wavetable Synthesizer on Teensy 4.1 **/
+/** @author Saisana299 **/
+
 #include <Arduino.h>
 
 /* Handlers */

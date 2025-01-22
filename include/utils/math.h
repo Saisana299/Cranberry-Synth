@@ -1,5 +1,6 @@
-#ifndef AUDIO_MATH_H
-#define AUDIO_MATH_H
+#pragma once
+
+#include <Arduino.h>
 
 class AudioMath {
 public:
@@ -12,8 +13,6 @@ public:
     }
 
     static inline float randomFloat4(float min, float max) {
-        return min + (random(0, 10000) / 10000.0) * (max - min);
+        return min + (random(0, 10000) / 10000.0f) * (max - min);
     }
 };
-
-#endif

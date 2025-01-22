@@ -1,5 +1,4 @@
-#ifndef GFX_SSD1351_H
-#define GFX_SSD1351_H
+#pragma once
 
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1351.h>
@@ -23,5 +22,3 @@ public:
     }
     void testdrawtext(char *text, uint16_t color);
 };
-
-#endif

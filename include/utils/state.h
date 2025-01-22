@@ -1,5 +1,4 @@
-#ifndef STATE_H
-#define STATE_H
+#pragma once
 
 #define MODE_SYNTH 0
 
@@ -10,5 +9,3 @@ public:
     static inline uint8_t mode_state = MODE_SYNTH;
     static inline float amp_level = 1.0f;
 };
-
-#endif

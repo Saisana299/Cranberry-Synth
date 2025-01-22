@@ -1,5 +1,4 @@
-#ifndef DEBUG_H
-#define DEBUG_H
+#pragma once
 
 class Debug {
 private:
@@ -28,5 +27,3 @@ public:
         DebugSerial.print(msg);
     }
 };
-
-#endif
