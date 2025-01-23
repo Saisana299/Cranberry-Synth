@@ -1,29 +1,31 @@
 #pragma once
 
+#include "handlers/audio.h"
 #include "utils/math.h"
-
-struct ADSRConfig {
-    uint32_t attack_samples;
-    uint32_t decay_samples;
-    float    sustain_level;
-    uint32_t release_samples;
-};
 
 class Envelope {
 public:
-    enum class EnvState {
+
+    enum class State {
         Attack, Decay, Sustain, Release
     };
 
-    void reset();
-    void release();
-    void update(const ADSRConfig& adsr, uint32_t dt);
-    float currentLevel();
-    bool isFinished();
+    struct Memory {
+        State state;
+        uint32_t elapsed;
+        float current_level;
+        float prev_level;
+    };
+
+    void reset(Memory& mem);
+    void release(Memory& mem);
+    void update(Memory& mem, uint32_t dt = 1);
+    float currentLevel(Memory& mem);
+    bool isFinished(Memory& mem);
 
 private:
-    EnvState state = EnvState::Attack;
-    uint32_t elapsed = 0;
-    float current_level = 0;
-    float prev_level = 0;
+    uint32_t attack_samples = 0.001f * SAMPLE_RATE;
+    uint32_t decay_samples = 0.01f * SAMPLE_RATE;
+    uint32_t release_samples = 0.01f * SAMPLE_RATE;
+    float sustain_level = 1.0f;
 };

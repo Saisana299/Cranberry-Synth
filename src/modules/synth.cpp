@@ -5,19 +5,11 @@
 /** @brief シンセ初期化 */
 void Synth::init() {
     instance = this;
+    Oscillator::Memory osc_mem = {0.0f, 0.0f};
+    Envelope::Memory env_mem = {Envelope::State::Release, 0, 0.0f, 0.0f};
     for(uint8_t i = 0; i < MAX_NOTES; i++) {
-        active_notes[i] = ActiveSynthNote {0, 255, 0, 0, Oscillator(), Envelope()};
+        notes[i] = SynthNote {0, 255, 0, 0, osc_mem, env_mem};
     }
-    float    sustain_level   = 1.0f;
-    uint32_t attack_samples  = 0.001f * SAMPLE_RATE;
-    uint32_t decay_samples   = 0.01f  * SAMPLE_RATE;
-    uint32_t release_samples = 0.01f  * SAMPLE_RATE;
-    amp_adsr = ADSRConfig {
-        attack_samples,
-        decay_samples,
-        sustain_level,
-        release_samples
-    };
 }
 
 /** @brief シンセ生成 */
@@ -32,27 +24,27 @@ void Synth::generate() {
 
     // ノート毎処理
     for(uint8_t n = 0; n < MAX_NOTES; ++n) {
-        if(active_notes[n].order != 0) {
-            auto& note = active_notes[n];
-            auto& osc = note.osc;
+        if(notes[n].order != 0) {
+            auto& note = notes[n];
+            auto& osc_mem = note.osc_mem;
+            auto& env_mem = note.env_mem;
             auto& amp_level = State::amp_level;
-            auto& amp_env = note.amp_env;
 
             // サンプル毎処理
             for(size_t i = 0; i < BUFFER_SIZE; ++i) {
                 // サンプル入手
-                int16_t sample = osc.getSample();
+                int16_t sample = operators[0].osc.getSample(osc_mem);
 
                 // 合計を出力バッファに追加
-                samples_L[i] = samples_R[i] += sample * (amp_level * (1.0f / MAX_NOTES)) * amp_env.currentLevel();
+                samples_L[i] = samples_R[i] += sample * (amp_level * (1.0f / MAX_NOTES)) * operators[0].env.currentLevel(env_mem);
 
                 // 位相を更新
-                osc.update();
-                amp_env.update(amp_adsr, 1);
+                operators[0].osc.update(osc_mem);
+                operators[0].env.update(env_mem);
             }
 
             // リリースが終わっていればリセット
-            if(amp_env.isFinished()) {
+            if(operators[0].env.isFinished(env_mem)) {
                 resetNote(n);
             }
         }
@@ -75,9 +67,9 @@ void Synth::update() {
  */
 void Synth::updateOrder(uint8_t removed) {
     for (uint8_t i = 0; i < MAX_NOTES; ++i) {
-        if (active_notes[i].order > removed) {
-            --active_notes[i].order;
-            if(active_notes[i].order == 1) {
+        if (notes[i].order > removed) {
+            --notes[i].order;
+            if(notes[i].order == 1) {
                 last_index = i;
             }
         }
@@ -95,7 +87,7 @@ void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
     // 既に演奏している場合
     // ONの次に同じ音のONはありえない状況
     for (uint8_t i = 0; i < MAX_NOTES; ++i) {
-        if(active_notes[i].note == note) return;
+        if(notes[i].note == note) return;
     }
     // MAX_NOTES個ノートがある場合
     if(order_max == MAX_NOTES) {
@@ -104,16 +96,16 @@ void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
     }
     // ノートを追加する
     for (uint8_t i = 0; i < MAX_NOTES; ++i) {
-        if (active_notes[i].order == 0) {
-            auto& it = active_notes[i];
+        if (notes[i].order == 0) {
+            auto& it = notes[i];
             if(order_max < MAX_NOTES) ++order_max;
             it.order = order_max;
             it.note = note;
             it.velocity = velocity;
             it.channel = channel;
-            it.osc.setFrequency(note);
-            it.osc.resetPhase();
-            it.amp_env.reset();
+            operators[0].osc.setFrequency(it.osc_mem, note);
+            operators[0].osc.resetPhase(it.osc_mem);
+            operators[0].env.reset(it.env_mem);
             break;
         }
     }
@@ -127,9 +119,9 @@ void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
  */
 void Synth::noteOff(uint8_t note, uint8_t channel) {
     for (uint8_t i = 0; i < MAX_NOTES; ++i) {
-        if (active_notes[i].note == note) {
-            auto& it = active_notes[i];
-            it.amp_env.release();
+        if (notes[i].note == note) {
+            auto& it = notes[i];
+            operators[0].env.release(it.env_mem);
         }
     }
 }
@@ -140,13 +132,13 @@ void Synth::noteOff(uint8_t note, uint8_t channel) {
  * @param index リセットするノートのインデックス
  */
 void Synth::resetNote(uint8_t index) {
-    auto& it = active_notes[index];
+    auto& it = notes[index];
     uint8_t removed = it.order;
     it.order = 0;
     it.note = 255;
     it.velocity = 0;
     it.channel = 0;
-    it.amp_env.reset();
+    operators[0].env.reset(it.env_mem);
     if(order_max > 0) --order_max;
     // 他ノートorder更新
     updateOrder(removed);

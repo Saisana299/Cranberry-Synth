@@ -8,20 +8,23 @@
 #include "utils/state.h"
 #include "utils/debug.h"
 
-struct ActiveSynthNote {
-    uint8_t order;
-    uint8_t note;
-    uint8_t velocity;
-    uint8_t channel;
-    Oscillator osc;
-    Envelope amp_env;
-};
-
 class Synth {
 private:
+    struct SynthNote {
+        uint8_t order;
+        uint8_t note;
+        uint8_t velocity;
+        uint8_t channel;
+        Oscillator::Memory osc_mem;
+        Envelope::Memory env_mem;
+    };
+    struct Operator {
+        Oscillator osc;
+        Envelope env;
+    };
     static inline Synth* instance = nullptr;
-    ActiveSynthNote active_notes[MAX_NOTES];
-    ADSRConfig amp_adsr;
+    SynthNote notes[MAX_NOTES];
+    Operator operators[6];
     uint8_t order_max = 0;
     uint8_t last_index = 0;
     void init();

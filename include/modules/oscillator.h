@@ -6,20 +6,22 @@
 
 class Oscillator {
 private:
-    float phase;
-    float delta;
-    float frequency;
-
+    //wavetable
     void init();
 
 public:
+    struct Memory {
+        float phase;
+        float delta;
+    };
+
     Oscillator() {
         init();
     }
 
-    void setFrequency(uint8_t note);
-    void setFrequency(float freq);
-    void resetPhase();
-    int16_t getSample();
-    void update();
+    void setFrequency(Memory& mem, uint8_t note);
+    void setFrequency(Memory& mem, float freq);
+    void resetPhase(Memory& mem);
+    int16_t getSample(Memory& mem);
+    void update(Memory& mem);
 };

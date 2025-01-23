@@ -1,19 +1,19 @@
 #include "modules/envelope.h"
 
 /** @brief エンベロープを初期位置に戻す */
-void Envelope::reset() {
-    state = EnvState::Attack;
-    elapsed = 0;
-    current_level = 0.0f;
-    prev_level = 0.0f;
+void Envelope::reset(Memory& mem) {
+    mem.state = State::Attack;
+    mem.elapsed = 0;
+    mem.current_level = 0.0f;
+    mem.prev_level = 0.0f;
 }
 
 /** @brief エンベロープをリリースに移行 */
-void Envelope::release() {
-    if(state != EnvState::Release) {
-        prev_level = current_level;
-        elapsed = 0;
-        state = EnvState::Release;
+void Envelope::release(Memory& mem) {
+    if(mem.state != State::Release) {
+        mem.prev_level = mem.current_level;
+        mem.elapsed = 0;
+        mem.state = State::Release;
     }
 }
 
@@ -23,39 +23,39 @@ void Envelope::release() {
  * @param adsr ADSRの設定
  * @param dt 加算するサンプル数
  */
-void Envelope::update(const ADSRConfig& adsr, uint32_t dt) {
-    switch(state) {
-        case EnvState::Attack:
-            if(elapsed < adsr.attack_samples) {
-                current_level = AudioMath::lerp(prev_level, 1.0f, static_cast<float>(elapsed) / adsr.attack_samples);
+void Envelope::update(Memory& mem, uint32_t dt) {
+    switch(mem.state) {
+        case State::Attack:
+            if(mem.elapsed < attack_samples) {
+                mem.current_level = AudioMath::lerp(mem.prev_level, 1.0f, static_cast<float>(mem.elapsed) / attack_samples);
                 break;
             }
-            prev_level = current_level;
-            elapsed -= adsr.attack_samples;
-            state = EnvState::Decay;
+            mem.prev_level = mem.current_level;
+            mem.elapsed -= attack_samples;
+            mem.state = State::Decay;
             [[fallthrough]];
 
-        case EnvState::Decay:
-            if(elapsed < adsr.decay_samples) {
-                current_level = AudioMath::lerp(prev_level, adsr.sustain_level, static_cast<float>(elapsed) / adsr.decay_samples);
+        case State::Decay:
+            if(mem.elapsed < decay_samples) {
+                mem.current_level = AudioMath::lerp(mem.prev_level, sustain_level, static_cast<float>(mem.elapsed) / decay_samples);
                 break;
             }
-            prev_level = current_level;
-            elapsed -= adsr.decay_samples;
-            state = EnvState::Sustain;
+            mem.prev_level = mem.current_level;
+            mem.elapsed -= decay_samples;
+            mem.state = State::Sustain;
             [[fallthrough]];
 
-        case EnvState::Sustain:
-            current_level = adsr.sustain_level;
+        case State::Sustain:
+            mem.current_level = sustain_level;
             break;
 
-        case EnvState::Release:
-            current_level = elapsed < adsr.release_samples
-                ? AudioMath::lerp(prev_level, 0.0f, static_cast<float>(elapsed) / adsr.release_samples)
+        case State::Release:
+            mem.current_level = mem.elapsed < release_samples
+                ? AudioMath::lerp(mem.prev_level, 0.0f, static_cast<float>(mem.elapsed) / release_samples)
                 : 0.0f;
             break;
     }
-    elapsed += dt;
+    mem.elapsed += dt;
 }
 
 /**
@@ -63,8 +63,8 @@ void Envelope::update(const ADSRConfig& adsr, uint32_t dt) {
  *
  * @return float Min: 0.0, Max: 1.0
  */
-float Envelope::currentLevel() {
-    return current_level;
+float Envelope::currentLevel(Memory& mem) {
+    return mem.current_level;
 }
 
 /**
@@ -72,6 +72,6 @@ float Envelope::currentLevel() {
  *
  * @return 終了していれば `true` を返す
  */
-bool Envelope::isFinished() {
-    return (state == EnvState::Release && current_level == 0.0f);
+bool Envelope::isFinished(Memory& mem) {
+    return (mem.state == State::Release && mem.current_level == 0.0f);
 }

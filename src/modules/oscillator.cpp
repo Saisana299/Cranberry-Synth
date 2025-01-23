@@ -2,9 +2,6 @@
 
 /** @brief Oscillator初期化 */
 void Oscillator::init() {
-    phase = 0.0f;
-    delta = 0.0f;
-    frequency = 0.0f;
 }
 
 /**
@@ -12,9 +9,8 @@ void Oscillator::init() {
  *
  * @param note MIDIノート番号
  */
-void Oscillator::setFrequency(uint8_t note) {
-    frequency = AudioMath::noteToFrequency(note);
-    delta = frequency / SAMPLE_RATE;
+void Oscillator::setFrequency(Memory& mem, uint8_t note) {
+    mem.delta = AudioMath::noteToFrequency(note) / SAMPLE_RATE;
 }
 
 /**
@@ -22,27 +18,26 @@ void Oscillator::setFrequency(uint8_t note) {
  *
  * @param freq 周波数
  */
-void Oscillator::setFrequency(float freq) {
-    frequency = freq;
-    delta = frequency / SAMPLE_RATE;
+void Oscillator::setFrequency(Memory& mem, float freq) {
+    mem.delta = freq / SAMPLE_RATE;
 }
 
 /** @brief oscillatorのphaseをリセット */
-void Oscillator::resetPhase() {
-    phase = AudioMath::randomFloat4(0.0f, 1.0f);
-    if(phase == 1.0f) phase = 0.0f;
+void Oscillator::resetPhase(Memory& mem) {
+    mem.phase = AudioMath::randomFloat4(0.0f, 1.0f);
+    if(mem.phase == 1.0f) mem.phase = 0.0f;
 }
 
 /** @brief oscillatorのphaseを更新 */
-void Oscillator::update() {
-    phase += delta;
-    if(phase >= 1.0f) phase -= 1.0f;
+void Oscillator::update(Memory& mem) {
+    mem.phase += mem.delta;
+    if(mem.phase >= 1.0f) mem.phase -= 1.0f;
 }
 
 /** @brief oscillatorのサンプルを取得 */
-int16_t Oscillator::getSample() {
+int16_t Oscillator::getSample(Memory& mem) {
     auto& wavetable = Wavetable::square;
     const size_t WAVETABLE_SIZE = sizeof(wavetable) / sizeof(wavetable[0]);
-    size_t index = static_cast<size_t>(phase * WAVETABLE_SIZE) % WAVETABLE_SIZE;
+    size_t index = static_cast<size_t>(mem.phase * WAVETABLE_SIZE) % WAVETABLE_SIZE;
     return wavetable[index];
 }
