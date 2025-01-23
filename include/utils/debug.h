@@ -2,7 +2,8 @@
 
 class Debug {
 private:
-    static constexpr HardwareSerial& DebugSerial = Serial6;
+    // static constexpr HardwareSerial& DebugSerial = Serial6;
+    static constexpr usb_serial_class& DebugSerial = Serial;
     static inline bool initialized = false;
 
     static inline void init() {

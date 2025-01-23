@@ -1,6 +1,7 @@
 #pragma once
 
-#define MAX_NOTES 8
+// #define MAX_NOTES 8
+#define MAX_NOTES 32
 
 #include "handlers/audio.h"
 #include "modules/envelope.h"

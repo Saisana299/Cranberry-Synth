@@ -5,8 +5,8 @@
 /** @brief シンセ初期化 */
 void Synth::init() {
     instance = this;
-    Oscillator::Memory osc_mem = {0.0f, 0.0f};
-    Envelope::Memory env_mem = {Envelope::State::Release, 0, 0.0f, 0.0f};
+    Oscillator::Memory osc_mem = {0.0f, 0.0f, 0.0f};
+    Envelope::Memory env_mem = {Envelope::State::Attack, 0, 0.0f, 0.0f};
     for(uint8_t i = 0; i < MAX_NOTES; i++) {
         notes[i] = SynthNote {0, 255, 0, 0, osc_mem, env_mem};
     }
@@ -103,9 +103,9 @@ void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
             it.note = note;
             it.velocity = velocity;
             it.channel = channel;
+            operators[0].osc.setVolume(it.osc_mem, velocity);
             operators[0].osc.setFrequency(it.osc_mem, note);
-            operators[0].osc.resetPhase(it.osc_mem);
-            operators[0].env.reset(it.env_mem);
+            operators[0].osc.setPhase(it.osc_mem);
             break;
         }
     }
@@ -138,6 +138,7 @@ void Synth::resetNote(uint8_t index) {
     it.note = 255;
     it.velocity = 0;
     it.channel = 0;
+    operators[0].osc.reset(it.osc_mem);
     operators[0].env.reset(it.env_mem);
     if(order_max > 0) --order_max;
     // 他ノートorder更新
