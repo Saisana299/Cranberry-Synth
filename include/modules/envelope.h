@@ -24,7 +24,7 @@ public:
     bool isFinished(Memory& mem);
 
 private:
-    uint32_t attack_samples = 0.001f * SAMPLE_RATE;
+    uint32_t attack_samples = 0.005f * SAMPLE_RATE;
     uint32_t decay_samples = 0.01f * SAMPLE_RATE;
     uint32_t release_samples = 0.01f * SAMPLE_RATE;
     float sustain_level = 1.0f;

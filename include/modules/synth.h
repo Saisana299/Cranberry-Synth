@@ -2,6 +2,7 @@
 
 // #define MAX_NOTES 8
 #define MAX_NOTES 32
+#define MAX_OPERATORS 4
 
 #include "handlers/audio.h"
 #include "modules/envelope.h"
@@ -19,13 +20,19 @@ private:
         Oscillator::Memory osc_mem;
         Envelope::Memory env_mem;
     };
-    struct Operator {
-        Oscillator osc;
-        Envelope env;
-    };
-    static inline Synth* instance = nullptr;
     SynthNote notes[MAX_NOTES];
-    Operator operators[6];
+
+    enum class OpMode {
+        Carrier, Modulator
+    };
+    struct Operator {//todo Operator ON/OFF機能
+        OpMode mode = OpMode::Modulator;
+        Oscillator osc = Oscillator();
+        Envelope env = Envelope();
+    };
+    Operator operators[MAX_OPERATORS];
+
+    static inline Synth* instance = nullptr;
     uint8_t order_max = 0;
     uint8_t last_index = 0;
     void init();

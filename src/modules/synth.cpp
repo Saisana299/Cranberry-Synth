@@ -1,7 +1,5 @@
 #include "modules/synth.h"
 
-//todo: 強制リリースはバッファサイズ分で振幅0まで滑らかに減衰するようにする 次のノートは減衰処理完了後に入れる（同ループ）
-
 /** @brief シンセ初期化 */
 void Synth::init() {
     instance = this;
@@ -10,6 +8,8 @@ void Synth::init() {
     for(uint8_t i = 0; i < MAX_NOTES; i++) {
         notes[i] = SynthNote {0, 255, 0, 0, osc_mem, env_mem};
     }
+    // [0]はCarrier確定
+    operators[0].mode = OpMode::Carrier;
 }
 
 /** @brief シンセ生成 */
@@ -30,21 +30,35 @@ void Synth::generate() {
             auto& env_mem = note.env_mem;
             auto& amp_level = State::amp_level;
 
-            // サンプル毎処理
-            for(size_t i = 0; i < BUFFER_SIZE; ++i) {
-                // サンプル入手
-                int16_t sample = operators[0].osc.getSample(osc_mem);
+            // オペレーター毎処理
+            uint8_t finished_cnt = 0;
+            for(uint8_t op = 0; op < MAX_OPERATORS; ++op) {
+                auto& oper = operators[op];
+                // ModulatorはCarrier内で処理される
+                if(oper.mode == OpMode::Carrier) {
+                    // todo:Carrierが2以上なら音量調節推奨
+                    // サンプル毎処理
+                    for(size_t i = 0; i < BUFFER_SIZE; ++i) {
+                        // サンプル入手
+                        int16_t sample = oper.osc.getSample(osc_mem);
 
-                // 合計を出力バッファに追加
-                samples_L[i] = samples_R[i] += sample * (amp_level * (1.0f / MAX_NOTES)) * operators[0].env.currentLevel(env_mem);
+                        // 合計を出力バッファに追加
+                        samples_L[i] = samples_R[i] += sample * (amp_level * (1.0f / MAX_NOTES)) * oper.env.currentLevel(env_mem);
 
-                // 位相を更新
-                operators[0].osc.update(osc_mem);
-                operators[0].env.update(env_mem);
+                        // 位相を更新
+                        oper.osc.update(osc_mem);
+                        oper.env.update(env_mem);
+                    }
+                }
+
+                // Releaseが完了しているか
+                if(oper.env.isFinished(env_mem)) {
+                    ++finished_cnt;
+                }
             }
 
-            // リリースが終わっていればリセット
-            if(operators[0].env.isFinished(env_mem)) {
+            // 全てのオペレーターが処理完了
+            if(finished_cnt == MAX_OPERATORS) {
                 resetNote(n);
             }
         }
@@ -85,13 +99,14 @@ void Synth::updateOrder(uint8_t removed) {
  */
 void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
     // 既に演奏している場合
-    // ONの次に同じ音のONはありえない状況
+    // リリース状態であれば強制終了後発音//todo
     for (uint8_t i = 0; i < MAX_NOTES; ++i) {
-        if(notes[i].note == note) return;
+        if(notes[i].note == note
+        && notes[i].env_mem.state != Envelope::State::Release) return;
     }
     // MAX_NOTES個ノートがある場合
     if(order_max == MAX_NOTES) {
-        // 一番古いノートを強制停止する
+        // 一番古いノートを強制停止する//todo: 強制リリース
         resetNote(last_index);
     }
     // ノートを追加する
@@ -103,9 +118,12 @@ void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
             it.note = note;
             it.velocity = velocity;
             it.channel = channel;
-            operators[0].osc.setVolume(it.osc_mem, velocity);
-            operators[0].osc.setFrequency(it.osc_mem, note);
-            operators[0].osc.setPhase(it.osc_mem);
+            for(uint8_t op = 0; op < MAX_OPERATORS; ++op) {
+                auto& oper = operators[op];
+                oper.osc.setVolume(it.osc_mem, velocity);
+                oper.osc.setFrequency(it.osc_mem, note);
+                oper.osc.setPhase(it.osc_mem);
+            }
             break;
         }
     }
@@ -121,7 +139,10 @@ void Synth::noteOff(uint8_t note, uint8_t channel) {
     for (uint8_t i = 0; i < MAX_NOTES; ++i) {
         if (notes[i].note == note) {
             auto& it = notes[i];
-            operators[0].env.release(it.env_mem);
+            for(uint8_t op = 0; op < MAX_OPERATORS; ++op) {
+                auto& oper = operators[op];
+                oper.env.release(it.env_mem);
+            }
         }
     }
 }
@@ -138,8 +159,11 @@ void Synth::resetNote(uint8_t index) {
     it.note = 255;
     it.velocity = 0;
     it.channel = 0;
-    operators[0].osc.reset(it.osc_mem);
-    operators[0].env.reset(it.env_mem);
+    for(uint8_t op = 0; op < MAX_OPERATORS; ++op) {
+        auto& oper = operators[op];
+        oper.osc.reset(it.osc_mem);
+        oper.env.reset(it.env_mem);
+    }
     if(order_max > 0) --order_max;
     // 他ノートorder更新
     updateOrder(removed);
