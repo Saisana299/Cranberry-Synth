@@ -9,6 +9,7 @@
 #include "modules/oscillator.h"
 #include "utils/state.h"
 #include "utils/debug.h"
+#include "utils/math.h"
 
 class Synth {
 private:

@@ -19,6 +19,10 @@ void Synth::init() {
     // [0]はCarrier確定
     operators[0].mode = OpMode::Carrier;
     operators[0].osc.enable();
+
+    // [1]をモジュレーターに設定してみる
+    operators[1].mode = OpMode::Modulator;
+    operators[0].osc.setModulation(1, &operators[1].osc, &operators[1].env);
 }
 
 /** @brief シンセ生成 */
@@ -57,7 +61,7 @@ void Synth::generate() {
                         samples_L[i] = samples_R[i] += sample * (amp_level * (1.0f / MAX_NOTES)) * oper.env.currentLevel(env_mems[op]);
 
                         // オシレーターとエンベロープを更新
-                        oper.osc.update(osc_mems[op]);
+                        oper.osc.update(osc_mems[op], &osc_mems[1], &env_mems[1]);
                         oper.env.update(env_mems[op]);
                     }
 
@@ -138,7 +142,7 @@ void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
                 auto& oper = operators[op];
                 oper.osc.setVolume(it.osc_mems[op], velocity);
                 oper.osc.setFrequency(it.osc_mems[op], note);
-                oper.osc.setPhase(it.osc_mems[op]);
+                oper.osc.setPhase(it.osc_mems[op], 0.0f);
             }
             break;
         }
