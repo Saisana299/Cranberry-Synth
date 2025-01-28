@@ -16,7 +16,12 @@ public:
         return a + t * (b - a);
     }
 
-    static inline float randomFloat4(float min, float max) {
-        return min + (random(0, 10000) / 10000.0f) * (max - min);
+    static inline uint8_t bitPadding32(size_t size) {
+        uint8_t shift = 0;
+        while (size > 1) {
+            size >>= 1;
+            shift++;
+        }
+        return 32 - shift;
     }
 };

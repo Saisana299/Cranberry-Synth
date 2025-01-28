@@ -8,8 +8,8 @@
 class Oscillator {
 public:
     struct Memory {
-        float phase;
-        float delta;
+        uint32_t phase;
+        uint32_t delta;
         float vel_vol;
     };
 
@@ -20,7 +20,7 @@ public:
     void setFrequency(Memory& mem, uint8_t note);
     void setFrequency(Memory& mem, float freq);
     void setVolume(Memory& mem, uint8_t velocity);
-    void setPhase(Memory& mem, float phase);
+    void setPhase(Memory& mem, uint32_t phase);
     int16_t getSample(Memory& mem);
     void update(Memory& mem, Memory* mod_mem = nullptr, Envelope::Memory* mod_env_mem = nullptr);
     void reset(Memory& mem);
@@ -31,6 +31,8 @@ public:
     void setLoopback(bool loopback);
 
 private:
+    static constexpr float F_1ULL32 = (float)(1ULL << 32);
+    uint8_t bit_padding;
     int16_t* wavetable;
     size_t wavetable_size;
     bool enabled;

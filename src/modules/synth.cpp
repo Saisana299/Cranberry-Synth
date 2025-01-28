@@ -12,7 +12,7 @@ void Synth::init() {
         notes[i].channel = 0;
 
         for(uint8_t op = 0; op < MAX_OPERATORS; ++op) {
-            notes[i].osc_mems[op] = Oscillator::Memory {0.0f, 0.0f, 0.0f};
+            notes[i].osc_mems[op] = Oscillator::Memory {0, 0, 0.0f};
             notes[i].env_mems[op] = Envelope::Memory {Envelope::State::Attack, 0, 0.0f, 0.0f};
         }
     }
@@ -142,7 +142,7 @@ void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
                 auto& oper = operators[op];
                 oper.osc.setVolume(it.osc_mems[op], velocity);
                 oper.osc.setFrequency(it.osc_mems[op], note);
-                oper.osc.setPhase(it.osc_mems[op], 0.0f);
+                oper.osc.setPhase(it.osc_mems[op], 0);
             }
             break;
         }
