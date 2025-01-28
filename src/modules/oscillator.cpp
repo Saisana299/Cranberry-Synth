@@ -2,6 +2,7 @@
 
 /** @brief Oscillator初期化 */
 void Oscillator::init() {
+    enabled = false;
     wavetable = Wavetable::square;
     wavetable_size = sizeof(Wavetable::square) / sizeof(Wavetable::square[0]);
 }
@@ -51,6 +52,18 @@ int16_t Oscillator::getSample(Memory& mem) {
     size_t index = static_cast<size_t>(mem.phase * wavetable_size) % wavetable_size;
     int16_t sample = wavetable[index];
     return static_cast<int16_t>(sample * mem.vel_vol);
+}
+
+void Oscillator::enable() {
+    enabled = true;
+}
+
+void Oscillator::disable() {
+    enabled = false;
+}
+
+bool Oscillator::isActive() {
+    return enabled;
 }
 
 void Oscillator::reset(Memory& mem) {

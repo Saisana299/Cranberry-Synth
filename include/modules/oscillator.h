@@ -8,6 +8,7 @@ class Oscillator {
 private:
     int16_t* wavetable;
     size_t wavetable_size;
+    bool enabled;
     void init();
 
 public:
@@ -28,4 +29,7 @@ public:
     int16_t getSample(Memory& mem);
     void update(Memory& mem);
     void reset(Memory& mem);
+    void enable();
+    void disable();
+    bool isActive();
 };

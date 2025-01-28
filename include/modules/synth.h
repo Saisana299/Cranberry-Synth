@@ -17,8 +17,8 @@ private:
         uint8_t note;
         uint8_t velocity;
         uint8_t channel;
-        Oscillator::Memory osc_mem;
-        Envelope::Memory env_mem;
+        Oscillator::Memory osc_mems[MAX_OPERATORS];
+        Envelope::Memory env_mems[MAX_OPERATORS];
     };
     SynthNote notes[MAX_NOTES];
 
