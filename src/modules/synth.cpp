@@ -21,8 +21,8 @@ void Synth::init() {
     operators[0].osc.enable();
 
     // [1]をモジュレーターに設定してみる
-    operators[1].mode = OpMode::Modulator;
-    operators[0].osc.setModulation(1, &operators[1].osc, &operators[1].env);
+    //operators[1].mode = OpMode::Modulator;
+    //operators[0].osc.setModulation(1, &operators[1].osc, &operators[1].env);
 }
 
 /** @brief シンセ生成 */
@@ -57,7 +57,7 @@ void Synth::generate() {
                         // サンプル入手、ここでエンベロープレベルを適用
                         int16_t sample = oper.osc.getSample(osc_mems[op]);
 
-                        // 合計を出力バッファに追加
+                        // 合計を出力バッファに追加 //todo ボリューム制御方法
                         samples_L[i] = samples_R[i] += sample * (amp_level * (1.0f / MAX_NOTES)) * oper.env.currentLevel(env_mems[op]);
 
                         // オシレーターとエンベロープを更新

@@ -50,11 +50,18 @@ void Oscillator::update(Memory& mem, Memory* mod_mem, Envelope::Memory* mod_env_
     // Modulationあり
     if(mod_osc != nullptr && mod_env != nullptr && mod_mem != nullptr && mod_env_mem != nullptr) {
         // modulationのupdate
-        int16_t mod_sample = mod_osc->getSample(*mod_mem);
+        int16_t mod_sample = mod_osc->getSample(*mod_mem) * mod_env->currentLevel(*mod_env_mem) * 0.05f;//todo volume
         float mod_delta = (mod_sample / 32768.0f);
-        int32_t modulated_delta = static_cast<int32_t>(mod_delta * INT32_MAX);//todo 変調深度
-        uint32_t delta_phase = mem.delta + modulated_delta;
-        mem.phase += delta_phase;
+        if(mod_delta < 0.0f) {
+            uint32_t modulated_delta = static_cast<uint32_t>(fabs(mod_delta) * UINT32_MAX);
+            uint32_t delta_phase = mem.delta - modulated_delta;
+            mem.phase += delta_phase;
+        }
+        else {
+            uint32_t modulated_delta = static_cast<uint32_t>(mod_delta * UINT32_MAX);
+            uint32_t delta_phase = mem.delta + modulated_delta;
+            mem.phase += delta_phase;
+        }
         mod_osc->update(*mod_mem);
         mod_env->update(*mod_env_mem);
     // 通常
