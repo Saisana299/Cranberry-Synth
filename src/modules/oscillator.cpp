@@ -60,19 +60,6 @@ void Oscillator::update(Memory& mem, uint8_t note_id) {
         Oscillator::Memory& mod_mem = mod_osc_mems[note_id];
         Envelope::Memory& mod_env_mem = mod_env_mems[note_id];
 
-        // Modulation
-        int16_t mod_sample = mod_osc->getSample(mod_mem) * mod_env->currentLevel(mod_env_mem) * 0.12f; //todo volume
-        float mod_delta = (mod_sample / 32768.0f);
-        // 負数
-        if(mod_delta < 0.0f) {
-            uint32_t modulate_delta = static_cast<uint32_t>(fabs(mod_delta) * UINT32_MAX);
-            mem.phase -= modulate_delta;
-        }
-        // 正数
-        else {
-            uint32_t modulate_delta = static_cast<uint32_t>(mod_delta * UINT32_MAX);
-            mem.phase += modulate_delta;
-        }
         mod_osc->update(mod_mem, note_id);
         mod_env->update(mod_env_mem);
 
@@ -85,10 +72,41 @@ void Oscillator::setLoopback(bool loopback) {
 }
 
 /** @brief oscillatorのサンプルを取得 */
-int16_t Oscillator::getSample(Memory& mem) {
-    // 波形データからサンプル取得
-    size_t index = static_cast<size_t>(mem.phase >> bit_padding) % wavetable_size;
+int16_t Oscillator::getSample(Memory& mem, uint8_t note_id) {
+    // キャリアのベース位相
+    uint32_t base_phase = mem.phase;
+
+    // モジュレーションがある場合
+    if(mod_osc != nullptr) {
+        if(mod_env != nullptr && mod_osc_mems != nullptr && mod_env_mems != nullptr) {
+            //------ 危険地帯：mod_osc_memsとmod_env_memsの要素数がnote_id以上という前提 ------//
+
+            // キャッシュ
+            Oscillator::Memory& mod_mem = mod_osc_mems[note_id];
+            Envelope::Memory& mod_env_mem = mod_env_mems[note_id];
+
+            // mod_osc->getSample(mod_mem) は -32768~32767 の範囲を想定
+            float mod_env_level = mod_env->currentLevel(mod_env_mem);
+            float mod_sample_f = (mod_osc->getSample(mod_mem, note_id) / 32768.0f) * mod_env_level * 1.8f;
+
+            // mod_sample_f の値を位相単位にスケーリングして加算
+            uint32_t mod_phase_offset = static_cast<uint32_t>(mod_sample_f * (float)0xFFFFFFFFu);
+
+            // base_phase に加算
+            if(mod_sample_f >= 0.0f) {
+                base_phase += mod_phase_offset;
+            } else {
+                base_phase -= mod_phase_offset;
+            }
+
+            // ----------------------------------------------------------------------------- //
+        }
+    }
+
+    // 波形テーブルを参照する
+    size_t index = static_cast<size_t>(base_phase >> bit_padding) % wavetable_size;
     int16_t sample = wavetable[index];
+
     // ベロシティを適用
     return static_cast<int16_t>(sample * mem.vel_vol);
 }

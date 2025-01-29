@@ -58,7 +58,7 @@ void Synth::generate() {
                     // サンプル毎処理
                     for(size_t i = 0; i < BUFFER_SIZE; ++i) {
                         // サンプル入手、ここでエンベロープレベルを適用
-                        int16_t sample = oper.osc.getSample(osc_mem);
+                        int16_t sample = oper.osc.getSample(osc_mem, n);
 
                         // 合計を出力バッファに追加 //todo ボリューム制御方法
                         samples_L[i] = samples_R[i] += sample * (amp_level * (1.0f / MAX_NOTES)) * oper.env.currentLevel(env_mem);
@@ -122,7 +122,7 @@ void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
         if(notes[i].note == note) {
             for(uint8_t op = 0; op < MAX_OPERATORS; ++op) {
                 // リリース中でなければ何もしない。
-                if(ope_states[op].env_mems[i].state != Envelope::State::Release) return;
+                // if(ope_states[op].env_mems[i].state != Envelope::State::Release) return;
             }
             // リリース状態であれば強制リリース後発音 //todo
         }

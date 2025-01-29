@@ -21,7 +21,7 @@ public:
     void setFrequency(Memory& mem, float freq);
     void setVolume(Memory& mem, uint8_t velocity);
     void setPhase(Memory& mem, uint32_t phase);
-    int16_t getSample(Memory& mem);
+    int16_t getSample(Memory& mem, uint8_t note_id);
     void update(Memory& mem, uint8_t note_id);
     void reset(Memory& mem);
     void enable();
