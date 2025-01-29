@@ -5,24 +5,28 @@
 /** @brief シンセ初期化 */
 void Synth::init() {
     instance = this;
+    // ノート情報を初期化
     for(uint8_t i = 0; i < MAX_NOTES; i++) {
         notes[i].order = 0;
         notes[i].note = 255;
         notes[i].velocity = 0;
         notes[i].channel = 0;
-
-        for(uint8_t op = 0; op < MAX_OPERATORS; ++op) {
-            notes[i].osc_mems[op] = Oscillator::Memory {0, 0, 0.0f};
-            notes[i].env_mems[op] = Envelope::Memory {Envelope::State::Attack, 0, 0.0f, 0.0f};
+    }
+    // オペレーター情報を初期化
+    for(uint8_t op = 0; op < MAX_OPERATORS; ++op) {
+        for(uint8_t i = 0; i < MAX_NOTES; ++i) {
+            ope_states[op].osc_mems[i] = Oscillator::Memory {0, 0, 0.0f};
+            ope_states[op].env_mems[i] = Envelope::Memory {Envelope::State::Attack, 0, 0.0f, 0.0f};
         }
     }
+
     // [0]はCarrier確定
     operators[0].mode = OpMode::Carrier;
     operators[0].osc.enable();
 
     // [1]をモジュレーターに設定してみる
-    //operators[1].mode = OpMode::Modulator;
-    //operators[0].osc.setModulation(1, &operators[1].osc, &operators[1].env);
+    operators[1].mode = OpMode::Modulator;
+    operators[0].osc.setModulation(&operators[1].osc, &operators[1].env, &ope_states[1].osc_mems[0], &ope_states[1].env_mems[0]);
 }
 
 /** @brief シンセ生成 */
@@ -38,9 +42,6 @@ void Synth::generate() {
     // ノート毎処理
     for(uint8_t n = 0; n < MAX_NOTES; ++n) {
         if(notes[n].order != 0) {
-            auto& note = notes[n];
-            auto& osc_mems = note.osc_mems;
-            auto& env_mems = note.env_mems;
             auto& amp_level = State::amp_level;
 
             // オペレーター毎処理
@@ -48,6 +49,8 @@ void Synth::generate() {
             uint8_t r_finished_cnt = 0;
             for(uint8_t op = 0; op < MAX_OPERATORS; ++op) {
                 auto& oper = operators[op];
+                auto& osc_mem = ope_states[op].osc_mems[n];
+                auto& env_mem = ope_states[op].env_mems[n];
                 // Modulatorの更新処理はCarrier内で行う
                 if(oper.mode == OpMode::Carrier && oper.osc.isActive()) {
                     ++carrier_cnt;
@@ -55,19 +58,19 @@ void Synth::generate() {
                     // サンプル毎処理
                     for(size_t i = 0; i < BUFFER_SIZE; ++i) {
                         // サンプル入手、ここでエンベロープレベルを適用
-                        int16_t sample = oper.osc.getSample(osc_mems[op]);
+                        int16_t sample = oper.osc.getSample(osc_mem);
 
                         // 合計を出力バッファに追加 //todo ボリューム制御方法
-                        samples_L[i] = samples_R[i] += sample * (amp_level * (1.0f / MAX_NOTES)) * oper.env.currentLevel(env_mems[op]);
+                        samples_L[i] = samples_R[i] += sample * (amp_level * (1.0f / MAX_NOTES)) * oper.env.currentLevel(env_mem);
 
                         // オシレーターとエンベロープを更新
-                        oper.osc.update(osc_mems[op], &osc_mems[1], &env_mems[1]);
-                        oper.env.update(env_mems[op]);
+                        oper.osc.update(osc_mem, n);
+                        oper.env.update(env_mem);
                     }
 
                     // Releaseが完了しているか
                     // モジュレータ―のエンベロープは考慮しない
-                    if(oper.env.isFinished(env_mems[op])) {
+                    if(oper.env.isFinished(env_mem)) {
                         ++r_finished_cnt;
                     }
                 }
@@ -119,7 +122,7 @@ void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
         if(notes[i].note == note) {
             for(uint8_t op = 0; op < MAX_OPERATORS; ++op) {
                 // リリース中でなければ何もしない。
-                if(notes[i].env_mems[op].state != Envelope::State::Release) return;
+                if(ope_states[op].env_mems[i].state != Envelope::State::Release) return;
             }
             // リリース状態であれば強制リリース後発音 //todo
         }
@@ -140,10 +143,14 @@ void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
             it.channel = channel;
             for(uint8_t op = 0; op < MAX_OPERATORS; ++op) {
                 auto& oper = operators[op];
-                oper.osc.setVolume(it.osc_mems[op], velocity);
-                oper.osc.setFrequency(it.osc_mems[op], note);
-                oper.osc.setPhase(it.osc_mems[op], 0);
+                auto& osc_mem = ope_states[op].osc_mems[i];
+                oper.osc.setVolume(osc_mem, velocity);
+                oper.osc.setFrequency(osc_mem, note);
+                oper.osc.setPhase(osc_mem, 0);
             }
+            uint8_t a = note+12;
+            operators[1].osc.setFrequency(ope_states[1].osc_mems[i], a);
+            operators[1].osc.setPhase(ope_states[1].osc_mems[i], 0);
             break;
         }
     }
@@ -158,10 +165,10 @@ void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
 void Synth::noteOff(uint8_t note, uint8_t channel) {
     for (uint8_t i = 0; i < MAX_NOTES; ++i) {
         if (notes[i].note == note) {
-            auto& it = notes[i];
             for(uint8_t op = 0; op < MAX_OPERATORS; ++op) {
                 auto& oper = operators[op];
-                oper.env.release(it.env_mems[op]);
+                auto& env_mem = ope_states[op].env_mems[i];
+                oper.env.release(env_mem);
             }
         }
     }
@@ -181,8 +188,10 @@ void Synth::resetNote(uint8_t index) {
     it.channel = 0;
     for(uint8_t op = 0; op < MAX_OPERATORS; ++op) {
         auto& oper = operators[op];
-        oper.osc.reset(it.osc_mems[op]);
-        oper.env.reset(it.env_mems[op]);
+        auto& osc_mem = ope_states[op].osc_mems[index];
+        auto& env_mem = ope_states[op].env_mems[index];
+        oper.osc.reset(osc_mem);
+        oper.env.reset(env_mem);
     }
     if(order_max > 0) --order_max;
     // 他ノートorder更新

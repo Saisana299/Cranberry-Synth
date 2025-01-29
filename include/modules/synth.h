@@ -18,15 +18,20 @@ private:
         uint8_t note;
         uint8_t velocity;
         uint8_t channel;
-        Oscillator::Memory osc_mems[MAX_OPERATORS];
-        Envelope::Memory env_mems[MAX_OPERATORS];
     };
     SynthNote notes[MAX_NOTES];
+
+    struct OperatorState {
+        Oscillator::Memory osc_mems[MAX_NOTES];
+        Envelope::Memory env_mems[MAX_NOTES];
+    };
+    OperatorState ope_states[MAX_OPERATORS];
 
     enum class OpMode {
         Carrier, Modulator
     };
-    struct Operator {//todo Operator ON/OFF機能
+
+    struct Operator { //todo Operator ON/OFF機能
         OpMode mode = OpMode::Modulator;
         Oscillator osc = Oscillator();
         Envelope env = Envelope();

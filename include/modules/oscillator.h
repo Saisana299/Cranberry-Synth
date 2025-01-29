@@ -22,12 +22,17 @@ public:
     void setVolume(Memory& mem, uint8_t velocity);
     void setPhase(Memory& mem, uint32_t phase);
     int16_t getSample(Memory& mem);
-    void update(Memory& mem, Memory* mod_mem = nullptr, Envelope::Memory* mod_env_mem = nullptr);
+    void update(Memory& mem, uint8_t note_id);
     void reset(Memory& mem);
     void enable();
     void disable();
     bool isActive();
-    void setModulation(uint8_t id, Oscillator* mod_osc, Envelope* mod_env);
+    void setModulation(
+        Oscillator* mod_osc,
+        Envelope* mod_env,
+        Oscillator::Memory* mod_osc_mems,
+        Envelope::Memory* mod_env_mems
+    );
     void setLoopback(bool loopback);
 
 private:
@@ -39,6 +44,7 @@ private:
     bool loopback;
     Oscillator* mod_osc;
     Envelope* mod_env;
-    uint8_t mod_id;
+    Oscillator::Memory* mod_osc_mems;
+    Envelope::Memory* mod_env_mems;
     void init();
 };
