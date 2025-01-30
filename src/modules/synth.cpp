@@ -101,7 +101,7 @@ void Synth::update() {
         generate();
     }
     // ディレイが残っている時の処理
-    else if(delay_enabled) {
+    else if(delay_enabled && delay_remain > 0) {
         if(delay_remain <= BUFFER_SIZE) delay_remain = 0;
         else delay_remain -= BUFFER_SIZE;
         generate();
