@@ -6,6 +6,7 @@ void Oscillator::init() {
     mod_env = nullptr;
     loopback = false;
     enabled = false;
+    level = 0.0f;
     wavetable = Wavetable::sine;
     wavetable_size = sizeof(Wavetable::sine) / sizeof(Wavetable::sine[0]);
     bit_padding = AudioMath::bitPadding32(wavetable_size);
@@ -30,22 +31,31 @@ void Oscillator::setFrequency(Memory& mem, float freq) {
 }
 
 /**
- * @brief 
- * 
- * @param mem 
- * @param velocity 
+ * @brief オシレーターのベロシティボリュームを設定
+ *
+ * @param velocity ベロシティ値
  */
-void Oscillator::setVolume(Memory& mem, uint8_t velocity) {
+void Oscillator::setVelocity(Memory& mem, uint8_t velocity) {
     mem.vel_vol = AudioMath::velocityToAmplitude(velocity);
 }
 
-/** @brief oscillatorのphaseをリセット */
+/**
+ * @brief oscillatorの位相をリセット
+ *
+ * @param phase 位相
+*/
 void Oscillator::setPhase(Memory& mem, uint32_t phase) {
-    mem.phase = phase;//todo
+    mem.phase = phase;
 }
 
-/** @brief oscillatorのphaseを更新 */
+/**
+ * @brief オシレーターの状態を更新
+ *
+ * @param note_id ノートID
+*/
 void Oscillator::update(Memory& mem, uint8_t note_id) {
+    if(!enabled) return;
+
     // 通常の処理
     mem.phase += mem.delta;
 
@@ -67,12 +77,19 @@ void Oscillator::update(Memory& mem, uint8_t note_id) {
     }
 }
 
+/** @brief loopbackを設定 */
 void Oscillator::setLoopback(bool loopback) {
     this->loopback = loopback;
 }
 
-/** @brief oscillatorのサンプルを取得 */
+/**
+ * @brief oscillatorのサンプルを取得
+ *
+ * @param note_id ノートID
+ */
 int16_t Oscillator::getSample(Memory& mem, uint8_t note_id) {
+    if(!enabled) return 0;
+
     // キャリアのベース位相
     uint32_t base_phase = mem.phase;
 
@@ -87,6 +104,7 @@ int16_t Oscillator::getSample(Memory& mem, uint8_t note_id) {
 
             // mod_osc->getSample(mod_mem) は -32768~32767 の範囲を想定
             float mod_env_level = mod_env->currentLevel(mod_env_mem);
+            // サンプル * エンベロープ音量 * モジュレーション深度
             float mod_sample_f = (mod_osc->getSample(mod_mem, note_id) / 32768.0f) * mod_env_level * 1.8f;
 
             // mod_sample_f の値を位相単位にスケーリングして加算
@@ -107,28 +125,40 @@ int16_t Oscillator::getSample(Memory& mem, uint8_t note_id) {
     size_t index = static_cast<size_t>(base_phase >> bit_padding) % wavetable_size;
     int16_t sample = wavetable[index];
 
-    // ベロシティを適用
-    return static_cast<int16_t>(sample * mem.vel_vol);
+    // オシレーターレベルを適用
+    return static_cast<int16_t>(sample * level);
 }
 
+/** @brief オシレーターを有効化 */
 void Oscillator::enable() {
     enabled = true;
 }
 
+/** @brief オシレーターを無効化 */
 void Oscillator::disable() {
     enabled = false;
 }
 
+/** @brief オシレーターの状態 */
 bool Oscillator::isActive() {
     return enabled;
 }
 
+/** @brief オシレーターの状態をリセット */
 void Oscillator::reset(Memory& mem) {
     mem.phase = 0;
     mem.delta = 0;
     mem.vel_vol = 0.0f;
 }
 
+/**
+ * @brief オシレーターのモジュレーションを設定
+ *
+ * @param mod_osc モジュレーターオシレーター
+ * @param mod_env モジュレーターエンベロープ
+ * @param mod_osc_mems モジュレーターオシレーターのメモリ(ノートごと)
+ * @param mod_env_mems モジュレーターエンベロープのメモリ(ノートごと)
+ */
 void Oscillator::setModulation(
     Oscillator* mod_osc,
     Envelope* mod_env,
@@ -139,4 +169,40 @@ void Oscillator::setModulation(
     this->mod_env = mod_env;
     this->mod_osc_mems = mod_osc_mems;
     this->mod_env_mems = mod_env_mems;
+}
+
+/**
+ * @brief オシレーターの音量を設定
+ *
+ * @param level 0.0~1.0
+ */
+void Oscillator::setLevel(float level) {
+    if(level < 0.0f || level > 1.0f) return;
+    this->level = level;
+}
+
+/**
+ * @brief 波形テーブルを設定
+ *
+ * @param table_id id
+ */
+void Oscillator::setWavetable(uint8_t table_id) {
+    switch(table_id) {
+    case 0:
+        wavetable = Wavetable::sine;
+        wavetable_size = sizeof(Wavetable::sine) / sizeof(Wavetable::sine[0]);
+        break;
+    case 1:
+        wavetable = Wavetable::triangle;
+        wavetable_size = sizeof(Wavetable::triangle) / sizeof(Wavetable::triangle[0]);
+        break;
+    case 2:
+        wavetable = Wavetable::saw;
+        wavetable_size = sizeof(Wavetable::saw) / sizeof(Wavetable::saw[0]);
+        break;
+    case 3:
+        wavetable = Wavetable::square;
+        wavetable_size = sizeof(Wavetable::square) / sizeof(Wavetable::square[0]);
+        break;
+    }
 }

@@ -42,9 +42,9 @@ void loop() {
 
         // 各モジュールの処理
         switch(mode_state) {
-            case MODE_SYNTH:
-                synth.update();
-                break;
+        case MODE_SYNTH:
+            synth.update();
+            break;
         }
 
         // LEDの切り替え

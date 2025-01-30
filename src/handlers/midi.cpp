@@ -40,14 +40,10 @@ void MIDIHandler::handleNoteOff(uint8_t ch, uint8_t note, uint8_t velocity) {
 void MIDIHandler::process() {
     auto& led_state = State::led_state;
     if(usbMIDI.read()){
-        led_state = true;
-    } else {
-        led_state = false;
+        led_state = !led_state;
     }
     if(MIDI.read()){
-        led_state = true;
-    } else {
-        led_state = false;
+        led_state = !led_state;
     }
 }
 

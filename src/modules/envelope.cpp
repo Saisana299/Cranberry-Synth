@@ -75,3 +75,43 @@ float Envelope::currentLevel(Memory& mem) {
 bool Envelope::isFinished(Memory& mem) {
     return (mem.state == State::Release && mem.current_level == 0.0f);
 }
+
+/**
+ * @brief アタックを設定
+ *
+ * @param attack_ms 1.0ms - 10000.0ms
+ */
+void Envelope::setAttack(float attack_ms) {
+    if(attack_ms < 1.0f || attack_ms > 10000.0f) return;
+    attack_samples = attack_ms * SAMPLE_RATE;
+}
+
+/**
+ * @brief ディケイを設定
+ *
+ * @param decay_ms 1.0ms - 10000.0ms
+ */
+void Envelope::setDecay(float decay_ms) {
+    if(decay_ms < 1.0f || decay_ms > 10000.0f) return;
+    decay_samples = decay_ms * SAMPLE_RATE;
+}
+
+/**
+ * @brief リリースを設定
+ *
+ * @param release_ms 1.0ms - 10000.0ms
+ */
+void Envelope::setRelease(float release_ms) {
+    if(release_ms < 1.0f || release_ms > 10000.0f) return;
+    release_samples = release_ms * SAMPLE_RATE;
+}
+
+/**
+ * @brief サステインを設定
+ *
+ * @param sustain_level 0.0 - 1.0
+ */
+void Envelope::setSustain(float sustain_level) {
+    if(sustain_level < 0.0f || sustain_level > 1.0f) return;
+    this->sustain_level = sustain_level;
+}

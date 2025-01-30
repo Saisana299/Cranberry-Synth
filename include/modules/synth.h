@@ -7,6 +7,7 @@
 #include "handlers/audio.h"
 #include "modules/envelope.h"
 #include "modules/oscillator.h"
+#include "modules/delay.h"
 #include "utils/state.h"
 #include "utils/debug.h"
 #include "utils/math.h"
@@ -38,9 +39,15 @@ private:
     };
     Operator operators[MAX_OPERATORS];
 
+    Delay delay = Delay();
+    uint32_t delay_remain = 0;
+    bool delay_enabled = false;
+
     static inline Synth* instance = nullptr;
     uint8_t order_max = 0;
     uint8_t last_index = 0;
+    float amp_level = 1.0f;
+    float adjust_level = (1.0f / MAX_NOTES);
     void init();
     void generate();
     void updateOrder(uint8_t removed);
