@@ -21,21 +21,24 @@ void Delay::setDelay(float time, float level, float feedback) {
 }
 
 int16_t Delay::process(int16_t in, bool isR) {
-    int16_t temp;
+    IntervalRingBuffer<int16_t, 13230>& buf = (isR ? buffer_R : buffer_L);
 
-    // Left
-    if(!isR) {
-        temp = in + (int16_t)(level * buffer_L.read());
-        buffer_L.write(in + (int16_t)(feedback * buffer_L.read()));
-        buffer_L.update();
-    }
-    // Right
-    else {
-        temp = in + (int16_t)(level * buffer_R.read());
-        buffer_R.write(in + (int16_t)(feedback * buffer_R.read()));
-        buffer_R.update();
-    }
-    return temp;
+    int32_t out_temp;
+    int32_t fb_temp;
+    int32_t sample = static_cast<int32_t>(buf.read());
+
+    // 出力用計算
+    out_temp = in + static_cast<int32_t>(level * sample);
+    out_temp = std::clamp<int32_t>(out_temp, -32768, 32767);
+
+    // フィードバック用計算
+    fb_temp = in + static_cast<int32_t>(feedback * sample);
+    fb_temp = std::clamp<int32_t>(fb_temp, -32768, 32767);
+
+    buf.write(static_cast<int16_t>(fb_temp));
+    buf.update();
+
+    return static_cast<int16_t>(out_temp);
 }
 
 uint32_t Delay::getTotalSamples() {
@@ -49,7 +52,7 @@ uint32_t Delay::getTotalSamples() {
     float total_time = n * time;
 
     // 残響時間をサンプル数に変換
-    uint32_t total_samples = (uint32_t)(total_time * SAMPLE_RATE);
+    uint32_t total_samples = static_cast<uint32_t>(total_time * SAMPLE_RATE);
 
     return total_samples;
 }

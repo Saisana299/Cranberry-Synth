@@ -8,6 +8,7 @@
 #include "modules/envelope.h"
 #include "modules/oscillator.h"
 #include "modules/delay.h"
+#include "modules/filter.h"
 #include "utils/state.h"
 #include "utils/debug.h"
 #include "utils/math.h"
@@ -42,6 +43,10 @@ private:
     Delay delay = Delay();
     uint32_t delay_remain = 0;
     bool delay_enabled = false;
+
+    Filter filter = Filter();
+    bool lpf_enabled = false;
+    bool hpf_enabled = false;
 
     static inline Synth* instance = nullptr;
     uint8_t order_max = 0;

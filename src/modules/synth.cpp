@@ -24,9 +24,13 @@ void Synth::init() {
     operators[0].osc.setLevel(1.0f);
     operators[0].osc.enable();
 
-    // ディレイの実験
-    delay.setDelay();
-    delay_enabled = true;
+    // ディレイテスト
+    // delay.setDelay();
+    // delay_enabled = true;
+
+    // フィルタテスト
+    filter.setLowPass();
+    lpf_enabled = true;
 }
 
 /** @brief シンセ生成 */
@@ -80,6 +84,18 @@ void Synth::generate() {
                     resetNote(n);
                 }
             }
+        }
+
+        // LPFを適用
+        if(lpf_enabled) {
+            samples_L[i] = filter.processLpf(samples_L[i], false);
+            samples_R[i] = filter.processLpf(samples_R[i], true);
+        }
+
+        // HPFを適用
+        if(hpf_enabled) {
+            samples_L[i] = filter.processHpf(samples_L[i], false);
+            samples_R[i] = filter.processHpf(samples_R[i], true);
         }
 
         // ディレイを適用

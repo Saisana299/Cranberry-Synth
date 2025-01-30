@@ -7,8 +7,8 @@ void Oscillator::init() {
     loopback = false;
     enabled = false;
     level = 0.0f;
-    wavetable = Wavetable::sine;
-    wavetable_size = sizeof(Wavetable::sine) / sizeof(Wavetable::sine[0]);
+    wavetable = Wavetable::square;
+    wavetable_size = sizeof(Wavetable::square) / sizeof(Wavetable::square[0]);
     bit_padding = AudioMath::bitPadding32(wavetable_size);
 }
 
