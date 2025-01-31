@@ -1,6 +1,6 @@
 #pragma once
 
-#define MODE_SYNTH 0
+constexpr uint8_t MODE_SYNTH = 0;
 
 class State {
 public:

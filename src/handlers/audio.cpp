@@ -8,8 +8,6 @@ bool samples_ready = false;
 void AudioHandler::init() {
     queue_L.setMaxBuffers(QUEUE_BLOCKS);
     queue_R.setMaxBuffers(QUEUE_BLOCKS);
-    patchCord1.connect(queue_R, 0, i2s2, 1);
-    patchCord2.connect(queue_L, 0, i2s2, 0);
     AudioMemory(QUEUE_BLOCKS*2 + 2);
 }
 

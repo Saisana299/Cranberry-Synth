@@ -2,7 +2,6 @@
 
 /** @brief MIDIハンドラ初期化 */
 void MIDIHandler::init() {
-    instance = this;
     usbMIDI.setHandleNoteOn(handleNoteOnStatic);
     usbMIDI.setHandleNoteOff(handleNoteOffStatic);
     MIDI.setHandleNoteOn(handleNoteOnStatic);

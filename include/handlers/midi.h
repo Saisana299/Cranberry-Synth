@@ -9,8 +9,8 @@
 
 class MIDIHandler {
 private:
-    MIDI_NAMESPACE::SerialMIDI<HardwareSerial> serialMIDI;
-    MIDI_NAMESPACE::MidiInterface<MIDI_NAMESPACE::SerialMIDI<HardwareSerial>> MIDI;
+    MIDI_NAMESPACE::SerialMIDI<HardwareSerial> serialMIDI = Serial1;
+    MIDI_NAMESPACE::MidiInterface<MIDI_NAMESPACE::SerialMIDI<HardwareSerial>> MIDI = serialMIDI;
 
     static inline void handleNoteOnStatic(uint8_t ch, uint8_t note, uint8_t velocity);
     static inline void handleNoteOffStatic(uint8_t ch, uint8_t note, uint8_t velocity);
@@ -22,7 +22,8 @@ private:
     void handleNoteOff(uint8_t ch, uint8_t note, uint8_t velocity);
 
 public:
-    MIDIHandler(): serialMIDI(Serial1), MIDI(serialMIDI) {
+    MIDIHandler() {
+        instance = this;
         init();
     }
     void process();

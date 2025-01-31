@@ -2,35 +2,10 @@
 
 /** @brief シンセ初期化 */
 void Synth::init() {
-    instance = this;
-    // ノート情報を初期化
-    for(uint8_t i = 0; i < MAX_NOTES; i++) {
-        notes[i].order = 0;
-        notes[i].note = 255;
-        notes[i].velocity = 0;
-        notes[i].channel = 0;
-    }
-
-    // オペレーター情報を初期化
-    for(uint8_t op = 0; op < MAX_OPERATORS; ++op) {
-        for(uint8_t i = 0; i < MAX_NOTES; ++i) {
-            ope_states[op].osc_mems[i] = Oscillator::Memory {0, 0, 0.0f};
-            ope_states[op].env_mems[i] = Envelope::Memory {Envelope::State::Attack, 0, 0.0f, 0.0f};
-        }
-    }
-
     // [0]はCarrier確定
     operators[0].mode = OpMode::Carrier;
     operators[0].osc.setLevel(1.0f);
     operators[0].osc.enable();
-
-    // ディレイテスト
-    // delay.setDelay();
-    // delay_enabled = true;
-
-    // フィルタテスト
-    filter.setLowPass();
-    lpf_enabled = true;
 }
 
 /** @brief シンセ生成 */

@@ -8,13 +8,13 @@
 class Oscillator {
 public:
     struct Memory {
-        uint32_t phase;
-        uint32_t delta;
-        float vel_vol;
+        uint32_t phase = 0;
+        uint32_t delta = 0;
+        float vel_vol = 0.0f;
     };
 
     Oscillator() {
-        init();
+        bit_padding = AudioMath::bitPadding32(wavetable_size);
     }
 
     void setFrequency(Memory& mem, uint8_t note);
@@ -33,27 +33,34 @@ public:
         Oscillator::Memory* mod_osc_mems,
         Envelope::Memory* mod_env_mems
     );
-    void setLoopback(bool loopback);
+    void setFeedback(bool is_feedback);
     void setLevel(float level);
     void setWavetable(uint8_t table_id);
 
 private:
     // 定数
-    static constexpr float F_1ULL32 = (float)(1ULL << 32);
+    static constexpr float F_1ULL32 = static_cast<float>(1ULL << 32);
 
     // OSC設定
-    uint8_t bit_padding;
-    int16_t* wavetable;
-    size_t wavetable_size;
-    bool enabled;
-    float level;
+    uint8_t bit_padding; // コンストラクタで初期化
+    int16_t* wavetable = Wavetable::sine;
+    size_t wavetable_size = sizeof(Wavetable::sine) / sizeof(Wavetable::sine[0]);
+    bool enabled = false;
+    float level = 0.0f;
+
+    // ピッチ
+    uint8_t coarse = 0;
+    uint8_t fine = 0;
+    int8_t tune = 0;
+
+    // ratioかfixedか
+    bool is_fixed = false;
 
     // モジュレーション関連
-    bool loopback;
-    Oscillator* mod_osc;
-    Envelope* mod_env;
-    Oscillator::Memory* mod_osc_mems;
-    Envelope::Memory* mod_env_mems;
-
-    void init();
+    bool is_feedback = false;
+    float feedback = 0.0f;
+    Oscillator* mod_osc = nullptr;
+    Envelope* mod_env = nullptr;
+    Oscillator::Memory* mod_osc_mems = nullptr;
+    Envelope::Memory* mod_env_mems = nullptr;
 };

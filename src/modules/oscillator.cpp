@@ -1,17 +1,5 @@
 #include "modules/oscillator.h"
 
-/** @brief Oscillator初期化 */
-void Oscillator::init() {
-    mod_osc = nullptr;
-    mod_env = nullptr;
-    loopback = false;
-    enabled = false;
-    level = 0.0f;
-    wavetable = Wavetable::square;
-    wavetable_size = sizeof(Wavetable::square) / sizeof(Wavetable::square[0]);
-    bit_padding = AudioMath::bitPadding32(wavetable_size);
-}
-
 /**
  * @brief oscillatorの周波数を設定
  *
@@ -77,9 +65,9 @@ void Oscillator::update(Memory& mem, uint8_t note_id) {
     }
 }
 
-/** @brief loopbackを設定 */
-void Oscillator::setLoopback(bool loopback) {
-    this->loopback = loopback;
+/** @brief feedbackを設定 */
+void Oscillator::setFeedback(bool is_feedback) {
+    this->is_feedback = is_feedback;
 }
 
 /**
