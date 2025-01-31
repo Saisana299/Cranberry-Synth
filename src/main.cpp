@@ -5,22 +5,22 @@
 #include <Arduino.h>
 
 /* Handlers */
-#include "handlers/audio.h"
+#include "handlers/audio.hpp"
 AudioHandler audio_hdl;
-#include "handlers/midi.h"
+#include "handlers/midi.hpp"
 MIDIHandler  midi_hdl;
 
 /* Display */
-#include "display/gfx.h"
+#include "display/gfx.hpp"
 GFX_SSD1351  display;
 
 /* Modules */
-#include "modules/synth.h"
+#include "modules/synth.hpp"
 Synth synth;
 
 /* Utils */
-#include "utils/debug.h"
-#include "utils/state.h"
+#include "utils/debug.hpp"
+#include "utils/state.hpp"
 
 void setup() {
     pinMode(LED_BUILTIN, OUTPUT);

@@ -1,4 +1,4 @@
-#include "modules/synth.h"
+#include "modules/synth.hpp"
 
 /** @brief シンセ初期化 */
 void Synth::init() {

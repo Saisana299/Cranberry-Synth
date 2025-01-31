@@ -1,4 +1,4 @@
-#include "modules/oscillator.h"
+#include "modules/oscillator.hpp"
 
 /**
  * @brief oscillatorの周波数を設定

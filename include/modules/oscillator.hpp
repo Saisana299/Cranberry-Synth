@@ -1,9 +1,9 @@
 #pragma once
 
-#include "handlers/audio.h"
-#include "modules/envelope.h"
-#include "utils/math.h"
-#include "utils/wavetable.h"
+#include "handlers/audio.hpp"
+#include "modules/envelope.hpp"
+#include "utils/math.hpp"
+#include "utils/wavetable.hpp"
 
 class Oscillator {
 public:

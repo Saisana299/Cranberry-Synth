@@ -1,7 +1,7 @@
 #pragma once
 
-#include "handlers/audio.h"
-#include "utils/math.h"
+#include "handlers/audio.hpp"
+#include "utils/math.hpp"
 
 class Envelope {
 private:

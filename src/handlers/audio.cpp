@@ -1,4 +1,4 @@
-#include "handlers/audio.h"
+#include "handlers/audio.hpp"
 
 int16_t samples_L[BUFFER_SIZE];
 int16_t samples_R[BUFFER_SIZE];

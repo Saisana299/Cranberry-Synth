@@ -1,13 +1,13 @@
 #pragma once
 
-#include "handlers/audio.h"
-#include "modules/envelope.h"
-#include "modules/oscillator.h"
-#include "modules/delay.h"
-#include "modules/filter.h"
-#include "utils/state.h"
-#include "utils/debug.h"
-#include "utils/math.h"
+#include "handlers/audio.hpp"
+#include "modules/envelope.hpp"
+#include "modules/oscillator.hpp"
+#include "modules/delay.hpp"
+#include "modules/filter.hpp"
+#include "utils/state.hpp"
+#include "utils/debug.hpp"
+#include "utils/math.hpp"
 
 // #define MAX_NOTES 8
 constexpr uint8_t MAX_NOTES = 32;

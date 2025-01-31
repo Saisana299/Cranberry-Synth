@@ -6,7 +6,7 @@
 #include <SD.h>
 #include <SerialFlash.h>
 
-#include "utils/state.h"
+#include "utils/state.hpp"
 
 // サンプルバッファと状態は公開
 extern int16_t samples_L[];

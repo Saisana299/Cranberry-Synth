@@ -1,6 +1,6 @@
 #pragma once
 
-#include "handlers/audio.h"
+#include "handlers/audio.hpp"
 
 class Filter {
 private:

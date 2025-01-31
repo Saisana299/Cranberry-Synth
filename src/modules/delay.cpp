@@ -1,4 +1,4 @@
-#include "modules/delay.h"
+#include "modules/delay.hpp"
 
 void Delay::reset() {
     delay_length = 0;

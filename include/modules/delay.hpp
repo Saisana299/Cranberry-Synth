@@ -1,7 +1,7 @@
 #pragma once
 
-#include "handlers/audio.h"
-#include "utils/buffer.h"
+#include "handlers/audio.hpp"
+#include "utils/buffer.hpp"
 
 class Delay {
 private:

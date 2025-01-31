@@ -1,4 +1,4 @@
-#include "modules/filter.h"
+#include "modules/filter.hpp"
 
 // 2次IIR(Biquad)フィルタ
 void Filter::setLowPass(float cutoff, float resonance) {

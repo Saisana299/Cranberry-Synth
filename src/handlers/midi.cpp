@@ -1,4 +1,4 @@
-#include "handlers/midi.h"
+#include "handlers/midi.hpp"
 
 /** @brief MIDIハンドラ初期化 */
 void MIDIHandler::init() {

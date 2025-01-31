@@ -1,4 +1,4 @@
-#include "modules/envelope.h"
+#include "modules/envelope.hpp"
 
 /** @brief エンベロープを初期位置に戻す */
 void Envelope::reset(Memory& mem) {

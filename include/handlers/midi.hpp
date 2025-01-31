@@ -3,9 +3,9 @@
 #include <Audio.h>
 #include <MIDI.h>
 
-#include "modules/synth.h"
-#include "utils/state.h"
-#include "utils/debug.h"
+#include "modules/synth.hpp"
+#include "utils/state.hpp"
+#include "utils/debug.hpp"
 
 class MIDIHandler {
 private:
