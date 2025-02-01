@@ -18,7 +18,6 @@ public:
     }
 
     void setFrequency(Memory& mem, uint8_t note);
-    void setFrequency(Memory& mem, float freq);
     void setVelocity(Memory& mem, uint8_t velocity);
     void setPhase(Memory& mem, uint32_t phase);
     int16_t getSample(Memory& mem, uint8_t note_id);
@@ -49,9 +48,9 @@ private:
     float level = 0.0f;
 
     // ピッチ
-    uint8_t coarse = 0;
-    uint8_t fine = 0;
-    int8_t tune = 0;
+    float coarse = 1.0f;
+    float fine_level = 0.0f;
+    int8_t detune_cents = 0;
 
     // ratioかfixedか
     bool is_fixed = false;

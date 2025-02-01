@@ -6,6 +6,19 @@ void Synth::init() {
     operators[0].mode = OpMode::Carrier;
     operators[0].osc.setLevel(1.0f);
     operators[0].osc.enable();
+
+    // [1]を0のモジュレーターに //todo
+    operators[1].mode = OpMode::Modulator;
+    operators[0].osc.setModulation(&operators[1].osc, &operators[1].env, &ope_states[1].osc_mems[0], &ope_states[1].env_mems[0]);
+
+    // [2]をCarrierに
+    operators[2].mode = OpMode::Carrier;
+    operators[2].osc.setLevel(1.0f);
+    operators[2].osc.enable();
+
+    // [3]を2のモジュレーターに //todo
+    operators[3].mode = OpMode::Modulator;
+    operators[2].osc.setModulation(&operators[3].osc, &operators[3].env, &ope_states[3].osc_mems[0], &ope_states[3].env_mems[0]);
 }
 
 /** @brief シンセ生成 */

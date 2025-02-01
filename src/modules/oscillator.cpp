@@ -6,16 +6,7 @@
  * @param note MIDIノート番号
  */
 void Oscillator::setFrequency(Memory& mem, uint8_t note) {
-    mem.delta = AudioMath::noteToFrequency(note) * F_1ULL32 / SAMPLE_RATE;
-}
-
-/**
- * @brief oscillatorの周波数を設定
- *
- * @param freq 周波数
- */
-void Oscillator::setFrequency(Memory& mem, float freq) {
-    mem.delta = freq * F_1ULL32 / SAMPLE_RATE;
+    mem.delta = AudioMath::ratioToFrequency(note, detune_cents, coarse, fine_level) * F_1ULL32 / SAMPLE_RATE;
 }
 
 /**
