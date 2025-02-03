@@ -34,7 +34,11 @@ public:
     );
     void setFeedback(bool is_feedback);
     void setLevel(float level);
+    void setLevelNonLinear(uint8_t level);
     void setWavetable(uint8_t table_id);
+    void setCoarse(float coarse);
+    void setFine(float fine_level);
+    void setDetune(int8_t detune_cents);
 
 private:
     // 定数

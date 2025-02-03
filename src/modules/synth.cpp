@@ -7,18 +7,45 @@ void Synth::init() {
     operators[0].osc.setLevel(1.0f);
     operators[0].osc.enable();
 
+    operators[0].env.setDecay(0.4f);
+    operators[0].env.setSustain(0.0f);
+    operators[0].env.setRelease(0.3f);
+
+    operators[0].osc.setDetune(3);
+
     // [1]を0のモジュレーターに //todo
     operators[1].mode = OpMode::Modulator;
     operators[0].osc.setModulation(&operators[1].osc, &operators[1].env, &ope_states[1].osc_mems[0], &ope_states[1].env_mems[0]);
+    operators[1].osc.setLevelNonLinear(35);
+    operators[1].osc.enable();
+
+    operators[1].env.setDecay(0.2f);
+    operators[1].env.setSustain(0.0f);
+
+    operators[1].osc.setCoarse(14.0f);
 
     // [2]をCarrierに
     operators[2].mode = OpMode::Carrier;
     operators[2].osc.setLevel(1.0f);
     operators[2].osc.enable();
 
+    operators[2].env.setDecay(2.0f);
+    operators[2].env.setSustain(0.0f);
+    operators[2].env.setRelease(0.3f);
+
     // [3]を2のモジュレーターに //todo
     operators[3].mode = OpMode::Modulator;
     operators[2].osc.setModulation(&operators[3].osc, &operators[3].env, &ope_states[3].osc_mems[0], &ope_states[3].env_mems[0]);
+    operators[3].osc.setLevelNonLinear(89);
+    operators[3].osc.enable();
+
+    operators[3].env.setDecay(2.0f);
+    operators[3].env.setSustain(0.0f);
+    operators[3].env.setRelease(0.3f);
+
+    // ローパスフィルタ
+    filter.setLowPass(6000.0f, 1.0f/sqrt(2.0f));
+    lpf_enabled = true;
 }
 
 /** @brief シンセ生成 */

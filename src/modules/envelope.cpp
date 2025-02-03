@@ -82,7 +82,7 @@ bool Envelope::isFinished(Memory& mem) {
  * @param attack_ms 1.0ms - 10000.0ms
  */
 void Envelope::setAttack(float attack_ms) {
-    if(attack_ms < 1.0f || attack_ms > 10000.0f) return;
+    if(attack_ms < 0.001f || attack_ms > 10.0f) return;
     attack_samples = attack_ms * SAMPLE_RATE;
 }
 
@@ -92,7 +92,7 @@ void Envelope::setAttack(float attack_ms) {
  * @param decay_ms 1.0ms - 10000.0ms
  */
 void Envelope::setDecay(float decay_ms) {
-    if(decay_ms < 1.0f || decay_ms > 10000.0f) return;
+    if(decay_ms < 0.001f || decay_ms > 10.0f) return;
     decay_samples = decay_ms * SAMPLE_RATE;
 }
 
@@ -102,7 +102,7 @@ void Envelope::setDecay(float decay_ms) {
  * @param release_ms 1.0ms - 10000.0ms
  */
 void Envelope::setRelease(float release_ms) {
-    if(release_ms < 1.0f || release_ms > 10000.0f) return;
+    if(release_ms < 0.001f || release_ms > 10.0f) return;
     release_samples = release_ms * SAMPLE_RATE;
 }
 

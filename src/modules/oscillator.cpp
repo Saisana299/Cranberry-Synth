@@ -69,6 +69,9 @@ void Oscillator::setFeedback(bool is_feedback) {
 int16_t Oscillator::getSample(Memory& mem, uint8_t note_id) {
     if(!enabled) return 0;
 
+    // ベロシティボリューム
+    float vel_vol = mem.vel_vol;
+
     // キャリアのベース位相
     uint32_t base_phase = mem.phase;
 
@@ -81,19 +84,21 @@ int16_t Oscillator::getSample(Memory& mem, uint8_t note_id) {
             Oscillator::Memory& mod_mem = mod_osc_mems[note_id];
             Envelope::Memory& mod_env_mem = mod_env_mems[note_id];
 
-            // mod_osc->getSample(mod_mem) は -32768~32767 の範囲を想定
+            // モジュレーターエンベロープのレベル
             float mod_env_level = mod_env->currentLevel(mod_env_mem);
-            // サンプル * エンベロープ音量 * モジュレーション深度
-            float mod_sample_f = (mod_osc->getSample(mod_mem, note_id) / 32768.0f) * mod_env_level * 1.8f;
+            // モジュレーションサンプル / INT16_MAX で倍率を計算
+            float mod_sample_ratio = (mod_osc->getSample(mod_mem, note_id) * mod_env_level) / 32768.0f;
 
-            // mod_sample_f の値を位相単位にスケーリングして加算
-            uint32_t mod_phase_offset = static_cast<uint32_t>(mod_sample_f * (float)0xFFFFFFFFu);
+            // 位相最大数
+            constexpr float PHASE_RANGE_F = 4294967296.0f;
+            // 加減算するフェーズ値を計算
+            uint32_t mod_phase_offset = static_cast<uint32_t>(fabsf(mod_sample_ratio) * PHASE_RANGE_F);
 
-            // base_phase に加算
-            if(mod_sample_f >= 0.0f) {
-                base_phase += mod_phase_offset;
-            } else {
+            // base_phase に加減算
+            if(mod_sample_ratio < 0) {
                 base_phase -= mod_phase_offset;
+            } else {
+                base_phase += mod_phase_offset;
             }
 
             // ----------------------------------------------------------------------------- //
@@ -104,8 +109,8 @@ int16_t Oscillator::getSample(Memory& mem, uint8_t note_id) {
     size_t index = static_cast<size_t>(base_phase >> bit_padding) % wavetable_size;
     int16_t sample = wavetable[index];
 
-    // オシレーターレベルを適用
-    return static_cast<int16_t>(sample * level);
+    // ベロシティレベルとオシレーターレベルを適用
+    return static_cast<int16_t>((sample * vel_vol) * level);
 }
 
 /** @brief オシレーターを有効化 */
@@ -184,4 +189,25 @@ void Oscillator::setWavetable(uint8_t table_id) {
         wavetable_size = sizeof(Wavetable::square) / sizeof(Wavetable::square[0]);
         break;
     }
+}
+
+void Oscillator::setCoarse(float coarse) {
+    // todo条件式
+    this->coarse = coarse;
+}
+
+void Oscillator::setFine(float fine_level) {
+    // todo条件式
+    this->fine_level = fine_level;
+}
+
+void Oscillator::setDetune(int8_t detune_cents) {
+    // todo条件式
+    this->detune_cents = detune_cents;
+}
+
+void Oscillator::setLevelNonLinear(uint8_t level) {
+    float x = level / 100.0f;
+    const float exponent = std::log(0.5f) / std::log(0.75f);
+    this->level = std::pow(x, exponent);
 }
