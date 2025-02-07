@@ -37,13 +37,15 @@ void MIDIHandler::handleNoteOff(uint8_t ch, uint8_t note, uint8_t velocity) {
 
 /** @brief MIDIデータ読み込み */
 void MIDIHandler::process() {
-    auto& led_state = State::led_state;
+    auto& led_midi = State::led_midi;
+    bool temp = false;
     if(usbMIDI.read()){
-        led_state = !led_state;
+        temp = true;
     }
     if(MIDI.read()){
-        led_state = !led_state;
+        temp = true;
     }
+    led_midi = temp;
 }
 
 /** @brief instance->handleNoteOn */
