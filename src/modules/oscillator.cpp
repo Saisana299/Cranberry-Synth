@@ -106,7 +106,7 @@ int16_t Oscillator::getSample(Memory& mem, uint8_t note_id) {
     }
 
     // 波形テーブルを参照する
-    size_t index = static_cast<size_t>(base_phase >> bit_padding) % wavetable_size;
+    size_t index = static_cast<size_t>(base_phase >> bit_padding) & (wavetable_size - 1);// サンプル数が2^Nである前提
     int16_t sample = wavetable[index];
 
     // ベロシティレベルとオシレーターレベルを適用

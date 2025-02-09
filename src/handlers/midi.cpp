@@ -45,7 +45,9 @@ void MIDIHandler::process() {
     if(MIDI.read()){
         temp = true;
     }
-    led_midi = temp;
+    if(temp) {
+        led_midi = !led_midi;
+    }
 }
 
 /** @brief instance->handleNoteOn */

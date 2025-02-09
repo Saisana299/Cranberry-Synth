@@ -1,5 +1,5 @@
 #include "modules/envelope.hpp"
-
+//todo 指数カーブ化を検討
 /** @brief エンベロープを初期位置に戻す */
 void Envelope::reset(Memory& mem) {
     mem.state = State::Attack;

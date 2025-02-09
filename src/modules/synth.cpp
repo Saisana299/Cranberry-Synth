@@ -52,73 +52,94 @@ void Synth::init() {
 void Synth::generate() {
     if(samples_ready) return;
 
+    const uint8_t local_active_count = active_note_count;
+    uint8_t local_active_notes[MAX_NOTES];
+    for(uint8_t i = 0; i < local_active_count; ++i) {
+        local_active_notes[i] = active_notes[i];
+    }
+
     // サンプル毎処理
     for(size_t i = 0; i < BUFFER_SIZE; ++i) {
         // 出力バッファを初期化
-        samples_L[i] = 0;
-        samples_R[i] = 0;
+        int32_t left = 0;
+        int32_t right = 0;
 
         // ノート毎処理
-        for(uint8_t n = 0; n < MAX_NOTES; ++n) {
-            // 発音中のノート
-            if(notes[n].order != 0) {
-                uint8_t carrier_cnt = 0;
-                uint8_t r_finished_cnt = 0;
-                // オペレーター毎処理
-                for(uint8_t op = 0; op < MAX_OPERATORS; ++op) {
-                    auto& oper = operators[op];
-                    auto& osc_mem = ope_states[op].osc_mems[n];
-                    auto& env_mem = ope_states[op].env_mems[n];
-                    // Modulatorの更新処理はCarrier内で行う
-                    if(oper.mode == OpMode::Carrier && oper.osc.isActive()) {
-                        ++carrier_cnt;
+        for(uint8_t k = 0; k < local_active_count; ++k) {
+            uint8_t n = local_active_notes[k];
 
-                        // サンプル入手、ここでエンベロープレベルを適用
-                        // todo ステレオ対応
-                        int16_t sample = oper.osc.getSample(osc_mem, n);
+            // 無効なインデックスはスキップ(本来は不要)
+            if(n == INVALID_INDEX) continue;
 
-                        // 合計を出力バッファに追加
-                        // ((サンプル*エンベロープ音量)*調整用レベル)*アンプレベル
-                        // todo ステレオ対応
-                        samples_L[i] = samples_R[i] += ((sample * oper.env.currentLevel(env_mem)) * adjust_level) * amp_level;
+            // 発音中でなければスキップ(本来は不要？)
+            if(notes[n].order == 0) continue;
 
-                        // オシレーターとエンベロープを更新
-                        oper.osc.update(osc_mem, n);
-                        oper.env.update(env_mem);
+            uint8_t carrier_cnt = 0;
+            uint8_t r_finished_cnt = 0;
+            // オペレーター毎処理
+            for(uint8_t op = 0; op < MAX_OPERATORS; ++op) {
+                // Modulatorの更新処理はCarrier内で行う
+                // Carrier出なければスキップ
+                if(operators[op].mode != OpMode::Carrier) continue;
+                if(!operators[op].osc.isActive()) continue;
 
-                        // Releaseが完了しているか
-                        // モジュレータ―のエンベロープは考慮しない
-                        if(oper.env.isFinished(env_mem)) {
-                            ++r_finished_cnt;
-                        }
-                    }
+                ++carrier_cnt;
+                auto& osc_mem = ope_states[op].osc_mems[n];
+                auto& env_mem = ope_states[op].env_mems[n];
+
+                // サンプル取得
+                // todo ステレオ対応
+                int16_t sample = operators[op].osc.getSample(osc_mem, n);
+
+                // エンベロープレベル
+                float env_level = operators[op].env.currentLevel(env_mem);
+
+                // 演算順序の固定と乗算回数削減のため
+                float scaled_sample = sample * env_level * master_scale;
+
+                // 合計を出力バッファに追加
+                // ((サンプル*エンベロープ音量)*調整用レベル)*アンプレベル
+                left += static_cast<int32_t>(scaled_sample);
+                right += static_cast<int32_t>(scaled_sample);
+
+                // オシレーターとエンベロープを更新
+                operators[op].osc.update(osc_mem, n);
+                operators[op].env.update(env_mem);
+
+                // Releaseが完了しているか
+                // モジュレータ―のエンベロープは考慮しない
+                if(operators[op].env.isFinished(env_mem)) {
+                    ++r_finished_cnt;
                 }
+            } // for operator
 
-                // 全てのオペレーターが処理完了
-                if(r_finished_cnt == carrier_cnt) {
-                    resetNote(n);
-                }
+            // 全てのオペレーターが処理完了
+            if(r_finished_cnt == carrier_cnt) {
+                resetNote(n);
             }
-        }
+        } // for active note
 
         // LPFを適用
         if(lpf_enabled) {
-            samples_L[i] = filter.processLpf(samples_L[i], false);
-            samples_R[i] = filter.processLpf(samples_R[i], true);
+            left = filter.processLpf(left, false);
+            right = filter.processLpf(right, true);
         }
 
         // HPFを適用
         if(hpf_enabled) {
-            samples_L[i] = filter.processHpf(samples_L[i], false);
-            samples_R[i] = filter.processHpf(samples_R[i], true);
+            left = filter.processHpf(left, false);
+            right = filter.processHpf(right, true);
         }
 
         // ディレイを適用
         if(delay_enabled) {
-            samples_L[i] = delay.process(samples_L[i], false);
-            samples_R[i] = delay.process(samples_R[i], true);
+            left = delay.process(left, false);
+            right = delay.process(right, true);
         }
-    }
+
+        samples_L[i] = std::clamp(left, static_cast<int32_t>(-32768), static_cast<int32_t>(32767));
+        samples_R[i] = std::clamp(right, static_cast<int32_t>(-32768), static_cast<int32_t>(32767));
+    } // for BUFFER_SIZE
 
     samples_ready = true;
 }
@@ -188,12 +209,12 @@ void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
             it.velocity = velocity;
             it.channel = channel;
             for(uint8_t op = 0; op < MAX_OPERATORS; ++op) {
-                auto& oper = operators[op];
                 auto& osc_mem = ope_states[op].osc_mems[i];
-                oper.osc.setVelocity(osc_mem, velocity);
-                oper.osc.setFrequency(osc_mem, note);
-                oper.osc.setPhase(osc_mem, 0);
+                operators[op].osc.setVelocity(osc_mem, velocity);
+                operators[op].osc.setFrequency(osc_mem, note);
+                operators[op].osc.setPhase(osc_mem, 0);
             }
+            addActiveNote(i);
             break;
         }
     }
@@ -224,7 +245,7 @@ void Synth::noteOff(uint8_t note, uint8_t channel) {
  */
 void Synth::resetNote(uint8_t index) {
     auto& it = notes[index];
-    uint8_t removed = it.order;
+    uint8_t removed_order = it.order;
     it.order = 0;
     it.note = 255;
     it.velocity = 0;
@@ -238,5 +259,37 @@ void Synth::resetNote(uint8_t index) {
     }
     if(order_max > 0) --order_max;
     // 他ノートorder更新
-    updateOrder(removed);
+    updateOrder(removed_order);
+    removeActiveNote(index);
+}
+
+/**
+ * @brief アクティブノートリストにノートを追加
+ */
+void Synth::addActiveNote(uint8_t index) {
+    // 既に入っていないか確認
+    for(uint8_t i = 0; i < active_note_count; ++i) {
+        if(active_notes[i] == index) {
+            return; // すでに登録済み
+        }
+    }
+    // 空いていれば追加
+    if(active_note_count < MAX_NOTES) {
+        active_notes[active_note_count++] = index;
+    }
+}
+
+/**
+ * @brief アクティブノートリストからノートを外す
+ */
+void Synth::removeActiveNote(uint8_t index) {
+    for(uint8_t i = 0; i < active_note_count; ++i) {
+        if(active_notes[i] == index) {
+            // 後ろを詰める
+            active_notes[i] = active_notes[active_note_count - 1];
+            active_notes[active_note_count - 1] = INVALID_INDEX;
+            --active_note_count;
+            return;
+        }
+    }
 }

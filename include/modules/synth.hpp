@@ -13,6 +13,8 @@
 constexpr uint8_t MAX_NOTES = 32;
 constexpr uint8_t MAX_OPERATORS = 4;
 
+constexpr uint8_t INVALID_INDEX = 255;
+
 class Synth {
 private:
     struct SynthNote {
@@ -22,6 +24,8 @@ private:
         uint8_t channel = 0;
     };
     SynthNote notes[MAX_NOTES] = {};
+    uint8_t active_notes[MAX_NOTES];
+    uint8_t active_note_count = 0;
 
     struct OperatorState {
         Oscillator::Memory osc_mems[MAX_NOTES];
@@ -54,15 +58,22 @@ private:
     float amp_level = 1.0f;
     float adjust_level = 1.0f / MAX_NOTES;
 
+    float master_scale = adjust_level * amp_level;
+
     void init();
     void generate();
     void updateOrder(uint8_t removed);
     void resetNote(uint8_t index);
+    void addActiveNote(uint8_t index);
+    void removeActiveNote(uint8_t index);
 
 public:
     Synth() {
         instance = this;
         init();
+        for(uint8_t i = 0; i < MAX_NOTES; ++i) {
+            active_notes[i] = INVALID_INDEX;
+        }
     }
     static inline Synth* getInstance() {
         return instance;
