@@ -29,7 +29,7 @@ Leds leds;
 Switches switches;
 
 void setup() {
-    // Debug::enable();
+    Debug::enable();
     // Debug::println("Cranberry Synth");
     // Debug::println("Mini Wavetable Synthesizer on Teensy 4.1");
 }

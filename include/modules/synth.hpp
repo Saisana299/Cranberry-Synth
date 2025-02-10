@@ -10,7 +10,7 @@
 #include "utils/math.hpp"
 
 // #define MAX_NOTES 8
-constexpr uint8_t MAX_NOTES = 32;
+constexpr uint8_t MAX_NOTES = 24;
 constexpr uint8_t MAX_OPERATORS = 4;
 
 constexpr uint8_t INVALID_INDEX = 255;
@@ -24,8 +24,6 @@ private:
         uint8_t channel = 0;
     };
     SynthNote notes[MAX_NOTES] = {};
-    uint8_t active_notes[MAX_NOTES];
-    uint8_t active_note_count = 0;
 
     struct OperatorState {
         Oscillator::Memory osc_mems[MAX_NOTES];
@@ -64,16 +62,11 @@ private:
     void generate();
     void updateOrder(uint8_t removed);
     void resetNote(uint8_t index);
-    void addActiveNote(uint8_t index);
-    void removeActiveNote(uint8_t index);
 
 public:
     Synth() {
         instance = this;
         init();
-        for(uint8_t i = 0; i < MAX_NOTES; ++i) {
-            active_notes[i] = INVALID_INDEX;
-        }
     }
     static inline Synth* getInstance() {
         return instance;

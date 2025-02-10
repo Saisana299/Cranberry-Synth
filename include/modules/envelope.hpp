@@ -10,6 +10,10 @@ private:
     uint32_t release_samples = static_cast<uint32_t>(0.01f * SAMPLE_RATE);
     float sustain_level = 1.0f;
 
+    float attack_inv = 1.0f / static_cast<float>(attack_samples);
+    float decay_inv = 1.0f / static_cast<float>(decay_samples);
+    float release_inv = 1.0f / static_cast<float>(release_samples);
+
 public:
 
     enum class State {
@@ -18,16 +22,32 @@ public:
 
     struct Memory {
         State state = State::Attack;
-        uint32_t elapsed = 0;
+        float elapsed = 0;
         float current_level = 0.0f;
         float prev_level = 0.0f;
     };
 
+    /**
+     * @brief 現在のレベルを返します
+     *
+     * @return float Min: 0.0, Max: 1.0
+     */
+    inline float currentLevel(Memory& mem) {
+        return mem.current_level;
+    }
+
+    /**
+     * @brief エンベロープ終了判定
+     *
+     * @return 終了していれば `true` を返す
+     */
+    inline bool isFinished(Memory& mem) {
+        return (mem.state == State::Release && mem.current_level == 0.0f);
+    }
+
     void reset(Memory& mem);
     void release(Memory& mem);
-    void update(Memory& mem, uint32_t dt = 1);
-    float currentLevel(Memory& mem);
-    bool isFinished(Memory& mem);
+    void update(Memory& mem);
 
     void setAttack(float attack_ms);
     void setDecay(float decay_ms);

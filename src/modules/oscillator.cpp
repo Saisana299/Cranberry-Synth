@@ -39,10 +39,7 @@ void Oscillator::update(Memory& mem, uint8_t note_id) {
     mem.phase += mem.delta;
 
     // Modulationあり
-    if(mod_osc != nullptr) {
-        // nullチェック
-        if(mod_env == nullptr || mod_osc_mems == nullptr || mod_env_mems == nullptr) return;
-
+    if (mod_osc && mod_env && mod_osc_mems && mod_env_mems) {
         //------ 危険地帯：mod_osc_memsとmod_env_memsの要素数がnote_id以上という前提 ------//
 
         // キャッシュ
@@ -76,41 +73,39 @@ int16_t Oscillator::getSample(Memory& mem, uint8_t note_id) {
     uint32_t base_phase = mem.phase;
 
     // モジュレーションがある場合
-    if(mod_osc != nullptr) {
-        if(mod_env != nullptr && mod_osc_mems != nullptr && mod_env_mems != nullptr) {
-            //------ 危険地帯：mod_osc_memsとmod_env_memsの要素数がnote_id以上という前提 ------//
+    if(mod_osc && mod_env && mod_osc_mems && mod_env_mems) {
+        //------ 危険地帯：mod_osc_memsとmod_env_memsの要素数がnote_id以上という前提 ------//
 
-            // キャッシュ
-            Oscillator::Memory& mod_mem = mod_osc_mems[note_id];
-            Envelope::Memory& mod_env_mem = mod_env_mems[note_id];
+        // キャッシュ
+        Oscillator::Memory& mod_mem = mod_osc_mems[note_id];
+        Envelope::Memory& mod_env_mem = mod_env_mems[note_id];
 
-            // モジュレーターエンベロープのレベル
-            float mod_env_level = mod_env->currentLevel(mod_env_mem);
-            // モジュレーションサンプル / INT16_MAX で倍率を計算
-            float mod_sample_ratio = (mod_osc->getSample(mod_mem, note_id) * mod_env_level) / 32768.0f;
+        // モジュレーターエンベロープのレベル
+        float mod_env_level = mod_env->currentLevel(mod_env_mem);
+        // モジュレーションサンプル / INT16_MAX で倍率を計算
+        float mod_sample_ratio = mod_osc->getSample(mod_mem, note_id) * mod_env_level * INV_INT16_MAXf;
 
-            // 位相最大数
-            constexpr float PHASE_RANGE_F = 4294967296.0f;
-            // 加減算するフェーズ値を計算
-            uint32_t mod_phase_offset = static_cast<uint32_t>(fabsf(mod_sample_ratio) * PHASE_RANGE_F);
+        // 位相最大数
+        constexpr float PHASE_RANGE_F = 4294967296.0f;
+        // 加減算するフェーズ値を計算
+        uint32_t mod_phase_offset = static_cast<uint32_t>(fabsf(mod_sample_ratio) * PHASE_RANGE_F);
 
-            // base_phase に加減算
-            if(mod_sample_ratio < 0) {
-                base_phase -= mod_phase_offset;
-            } else {
-                base_phase += mod_phase_offset;
-            }
-
-            // ----------------------------------------------------------------------------- //
+        // base_phase に加減算
+        if(mod_sample_ratio < 0) {
+            base_phase -= mod_phase_offset;
+        } else {
+            base_phase += mod_phase_offset;
         }
+
+        // ----------------------------------------------------------------------------- //
     }
 
     // 波形テーブルを参照する
-    size_t index = static_cast<size_t>(base_phase >> bit_padding) & (wavetable_size - 1);// サンプル数が2^Nである前提
+    size_t index = static_cast<size_t>(base_phase >> bit_padding) & (wavetable_size - 1); // サンプル数が2^Nである前提
     int16_t sample = wavetable[index];
 
     // ベロシティレベルとオシレーターレベルを適用
-    return static_cast<int16_t>((sample * vel_vol) * level);
+    return static_cast<int16_t>(sample * (vel_vol * level));
 }
 
 /** @brief オシレーターを有効化 */

@@ -43,6 +43,7 @@ public:
 private:
     // 定数
     static constexpr float F_1ULL32 = static_cast<float>(1ULL << 32);
+    static constexpr float INV_INT16_MAXf = 1.0f / 32768.0f;
 
     // OSC設定
     uint8_t bit_padding; // コンストラクタで初期化
