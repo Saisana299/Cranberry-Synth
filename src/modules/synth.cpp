@@ -52,7 +52,7 @@ void Synth::init() {
 void Synth::generate() {
     if(samples_ready) return;
 
-    /*debug*/ uint32_t startTime = micros();
+    // /*debug*/ uint32_t startTime = micros();
 
     // 定数キャッシュ
     const bool LPF_ENABLED = lpf_enabled;
@@ -148,11 +148,12 @@ void Synth::generate() {
 
     samples_ready = true;
 
-    /*debug*/ uint32_t endTime = micros();
-    /*debug*/ uint32_t duration = endTime - startTime;
-    /*debug*/ Serial.print(" ");
-    /*debug*/ Serial.print(duration);
-    /*debug*/ Serial.println("us");
+    // /*debug*/ uint32_t endTime = micros();
+    // /*debug*/ uint32_t duration = endTime - startTime;
+    // /*debug*/ Serial.print(" ");
+    // /*debug*/ Serial.print(duration);
+    // /*debug*/ Serial.println("us");
+    // 3000us以内に終わらせる必要がある
 }
 
 /** @brief シンセ更新 */
