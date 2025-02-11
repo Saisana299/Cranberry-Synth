@@ -94,7 +94,8 @@ int16_t Oscillator::getSample(Memory& mem, uint8_t note_id) {
         // モジュレーション比率を計算
         const float mod_sample_ratio = mod_sample * mod_env_level * INV_INT16_MAXf;
         // モジュレーションの位相オフセット
-        const uint32_t mod_phase_offset = static_cast<uint32_t>(fabsf(mod_sample_ratio) * PHASE_RANGE_F);
+        const float tmp_abs = AudioMath::fastAbsf(mod_sample_ratio);
+        const uint32_t mod_phase_offset = static_cast<uint32_t>(tmp_abs * PHASE_RANGE_F);
 
         // base_phase に加減算
         base_phase += (mod_sample_ratio < 0) ? -mod_phase_offset : mod_phase_offset;
@@ -118,11 +119,6 @@ void Oscillator::enable() {
 /** @brief オシレーターを無効化 */
 void Oscillator::disable() {
     enabled = false;
-}
-
-/** @brief オシレーターの状態 */
-bool Oscillator::isActive() {
-    return enabled;
 }
 
 /** @brief オシレーターの状態をリセット */
@@ -205,6 +201,6 @@ void Oscillator::setDetune(int8_t detune_cents) {
 
 void Oscillator::setLevelNonLinear(uint8_t level) {
     float x = level / 100.0f;
-    const float exponent = std::log(0.5f) / std::log(0.75f);
-    this->level = std::pow(x, exponent);
+    const float exponent = log(0.5f) / log(0.75f);
+    this->level = powf(x, exponent);
 }

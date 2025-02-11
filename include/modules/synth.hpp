@@ -9,9 +9,8 @@
 #include "utils/debug.hpp"
 #include "utils/math.hpp"
 
-// #define MAX_NOTES 8
-constexpr uint8_t MAX_NOTES = 24;
-constexpr uint8_t MAX_OPERATORS = 4;
+constexpr uint8_t MAX_NOTES = 16;
+constexpr uint8_t MAX_OPERATORS = 6;
 
 constexpr uint8_t INVALID_INDEX = 255;
 

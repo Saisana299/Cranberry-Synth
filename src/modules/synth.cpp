@@ -1,5 +1,19 @@
 #include "modules/synth.hpp"
 
+//todo 処理速度改善・処理方法変更
+/**
+4OP LPFあり 166μs
+4OP LPFなし 140μs
+LPF=26μs
+1OP 67μs
+2OP 93μs
+3OP 121μs
+0OP 37μs
+発音中にリリースに入ると177μs
+4OP 16notes LPFあり 2024μs
+OPループ展開で16notes LPFあり 1922μs
+*/
+
 /** @brief シンセ初期化 */
 void Synth::init() {
     // [0]はCarrier確定
@@ -52,7 +66,7 @@ void Synth::init() {
 void Synth::generate() {
     if(samples_ready) return;
 
-    // /*debug*/ uint32_t startTime = micros();
+    /*debug*/ uint32_t startTime = micros();
 
     // 定数キャッシュ
     const bool LPF_ENABLED = lpf_enabled;
@@ -73,44 +87,145 @@ void Synth::generate() {
 
             uint8_t carrier_cnt = 0;
             uint8_t r_finished_cnt = 0;
-            // オペレーター毎処理
-            for(uint8_t op = 0; op < MAX_OPERATORS; ++op) {
-                // ローカル参照
-                Operator& oper = operators[op];
-                auto& op_states_ref = ope_states[op];
 
-                // Carrierかつアクティブでない場合はスキップ
-                if(oper.mode != OpMode::Carrier || !oper.osc.isActive()) continue;
+            // // オペレーター毎処理
+            // for(uint8_t op = 0; op < MAX_OPERATORS; ++op) {
+            //     // ローカル参照
+            //     Operator& oper = operators[op];
+            //     auto& op_states_ref = ope_states[op];
 
-                ++carrier_cnt;
-                auto& osc_mem = op_states_ref.osc_mems[n];
-                auto& env_mem = op_states_ref.env_mems[n];
+            //     // Carrierかつアクティブでない場合はスキップ
+            //     if(oper.mode != OpMode::Carrier || !oper.osc.isActive()) continue;
 
-                // サンプル取得
-                // todo ステレオ対応
-                int16_t sample = oper.osc.getSample(osc_mem, n);
+            //     ++carrier_cnt;
+            //     auto& osc_mem = op_states_ref.osc_mems[n];
+            //     auto& env_mem = op_states_ref.env_mems[n];
 
-                // エンベロープレベル
-                float env_level = oper.env.currentLevel(env_mem);
+            //     // サンプル取得
+            //     // todo ステレオ対応
+            //     int16_t sample = oper.osc.getSample(osc_mem, n);
 
-                // 演算順序の固定と乗算回数削減のため
-                float scaled_sample = sample * env_level * MASTER_SCALE;
+            //     // エンベロープレベル
+            //     float env_level = oper.env.currentLevel(env_mem);
 
-                // 合計を出力バッファに追加
-                // ((サンプル*エンベロープ音量)*調整用レベル)*アンプレベル
-                left += static_cast<int32_t>(scaled_sample);
-                right += static_cast<int32_t>(scaled_sample);
+            //     // 演算順序の固定と乗算回数削減のため
+            //     float scaled_sample = sample * env_level * MASTER_SCALE;
 
-                // オシレーターとエンベロープを更新
-                oper.osc.update(osc_mem, n);
-                oper.env.update(env_mem);
+            //     // 合計を出力バッファに追加
+            //     // ((サンプル*エンベロープ音量)*調整用レベル)*アンプレベル
+            //     left += static_cast<int32_t>(scaled_sample);
+            //     right += static_cast<int32_t>(scaled_sample);
 
-                // Releaseが完了しているか
-                // モジュレータ―のエンベロープは考慮しない
-                if(oper.env.isFinished(env_mem)) {
-                    ++r_finished_cnt;
+            //     // オシレーターとエンベロープを更新
+            //     oper.osc.update(osc_mem, n);
+            //     oper.env.update(env_mem);
+
+            //     // Releaseが完了しているか
+            //     // モジュレータ―のエンベロープは考慮しない
+            //     if(oper.env.isFinished(env_mem)) {
+            //         ++r_finished_cnt;
+            //     }
+            // } // for operator
+
+            // オペレーター0
+            {
+                Operator& oper0 = operators[0];
+                auto& state0 = ope_states[0];
+                if (oper0.mode == OpMode::Carrier && oper0.osc.isActive()) {
+                    ++carrier_cnt;
+                    auto& osc_mem0 = state0.osc_mems[n];
+                    auto& env_mem0 = state0.env_mems[n];
+
+                    int16_t sample = oper0.osc.getSample(osc_mem0, n);
+                    float env_level = oper0.env.currentLevel(env_mem0);
+                    float scaled_sample = sample * env_level * MASTER_SCALE;
+
+                    left  += static_cast<int32_t>(scaled_sample);
+                    right += static_cast<int32_t>(scaled_sample);
+
+                    oper0.osc.update(osc_mem0, n);
+                    oper0.env.update(env_mem0);
+
+                    if (oper0.env.isFinished(env_mem0)) {
+                        ++r_finished_cnt;
+                    }
                 }
-            } // for operator
+            }
+
+            // オペレーター1
+            {
+                Operator& oper1 = operators[1];
+                auto& state1 = ope_states[1];
+                if (oper1.mode == OpMode::Carrier && oper1.osc.isActive()) {
+                    ++carrier_cnt;
+                    auto& osc_mem1 = state1.osc_mems[n];
+                    auto& env_mem1 = state1.env_mems[n];
+
+                    int16_t sample = oper1.osc.getSample(osc_mem1, n);
+                    float env_level = oper1.env.currentLevel(env_mem1);
+                    float scaled_sample = sample * env_level * MASTER_SCALE;
+
+                    left  += static_cast<int32_t>(scaled_sample);
+                    right += static_cast<int32_t>(scaled_sample);
+
+                    oper1.osc.update(osc_mem1, n);
+                    oper1.env.update(env_mem1);
+
+                    if (oper1.env.isFinished(env_mem1)) {
+                        ++r_finished_cnt;
+                    }
+                }
+            }
+
+            // オペレーター2
+            {
+                Operator& oper2 = operators[2];
+                auto& state2 = ope_states[2];
+                if (oper2.mode == OpMode::Carrier && oper2.osc.isActive()) {
+                    ++carrier_cnt;
+                    auto& osc_mem2 = state2.osc_mems[n];
+                    auto& env_mem2 = state2.env_mems[n];
+
+                    int16_t sample = oper2.osc.getSample(osc_mem2, n);
+                    float env_level = oper2.env.currentLevel(env_mem2);
+                    float scaled_sample = sample * env_level * MASTER_SCALE;
+
+                    left  += static_cast<int32_t>(scaled_sample);
+                    right += static_cast<int32_t>(scaled_sample);
+
+                    oper2.osc.update(osc_mem2, n);
+                    oper2.env.update(env_mem2);
+
+                    if (oper2.env.isFinished(env_mem2)) {
+                        ++r_finished_cnt;
+                    }
+                }
+            }
+
+            // オペレーター3
+            {
+                Operator& oper3 = operators[3];
+                auto& state3 = ope_states[3];
+                if (oper3.mode == OpMode::Carrier && oper3.osc.isActive()) {
+                    ++carrier_cnt;
+                    auto& osc_mem3 = state3.osc_mems[n];
+                    auto& env_mem3 = state3.env_mems[n];
+
+                    int16_t sample = oper3.osc.getSample(osc_mem3, n);
+                    float env_level = oper3.env.currentLevel(env_mem3);
+                    float scaled_sample = sample * env_level * MASTER_SCALE;
+
+                    left  += static_cast<int32_t>(scaled_sample);
+                    right += static_cast<int32_t>(scaled_sample);
+
+                    oper3.osc.update(osc_mem3, n);
+                    oper3.env.update(env_mem3);
+
+                    if (oper3.env.isFinished(env_mem3)) {
+                        ++r_finished_cnt;
+                    }
+                }
+            }
 
             // 全てのオペレーターが処理完了
             if(r_finished_cnt == carrier_cnt) {
@@ -119,8 +234,8 @@ void Synth::generate() {
         } // for active note
 
         // サンプルをクリッピングする
-        left = std::clamp<int32_t>(left, -32768, 32767);
-        right = std::clamp<int32_t>(right, -32768, 32767);
+        left  = AudioMath::fastClampInt16(left);
+        right = AudioMath::fastClampInt16(right);
         // フィルタはそれぞれでクリッピングがあるためこれ以降は必要無し
 
         // LPFを適用
@@ -148,12 +263,10 @@ void Synth::generate() {
 
     samples_ready = true;
 
-    // /*debug*/ uint32_t endTime = micros();
-    // /*debug*/ uint32_t duration = endTime - startTime;
-    // /*debug*/ Serial.print(" ");
-    // /*debug*/ Serial.print(duration);
-    // /*debug*/ Serial.println("us");
-    // 3000us以内に終わらせる必要がある
+    /*debug*/ uint32_t endTime = micros();
+    /*debug*/ uint32_t duration = endTime - startTime;
+    /*debug*/ Serial.println(String(duration) + "us");
+    // 2900μs以内に終わらせる必要がある
 }
 
 /** @brief シンセ更新 */

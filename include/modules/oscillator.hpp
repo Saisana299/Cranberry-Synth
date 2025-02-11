@@ -25,7 +25,6 @@ public:
     void reset(Memory& mem);
     void enable();
     void disable();
-    bool isActive();
     void setModulation(
         Oscillator* mod_osc,
         Envelope* mod_env,
@@ -39,6 +38,11 @@ public:
     void setCoarse(float coarse);
     void setFine(float fine_level);
     void setDetune(int8_t detune_cents);
+
+    /** @brief オシレーターの状態 */
+    inline bool isActive() {
+        return enabled;
+    }
 
 private:
     // 定数

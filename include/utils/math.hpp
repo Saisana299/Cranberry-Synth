@@ -92,4 +92,26 @@ public:
         float normalized_pan = (m_pan + 1.0f) * 0.5f;
         return static_cast<float>(sin(HALF_PI * normalized_pan));
     }
+
+    static inline int16_t fastClampInt16(int32_t x) {
+        // ARMv7E-M の DSP命令(SSAT)を直接使う例
+        // SSAT <Rd>, #<imm>, <Rn> : <Rn>を符号付で#<imm>ビット飽和して<Rd>へ格納
+        // #<imm> = 16 なら 16ビット範囲(-32768..32767)へ飽和
+        __asm__ volatile(
+            "ssat %0, #16, %1\n\t"
+            : "=r" (x)
+            : "r"  (x)
+        );
+        return static_cast<int16_t>(x);
+    }
+
+    static inline float fastAbsf(float in) {
+        float out;
+        __asm__ volatile(
+            "vabs.f32 %0, %1  \n" // out = absolute_value(in)
+            : "=t" (out)
+            : "t"  (in)
+        );
+        return out;
+    }
 };
