@@ -22,7 +22,6 @@ void Envelope::release(Memory& mem) {
  * @brief エンベロープ状態を更新します
  *
  * @param adsr ADSRの設定
- * @param dt 加算するサンプル数
  */
 void Envelope::update(Memory& mem) {
     switch(mem.state) {

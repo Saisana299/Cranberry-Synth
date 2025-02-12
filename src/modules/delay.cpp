@@ -1,11 +1,19 @@
 #include "modules/delay.hpp"
 
+/** @brief ディレイのバッファをリセット */
 void Delay::reset() {
     delay_length = 0;
     buffer_L.reset();
     buffer_R.reset();
 }
 
+/**
+ * @brief ディレイの設定
+ *
+ * @param time ディレイ時間(ms)
+ * @param level 出力レベル(100% = 1024)
+ * @param feedback フィードバック(100% = 1024)
+ */
 void Delay::setDelay(int32_t time, int32_t level, int32_t feedback) {
     // todo 条件式
 
@@ -20,6 +28,13 @@ void Delay::setDelay(int32_t time, int32_t level, int32_t feedback) {
     buffer_R.setInterval(delay_sample);
 }
 
+/**
+ * @brief ディレイ処理
+ *
+ * @param in サンプル
+ * @param isR 右チャンネルか
+ * @return int16_t 処理後のサンプル
+ */
 int16_t Delay::process(int16_t in, bool isR) {
     IntervalRingBuffer<int16_t, 13230>& buf = (isR ? buffer_R : buffer_L);
 
@@ -41,6 +56,7 @@ int16_t Delay::process(int16_t in, bool isR) {
     return static_cast<int16_t>(out_temp);
 }
 
+/** @brief ディレイが続く時間を計算 */
 uint32_t Delay::getTotalSamples() {
     // 1024(1.0) = Unlimited
     float feedback_ratio = static_cast<float>(feedback) / 1024.0f;
@@ -58,6 +74,7 @@ uint32_t Delay::getTotalSamples() {
     return total_samples;
 }
 
+/** @brief ディレイが続く時間を取得 */
 uint32_t Delay::getDelayLength() {
     return delay_length;
 }

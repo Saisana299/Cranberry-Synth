@@ -1,5 +1,7 @@
 #include "modules/oscillator.hpp"
 
+//todo floatをどうするか
+
 /**
  * @brief oscillatorの周波数を設定
  *

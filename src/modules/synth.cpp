@@ -1,23 +1,5 @@
 #include "modules/synth.hpp"
 
-//todo 処理速度改善・処理方法変更
-/**
-4OP LPFあり 166μs
-4OP LPFなし 140μs
-LPF=26μs
-1OP 67μs
-2OP 93μs
-3OP 121μs
-0OP 37μs
-発音中にリリースに入ると177μs
-4OP 16notes LPFあり 2024μs
-OPループ展開で16notes LPFあり 1922μs
-
-+一部整数処理 141->127->107μs
-+エンベロープ改善 124μs
-エンベロープ改善で16notes LPFあり 1517μs
-*/
-
 /** @brief シンセ初期化 */
 void Synth::init() {
     // [0]はCarrier確定

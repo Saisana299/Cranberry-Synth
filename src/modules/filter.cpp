@@ -1,6 +1,12 @@
 #include "modules/filter.hpp"
 
 // 2次IIR(Biquad)フィルタ
+/**
+ * @brief ローパスフィルター設定
+ *
+ * @param cutoff カットオフ周波数
+ * @param resonance Q値
+ */
 void Filter::setLowPass(float cutoff, float resonance) {
     //todo 条件式
     float omega = 2.0f * M_PI * cutoff / static_cast<float>(SAMPLE_RATE);
@@ -21,6 +27,12 @@ void Filter::setLowPass(float cutoff, float resonance) {
 }
 
 // 2次IIR(Biquad)フィルタ
+/**
+ * @brief ハイパスフィルター設定
+ *
+ * @param cutoff カットオフ周波数
+ * @param resonance Q値
+ */
 void Filter::setHighPass(float cutoff, float resonance) {
     //todo 条件式
     float omega = 2.0f * M_PI * cutoff / static_cast<float>(SAMPLE_RATE);
@@ -40,6 +52,13 @@ void Filter::setHighPass(float cutoff, float resonance) {
     hpf_coefs_L.f4 = hpf_coefs_R.f4 = static_cast<int32_t>((a2 / a0) * 65536.0f);
 }
 
+/**
+ * @brief ローパスフィルタ処理
+ *
+ * @param in サンプル
+ * @param isR 右チャンネルかどうか
+ * @return int16_t 処理後のサンプル
+ */
 int16_t Filter::processLpf(int16_t in, bool isR) {
     Filter::Coefs &coefs = (isR ? lpf_coefs_R : lpf_coefs_L);
 
@@ -57,6 +76,13 @@ int16_t Filter::processLpf(int16_t in, bool isR) {
     return static_cast<int16_t>(mixed);
 }
 
+/**
+ * @brief ハイパスフィルタ処理
+ *
+ * @param in サンプル
+ * @param isR 右チャンネルかどうか
+ * @return int16_t 処理後のサンプル
+ */
 int16_t Filter::processHpf(int16_t in, bool isR) {
     Filter::Coefs &coefs = (isR ? hpf_coefs_R : hpf_coefs_L);
 
