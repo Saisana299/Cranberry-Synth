@@ -12,6 +12,8 @@ LPF=26μs
 発音中にリリースに入ると177μs
 4OP 16notes LPFあり 2024μs
 OPループ展開で16notes LPFあり 1922μs
+
++一部固定小数点処理 141->127->107μs
 */
 
 /** @brief シンセ初期化 */
@@ -21,9 +23,9 @@ void Synth::init() {
     operators[0].osc.setLevel(1.0f);
     operators[0].osc.enable();
 
-    operators[0].env.setDecay(0.4f);
-    operators[0].env.setSustain(0.0f);
-    operators[0].env.setRelease(0.3f);
+    operators[0].env.setDecay(400);
+    operators[0].env.setSustain(0);
+    operators[0].env.setRelease(300);
 
     operators[0].osc.setDetune(3);
 
@@ -33,8 +35,8 @@ void Synth::init() {
     operators[1].osc.setLevelNonLinear(35);
     operators[1].osc.enable();
 
-    operators[1].env.setDecay(0.2f);
-    operators[1].env.setSustain(0.0f);
+    operators[1].env.setDecay(200);
+    operators[1].env.setSustain(0);
 
     operators[1].osc.setCoarse(14.0f);
 
@@ -43,9 +45,9 @@ void Synth::init() {
     operators[2].osc.setLevel(1.0f);
     operators[2].osc.enable();
 
-    operators[2].env.setDecay(2.0f);
-    operators[2].env.setSustain(0.0f);
-    operators[2].env.setRelease(0.3f);
+    operators[2].env.setDecay(2000);
+    operators[2].env.setSustain(0);
+    operators[2].env.setRelease(300);
 
     // [3]を2のモジュレーターに //todo
     operators[3].mode = OpMode::Modulator;
@@ -53,9 +55,9 @@ void Synth::init() {
     operators[3].osc.setLevelNonLinear(89);
     operators[3].osc.enable();
 
-    operators[3].env.setDecay(2.0f);
-    operators[3].env.setSustain(0.0f);
-    operators[3].env.setRelease(0.3f);
+    operators[3].env.setDecay(2000);
+    operators[3].env.setSustain(0);
+    operators[3].env.setRelease(300);
 
     // ローパスフィルタ
     filter.setLowPass(6000.0f, 1.0f/sqrt(2.0f));
@@ -72,7 +74,7 @@ void Synth::generate() {
     const bool LPF_ENABLED = lpf_enabled;
     const bool HPF_ENABLED = hpf_enabled;
     const bool DELAY_ENABLED = delay_enabled;
-    const float MASTER_SCALE = master_scale;
+    const int16_t MASTER_SCALE = master_scale;
 
     // サンプル毎処理
     for(size_t i = 0; i < BUFFER_SIZE; ++i) {
@@ -88,85 +90,25 @@ void Synth::generate() {
             uint8_t carrier_cnt = 0;
             uint8_t r_finished_cnt = 0;
 
-            // // オペレーター毎処理
-            // for(uint8_t op = 0; op < MAX_OPERATORS; ++op) {
-            //     // ローカル参照
-            //     Operator& oper = operators[op];
-            //     auto& op_states_ref = ope_states[op];
-
-            //     // Carrierかつアクティブでない場合はスキップ
-            //     if(oper.mode != OpMode::Carrier || !oper.osc.isActive()) continue;
-
-            //     ++carrier_cnt;
-            //     auto& osc_mem = op_states_ref.osc_mems[n];
-            //     auto& env_mem = op_states_ref.env_mems[n];
-
-            //     // サンプル取得
-            //     // todo ステレオ対応
-            //     int16_t sample = oper.osc.getSample(osc_mem, n);
-
-            //     // エンベロープレベル
-            //     float env_level = oper.env.currentLevel(env_mem);
-
-            //     // 演算順序の固定と乗算回数削減のため
-            //     float scaled_sample = sample * env_level * MASTER_SCALE;
-
-            //     // 合計を出力バッファに追加
-            //     // ((サンプル*エンベロープ音量)*調整用レベル)*アンプレベル
-            //     left += static_cast<int32_t>(scaled_sample);
-            //     right += static_cast<int32_t>(scaled_sample);
-
-            //     // オシレーターとエンベロープを更新
-            //     oper.osc.update(osc_mem, n);
-            //     oper.env.update(env_mem);
-
-            //     // Releaseが完了しているか
-            //     // モジュレータ―のエンベロープは考慮しない
-            //     if(oper.env.isFinished(env_mem)) {
-            //         ++r_finished_cnt;
-            //     }
-            // } // for operator
-
-            // オペレーター0
-            {
-                Operator& oper0 = operators[0];
-                auto& state0 = ope_states[0];
-                if (oper0.mode == OpMode::Carrier && oper0.osc.isActive()) {
-                    ++carrier_cnt;
-                    auto& osc_mem0 = state0.osc_mems[n];
-                    auto& env_mem0 = state0.env_mems[n];
-
-                    int16_t sample = oper0.osc.getSample(osc_mem0, n);
-                    float env_level = oper0.env.currentLevel(env_mem0);
-                    float scaled_sample = sample * env_level * MASTER_SCALE;
-
-                    left  += static_cast<int32_t>(scaled_sample);
-                    right += static_cast<int32_t>(scaled_sample);
-
-                    oper0.osc.update(osc_mem0, n);
-                    oper0.env.update(env_mem0);
-
-                    if (oper0.env.isFinished(env_mem0)) {
-                        ++r_finished_cnt;
-                    }
-                }
-            }
+            // オペレーター処理 手動ループ展開
+            // キャリアの場合のみここで処理を行う
 
             // オペレーター1
             {
-                Operator& oper1 = operators[1];
-                auto& state1 = ope_states[1];
+                Operator& oper1 = operators[0];
+                auto& state1 = ope_states[0];
                 if (oper1.mode == OpMode::Carrier && oper1.osc.isActive()) {
                     ++carrier_cnt;
                     auto& osc_mem1 = state1.osc_mems[n];
                     auto& env_mem1 = state1.env_mems[n];
 
-                    int16_t sample = oper1.osc.getSample(osc_mem1, n);
-                    float env_level = oper1.env.currentLevel(env_mem1);
-                    float scaled_sample = sample * env_level * MASTER_SCALE;
+                    const int32_t sample = static_cast<int32_t>(oper1.osc.getSample(osc_mem1, n));
+                    const int32_t env_level = static_cast<int32_t>(oper1.env.currentLevel(env_mem1));
+                    const int32_t scaling = (env_level * MASTER_SCALE) >> 10;
+                    const int32_t scaled_sample = (sample * scaling) >> 10;
 
-                    left  += static_cast<int32_t>(scaled_sample);
-                    right += static_cast<int32_t>(scaled_sample);
+                    left  += scaled_sample;
+                    right += scaled_sample;
 
                     oper1.osc.update(osc_mem1, n);
                     oper1.env.update(env_mem1);
@@ -179,19 +121,20 @@ void Synth::generate() {
 
             // オペレーター2
             {
-                Operator& oper2 = operators[2];
-                auto& state2 = ope_states[2];
+                Operator& oper2 = operators[1];
+                auto& state2 = ope_states[1];
                 if (oper2.mode == OpMode::Carrier && oper2.osc.isActive()) {
                     ++carrier_cnt;
                     auto& osc_mem2 = state2.osc_mems[n];
                     auto& env_mem2 = state2.env_mems[n];
 
-                    int16_t sample = oper2.osc.getSample(osc_mem2, n);
-                    float env_level = oper2.env.currentLevel(env_mem2);
-                    float scaled_sample = sample * env_level * MASTER_SCALE;
+                    const int32_t sample = static_cast<int32_t>(oper2.osc.getSample(osc_mem2, n));
+                    const int32_t env_level = static_cast<int32_t>(oper2.env.currentLevel(env_mem2));
+                    const int32_t scaling = (env_level * MASTER_SCALE) >> 10;
+                    const int32_t scaled_sample = (sample * scaling) >> 10;
 
-                    left  += static_cast<int32_t>(scaled_sample);
-                    right += static_cast<int32_t>(scaled_sample);
+                    left  += scaled_sample;
+                    right += scaled_sample;
 
                     oper2.osc.update(osc_mem2, n);
                     oper2.env.update(env_mem2);
@@ -204,24 +147,51 @@ void Synth::generate() {
 
             // オペレーター3
             {
-                Operator& oper3 = operators[3];
-                auto& state3 = ope_states[3];
+                Operator& oper3 = operators[2];
+                auto& state3 = ope_states[2];
                 if (oper3.mode == OpMode::Carrier && oper3.osc.isActive()) {
                     ++carrier_cnt;
                     auto& osc_mem3 = state3.osc_mems[n];
                     auto& env_mem3 = state3.env_mems[n];
 
-                    int16_t sample = oper3.osc.getSample(osc_mem3, n);
-                    float env_level = oper3.env.currentLevel(env_mem3);
-                    float scaled_sample = sample * env_level * MASTER_SCALE;
+                    const int32_t sample = static_cast<int32_t>(oper3.osc.getSample(osc_mem3, n));
+                    const int32_t env_level = static_cast<int32_t>(oper3.env.currentLevel(env_mem3));
+                    const int32_t scaling = (env_level * MASTER_SCALE) >> 10;
+                    const int32_t scaled_sample = (sample * scaling) >> 10;
 
-                    left  += static_cast<int32_t>(scaled_sample);
-                    right += static_cast<int32_t>(scaled_sample);
+                    left  += scaled_sample;
+                    right += scaled_sample;
 
                     oper3.osc.update(osc_mem3, n);
                     oper3.env.update(env_mem3);
 
                     if (oper3.env.isFinished(env_mem3)) {
+                        ++r_finished_cnt;
+                    }
+                }
+            }
+
+            // オペレーター4
+            {
+                Operator& oper4 = operators[3];
+                auto& state4 = ope_states[3];
+                if (oper4.mode == OpMode::Carrier && oper4.osc.isActive()) {
+                    ++carrier_cnt;
+                    auto& osc_mem4 = state4.osc_mems[n];
+                    auto& env_mem4 = state4.env_mems[n];
+
+                    const int32_t sample = static_cast<int32_t>(oper4.osc.getSample(osc_mem4, n));
+                    const int32_t env_level = static_cast<int32_t>(oper4.env.currentLevel(env_mem4));
+                    const int32_t scaling = (env_level * MASTER_SCALE) >> 10;
+                    const int32_t scaled_sample = (sample * scaling) >> 10;
+
+                    left  += scaled_sample;
+                    right += scaled_sample;
+
+                    oper4.osc.update(osc_mem4, n);
+                    oper4.env.update(env_mem4);
+
+                    if (oper4.env.isFinished(env_mem4)) {
                         ++r_finished_cnt;
                     }
                 }

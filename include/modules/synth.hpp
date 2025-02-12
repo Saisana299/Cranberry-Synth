@@ -52,10 +52,10 @@ private:
     static inline Synth* instance = nullptr;
     uint8_t order_max = 0;
     uint8_t last_index = 0;
-    float amp_level = 1.0f;
-    float adjust_level = 1.0f / MAX_NOTES;
+    int16_t amp_level = 1 << 10;
+    int16_t adjust_level = (1 << 10) / MAX_NOTES;
 
-    float master_scale = adjust_level * amp_level;
+    int16_t master_scale = (static_cast<uint32_t>(amp_level) * adjust_level) >> 10;
 
     void init();
     void generate();

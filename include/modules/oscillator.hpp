@@ -10,7 +10,7 @@ public:
     struct Memory {
         uint32_t phase = 0;
         uint32_t delta = 0;
-        float vel_vol = 0.0f;
+        int16_t vel_vol = 0;
     };
 
     Oscillator() {
@@ -55,7 +55,7 @@ private:
     int16_t* wavetable = Wavetable::sine;
     size_t wavetable_size = sizeof(Wavetable::sine) / sizeof(Wavetable::sine[0]);
     bool enabled = false;
-    float level = 0.0f;
+    int16_t level = 0;
 
     // ピッチ
     float coarse = 1.0f;

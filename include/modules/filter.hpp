@@ -4,13 +4,13 @@
 
 class Filter {
 private:
-    float lpf_mix = 1.0f;
-    float hpf_mix = 1.0f;
+    int16_t lpf_mix = 1 << 10;
+    int16_t hpf_mix = 1 << 10;
 
     struct Coefs {
-        float f0 = 0.0f, f1 = 0.0f, f2 = 0.0f, f3 = 0.0f, f4 = 0.0f;
-        float in1 = 0.0f, in2 = 0.0f;
-        float out1 = 0.0f, out2 = 0.0f;
+        int32_t f0   = 0, f1   = 0, f2 = 0, f3 = 0, f4 = 0;
+        int32_t in1  = 0, in2  = 0;
+        int32_t out1 = 0, out2 = 0;
     };
     Coefs lpf_coefs_L = {}, lpf_coefs_R = {};
     Coefs hpf_coefs_L = {}, hpf_coefs_R = {};

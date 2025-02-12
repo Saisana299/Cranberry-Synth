@@ -15,7 +15,8 @@ void Oscillator::setFrequency(Memory& mem, uint8_t note) {
  * @param velocity ベロシティ値
  */
 void Oscillator::setVelocity(Memory& mem, uint8_t velocity) {
-    mem.vel_vol = AudioMath::velocityToAmplitude(velocity);
+    const float vel = AudioMath::velocityToAmplitude(velocity);
+    mem.vel_vol = static_cast<int16_t>(vel * 1024.0f);
 }
 
 /**
@@ -67,7 +68,7 @@ int16_t Oscillator::getSample(Memory& mem, uint8_t note_id) {
     if(!enabled) return 0;
 
     // ローカル変数にキャッシュ
-    const float local_vel_vol = mem.vel_vol;
+    const int16_t local_vel_vol = mem.vel_vol;
     const uint32_t local_phase = mem.phase;
 
     // キャリアのベース位相
@@ -88,7 +89,7 @@ int16_t Oscillator::getSample(Memory& mem, uint8_t note_id) {
         Envelope::Memory&   mod_env_mem = local_mod_env_mems[note_id];
 
         // モジュレーターエンベロープのレベル
-        const float mod_env_level = local_mod_env->currentLevel(mod_env_mem);
+        const float mod_env_level = static_cast<float>(local_mod_env->currentLevel(mod_env_mem)) / 1024.0f;
         // モジュレーターのサンプルを取得
         const float mod_sample = static_cast<float>(local_mod_osc->getSample(mod_mem, note_id));
         // モジュレーション比率を計算
@@ -108,7 +109,8 @@ int16_t Oscillator::getSample(Memory& mem, uint8_t note_id) {
     const int16_t sample = wavetable[index];
 
     // ベロシティレベルとオシレーターレベルを適用
-    return static_cast<int16_t>(sample * (local_vel_vol * level));
+    const int32_t scaling = (static_cast<int32_t>(local_vel_vol) * static_cast<int32_t>(level)) >> 10;
+    return static_cast<int16_t>((static_cast<int32_t>(sample) * scaling) >> 10);
 }
 
 /** @brief オシレーターを有効化 */
@@ -125,7 +127,7 @@ void Oscillator::disable() {
 void Oscillator::reset(Memory& mem) {
     mem.phase = 0;
     mem.delta = 0;
-    mem.vel_vol = 0.0f;
+    mem.vel_vol = 0;
 }
 
 /**
@@ -155,7 +157,7 @@ void Oscillator::setModulation(
  */
 void Oscillator::setLevel(float level) {
     if(level < 0.0f || level > 1.0f) return;
-    this->level = level;
+    this->level = static_cast<int16_t>(level * 1024.0f);
 }
 
 /**
@@ -202,5 +204,5 @@ void Oscillator::setDetune(int8_t detune_cents) {
 void Oscillator::setLevelNonLinear(uint8_t level) {
     float x = level / 100.0f;
     const float exponent = log(0.5f) / log(0.75f);
-    this->level = powf(x, exponent);
+    this->level = static_cast<int16_t>(powf(x, exponent) * 1024.0f);
 }

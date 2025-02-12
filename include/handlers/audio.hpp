@@ -13,7 +13,7 @@ extern int16_t samples_L[];
 extern int16_t samples_R[];
 extern bool    samples_ready;
 
-constexpr float   SAMPLE_RATE  = 44100.0f;
+constexpr int32_t SAMPLE_RATE  = 44100;
 constexpr size_t  BUFFER_SIZE  = 128;
 constexpr uint8_t QUEUE_BLOCKS = 2;
 

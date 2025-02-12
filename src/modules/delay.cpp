@@ -6,7 +6,7 @@ void Delay::reset() {
     buffer_R.reset();
 }
 
-void Delay::setDelay(float time, float level, float feedback) {
+void Delay::setDelay(int32_t time, int32_t level, int32_t feedback) {
     // todo 条件式
 
     this->time = time;
@@ -15,7 +15,7 @@ void Delay::setDelay(float time, float level, float feedback) {
 
     this->delay_length = getTotalSamples();
 
-    uint32_t delay_sample = SAMPLE_RATE * this->time;
+    uint32_t delay_sample = static_cast<uint32_t>((this->time * SAMPLE_RATE) >> 10);
     buffer_L.setInterval(delay_sample);
     buffer_R.setInterval(delay_sample);
 }
@@ -28,11 +28,11 @@ int16_t Delay::process(int16_t in, bool isR) {
     int32_t sample = static_cast<int32_t>(buf.read());
 
     // 出力用計算
-    out_temp = in + static_cast<int32_t>(level * sample);
+    out_temp = in + ((level * sample) >> 10);
     out_temp = std::clamp<int32_t>(out_temp, -32768, 32767);
 
     // フィードバック用計算
-    fb_temp = in + static_cast<int32_t>(feedback * sample);
+    fb_temp = in + ((feedback * sample) >> 10);
     fb_temp = std::clamp<int32_t>(fb_temp, -32768, 32767);
 
     buf.write(static_cast<int16_t>(fb_temp));
@@ -42,17 +42,18 @@ int16_t Delay::process(int16_t in, bool isR) {
 }
 
 uint32_t Delay::getTotalSamples() {
-    // 1.0 = Unlimited
-    if (feedback >= 1.0f) return UINT32_MAX;
+    // 1024(1.0) = Unlimited
+    float feedback_ratio = static_cast<float>(feedback) / 1024.0f;
+    if (feedback_ratio >= 1.0f) return UINT32_MAX;
 
     // 60dB減衰するまでのエコー回数を計算
-    float n = log(0.001f) / log(feedback);
+    float n = log(0.001f) / log(feedback_ratio);
 
     // 全体の残響時間をミリ秒で計算
-    float total_time = n * time;
+    float total_time = n * static_cast<float>(time);
 
     // 残響時間をサンプル数に変換
-    uint32_t total_samples = static_cast<uint32_t>(total_time * SAMPLE_RATE);
+    uint32_t total_samples = (static_cast<uint32_t>(total_time * static_cast<float>(SAMPLE_RATE))) >> 10;
 
     return total_samples;
 }
