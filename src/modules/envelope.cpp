@@ -1,6 +1,6 @@
 #include "modules/envelope.hpp"
-//todo ADSR切り替わり時の音量が違う(処理内容見直し)
 //todo エンベロープの指数カーブ化を検討
+// 案外適当な方が面白いかもしれない
 /** @brief エンベロープを初期位置に戻す */
 void Envelope::reset(Memory& mem) {
     mem.state = State::Attack;
@@ -40,12 +40,13 @@ void Envelope::update(Memory& mem) {
 
         case State::Decay:
             if(mem.elapsed < decay_samples) {
-                const int32_t diff = static_cast<int32_t>(sustain_level) - static_cast<int32_t>(mem.prev_level);
-                const int32_t absDiff = (diff ^ (diff >> 31)) - (diff >> 31);
-                const int32_t offset = (absDiff * mem.elapsed * decay_inv) >> 16;
-                const int32_t sign = 1 - ((diff >> 31) & 2);
-                mem.current_level = static_cast<int16_t>(mem.prev_level + sign * offset);
-                break;
+                if (mem.current_level > sustain_level) {
+                    const int32_t diff = static_cast<int32_t>(mem.prev_level) - static_cast<int32_t>(sustain_level);
+                    const int32_t offset = (diff * mem.elapsed * decay_inv) >> 16;
+                    mem.current_level = static_cast<int16_t>(mem.prev_level - offset);
+                    break;
+                }
+                // サステインと同じ音量になったらSustainへ移行する
             }
             mem.prev_level = mem.current_level;
             mem.elapsed -= decay_samples;
