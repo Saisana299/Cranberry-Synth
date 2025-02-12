@@ -1,5 +1,6 @@
 #include "modules/envelope.hpp"
-//todo 指数カーブ化を検討
+//todo ADSR切り替わり時の音量が違う(処理内容見直し)
+//todo エンベロープの指数カーブ化を検討
 /** @brief エンベロープを初期位置に戻す */
 void Envelope::reset(Memory& mem) {
     mem.state = State::Attack;
@@ -27,7 +28,9 @@ void Envelope::update(Memory& mem) {
     switch(mem.state) {
         case State::Attack:
             if(mem.elapsed < attack_samples) {
-                mem.current_level = AudioMath::lerp(static_cast<float>(mem.prev_level), 1024.0f, static_cast<float>(mem.elapsed) / attack_samples);
+                const int32_t diff = 1024 - static_cast<int32_t>(mem.prev_level);
+                const int32_t offset = (diff * mem.elapsed * attack_inv) >> 16;
+                mem.current_level = static_cast<int16_t>(mem.prev_level + offset);
                 break;
             }
             mem.prev_level = mem.current_level;
@@ -37,7 +40,11 @@ void Envelope::update(Memory& mem) {
 
         case State::Decay:
             if(mem.elapsed < decay_samples) {
-                mem.current_level = AudioMath::lerp(static_cast<float>(mem.prev_level), static_cast<float>(sustain_level), static_cast<float>(mem.elapsed) / decay_samples);
+                const int32_t diff = static_cast<int32_t>(sustain_level) - static_cast<int32_t>(mem.prev_level);
+                const int32_t absDiff = (diff ^ (diff >> 31)) - (diff >> 31);
+                const int32_t offset = (absDiff * mem.elapsed * decay_inv) >> 16;
+                const int32_t sign = 1 - ((diff >> 31) & 2);
+                mem.current_level = static_cast<int16_t>(mem.prev_level + sign * offset);
                 break;
             }
             mem.prev_level = mem.current_level;
@@ -51,7 +58,10 @@ void Envelope::update(Memory& mem) {
 
         case State::Release:
             if(mem.elapsed < release_samples) {
-                mem.current_level = AudioMath::lerp(static_cast<float>(mem.prev_level), 0.0f, static_cast<float>(mem.elapsed) / release_samples);
+                const int32_t diff = 0 - static_cast<int32_t>(mem.prev_level);
+                const int32_t absDiff = (diff ^ (diff >> 31)) - (diff >> 31); // = -diff
+                const int32_t offset = (absDiff * mem.elapsed * release_inv) >> 16;
+                mem.current_level = static_cast<int16_t>(mem.prev_level - offset);
             }
             else {
                 mem.current_level = 0;
@@ -69,6 +79,7 @@ void Envelope::update(Memory& mem) {
 void Envelope::setAttack(int16_t attack_ms) {
     if(attack_ms < 1 || attack_ms > 10000) return;
     attack_samples = (static_cast<uint32_t>(attack_ms * SAMPLE_RATE)) >> 10;
+    attack_inv = (attack_samples != 0) ? (((uint32_t)1 << 16) + (attack_samples >> 1)) / attack_samples : 0;
 }
 
 /**
@@ -79,6 +90,7 @@ void Envelope::setAttack(int16_t attack_ms) {
 void Envelope::setDecay(int16_t decay_ms) {
     if(decay_ms < 1 || decay_ms > 10000) return;
     decay_samples = (static_cast<uint32_t>(decay_ms * SAMPLE_RATE)) >> 10;
+    decay_inv = (decay_samples != 0) ? (((uint32_t)1 << 16) + (decay_samples >> 1)) / decay_samples : 0;
 }
 
 /**
@@ -89,6 +101,7 @@ void Envelope::setDecay(int16_t decay_ms) {
 void Envelope::setRelease(int16_t release_ms) {
     if(release_ms < 1 || release_ms > 10000) return;
     release_samples = (static_cast<uint32_t>(release_ms * SAMPLE_RATE)) >> 10;
+    release_inv = (release_samples != 0) ? (((uint32_t)1 << 16) + (release_samples >> 1)) / release_samples : 0;
 }
 
 /**

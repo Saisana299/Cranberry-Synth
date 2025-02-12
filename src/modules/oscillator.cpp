@@ -88,12 +88,12 @@ int16_t Oscillator::getSample(Memory& mem, uint8_t note_id) {
         Oscillator::Memory& mod_mem = local_mod_osc_mems[note_id];
         Envelope::Memory&   mod_env_mem = local_mod_env_mems[note_id];
 
-        // モジュレーターエンベロープのレベル
-        const float mod_env_level = static_cast<float>(local_mod_env->currentLevel(mod_env_mem)) / 1024.0f;
-        // モジュレーターのサンプルを取得
-        const float mod_sample = static_cast<float>(local_mod_osc->getSample(mod_mem, note_id));
+        // モジュレーターエンベロープレベル
+        const int16_t mod_env_level = local_mod_env->currentLevel(mod_env_mem);
+        // モジュレーターのサンプル取得
+        const int16_t mod_sample = local_mod_osc->getSample(mod_mem, note_id);
         // モジュレーション比率を計算
-        const float mod_sample_ratio = mod_sample * mod_env_level * INV_INT16_MAXf;
+        const float mod_sample_ratio = ((mod_sample * mod_env_level) >> 10) * INV_INT16_MAXf;
         // モジュレーションの位相オフセット
         const float tmp_abs = AudioMath::fastAbsf(mod_sample_ratio);
         const uint32_t mod_phase_offset = static_cast<uint32_t>(tmp_abs * PHASE_RANGE_F);

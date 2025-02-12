@@ -10,6 +10,10 @@ private:
     uint32_t release_samples = (static_cast<uint32_t>(10 * SAMPLE_RATE)) >> 10;
     int16_t sustain_level = 1 << 10;
 
+    int32_t attack_inv = ((1U << 16) + (attack_samples >> 1)) / attack_samples;
+    int32_t decay_inv = ((1U << 16) + (decay_samples >> 1)) / decay_samples;
+    int32_t release_inv = ((1U << 16) + (release_samples >> 1)) / release_samples;
+
 public:
 
     enum class State {
