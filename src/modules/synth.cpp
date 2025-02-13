@@ -4,7 +4,7 @@
 void Synth::init() {
     // [0]はCarrier確定
     operators[0].mode = OpMode::Carrier;
-    operators[0].osc.setLevel(1.0f);
+    operators[0].osc.setLevel(1024);
     operators[0].osc.enable();
 
     operators[0].env.setDecay(400);
@@ -26,7 +26,7 @@ void Synth::init() {
 
     // [2]をCarrierに
     operators[2].mode = OpMode::Carrier;
-    operators[2].osc.setLevel(1.0f);
+    operators[2].osc.setLevel(1024);
     operators[2].osc.enable();
 
     operators[2].env.setDecay(2000);
@@ -52,7 +52,7 @@ void Synth::init() {
 void Synth::generate() {
     if(samples_ready) return;
 
-    /*debug*/ uint32_t startTime = micros();
+    // /*debug*/ uint32_t startTime = micros();
 
     // 定数キャッシュ
     const bool LPF_ENABLED = lpf_enabled;
@@ -217,9 +217,9 @@ void Synth::generate() {
 
     samples_ready = true;
 
-    /*debug*/ uint32_t endTime = micros();
-    /*debug*/ uint32_t duration = endTime - startTime;
-    /*debug*/ Serial.println(String(duration) + "us");
+    // /*debug*/ uint32_t endTime = micros();
+    // /*debug*/ uint32_t duration = endTime - startTime;
+    // /*debug*/ Serial.println(String(duration) + "us");
     // 2900μs以内に終わらせる必要がある
 }
 

@@ -32,11 +32,11 @@ void Delay::setDelay(int32_t time, int32_t level, int32_t feedback) {
  * @brief ディレイ処理
  *
  * @param in サンプル
- * @param isR 右チャンネルか
+ * @param is_r 右チャンネルか
  * @return int16_t 処理後のサンプル
  */
-int16_t Delay::process(int16_t in, bool isR) {
-    IntervalRingBuffer<int16_t, 13230>& buf = (isR ? buffer_R : buffer_L);
+int16_t Delay::process(int16_t in, bool is_r) {
+    IntervalRingBuffer<int16_t, 13230>& buf = (is_r ? buffer_R : buffer_L);
 
     int32_t out_temp;
     int32_t fb_temp;

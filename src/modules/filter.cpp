@@ -56,11 +56,11 @@ void Filter::setHighPass(float cutoff, float resonance) {
  * @brief ローパスフィルタ処理
  *
  * @param in サンプル
- * @param isR 右チャンネルかどうか
+ * @param is_r 右チャンネルかどうか
  * @return int16_t 処理後のサンプル
  */
-int16_t Filter::processLpf(int16_t in, bool isR) {
-    Filter::Coefs &coefs = (isR ? lpf_coefs_R : lpf_coefs_L);
+int16_t Filter::processLpf(int16_t in, bool is_r) {
+    Filter::Coefs &coefs = (is_r ? lpf_coefs_R : lpf_coefs_L);
 
     int32_t out = (
         (coefs.f0 * in) + (coefs.f1 * coefs.in1) + (coefs.f2 * coefs.in2)
@@ -80,11 +80,11 @@ int16_t Filter::processLpf(int16_t in, bool isR) {
  * @brief ハイパスフィルタ処理
  *
  * @param in サンプル
- * @param isR 右チャンネルかどうか
+ * @param is_r 右チャンネルかどうか
  * @return int16_t 処理後のサンプル
  */
-int16_t Filter::processHpf(int16_t in, bool isR) {
-    Filter::Coefs &coefs = (isR ? hpf_coefs_R : hpf_coefs_L);
+int16_t Filter::processHpf(int16_t in, bool is_r) {
+    Filter::Coefs &coefs = (is_r ? hpf_coefs_R : hpf_coefs_L);
 
     int32_t out = (
         (coefs.f0 * in) + (coefs.f1 * coefs.in1) + (coefs.f2 * coefs.in2)

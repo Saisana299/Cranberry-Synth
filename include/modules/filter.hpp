@@ -18,6 +18,6 @@ private:
 public:
     void setLowPass(float cutoff = 2000.0f, float resonance = 1.0f/sqrt(2.0f));
     void setHighPass(float cutoff = 500.0f, float resonance = 1.0f/sqrt(2.0f));
-    int16_t processLpf(int16_t in, bool isR);
-    int16_t processHpf(int16_t in, bool isR);
+    int16_t processLpf(int16_t in, bool is_r);
+    int16_t processHpf(int16_t in, bool is_r);
 };

@@ -17,6 +17,6 @@ private:
 public:
     void reset();
     void setDelay(int32_t time = 256, int32_t level = 307, int32_t feedback = 512);
-    int16_t process(int16_t in, bool isR);
+    int16_t process(int16_t in, bool is_r);
     uint32_t getDelayLength();
 };

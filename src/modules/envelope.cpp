@@ -59,8 +59,8 @@ void Envelope::update(Memory& mem) {
         case State::Release:
             if(mem.elapsed < release_samples) {
                 const int32_t diff = 0 - static_cast<int32_t>(mem.prev_level);
-                const int32_t absDiff = (diff ^ (diff >> 31)) - (diff >> 31); // = -diff
-                const int32_t offset = (absDiff * mem.elapsed * release_inv) >> 16;
+                const int32_t abs_diff = (diff ^ (diff >> 31)) - (diff >> 31); // = -diff
+                const int32_t offset = (abs_diff * mem.elapsed * release_inv) >> 16;
                 mem.current_level = static_cast<int16_t>(mem.prev_level - offset);
             }
             else {

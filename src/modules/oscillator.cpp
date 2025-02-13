@@ -1,14 +1,12 @@
 #include "modules/oscillator.hpp"
 
-//todo floatをどうするか
-
 /**
  * @brief oscillatorの周波数を設定
  *
  * @param note MIDIノート番号
  */
 void Oscillator::setFrequency(Memory& mem, uint8_t note) {
-    mem.delta = AudioMath::ratioToFrequency(note, detune_cents, coarse, fine_level) * F_1ULL32 / SAMPLE_RATE;
+    mem.delta = AudioMath::ratioToFrequency(note, detune_cents, coarse, fine_level) * PHASE_SCALE_FACTOR;
 }
 
 /**
@@ -94,14 +92,14 @@ int16_t Oscillator::getSample(Memory& mem, uint8_t note_id) {
         const int16_t mod_env_level = local_mod_env->currentLevel(mod_env_mem);
         // モジュレーターのサンプル取得
         const int16_t mod_sample = local_mod_osc->getSample(mod_mem, note_id);
-        // モジュレーション比率を計算
-        const float mod_sample_ratio = ((mod_sample * mod_env_level) >> 10) * INV_INT16_MAXf;
+
+        // モジュレーション度合いを計算
+        const int32_t mod_product = (static_cast<int32_t>(mod_sample) * static_cast<int32_t>(mod_env_level)) >> 10;
         // モジュレーションの位相オフセット
-        const float tmp_abs = AudioMath::fastAbsf(mod_sample_ratio);
-        const uint32_t mod_phase_offset = static_cast<uint32_t>(tmp_abs * PHASE_RANGE_F);
+        const uint32_t mod_phase_offset = static_cast<uint32_t>(abs(mod_product)) * 131072; // 131072 = (1 << 32) / 32768
 
         // base_phase に加減算
-        base_phase += (mod_sample_ratio < 0) ? -mod_phase_offset : mod_phase_offset;
+        base_phase += (mod_product < 0) ? -mod_phase_offset : mod_phase_offset;
 
         // ----------------------------------------------------------------------------- //
     }
@@ -155,11 +153,11 @@ void Oscillator::setModulation(
 /**
  * @brief オシレーターの音量を設定
  *
- * @param level 0.0~1.0
+ * @param level 0~1024 (1.0)
  */
-void Oscillator::setLevel(float level) {
-    if(level < 0.0f || level > 1.0f) return;
-    this->level = static_cast<int16_t>(level * 1024.0f);
+void Oscillator::setLevel(int16_t level) {
+    if(level < 0 || level > 1024) return;
+    this->level = level;
 }
 
 /**

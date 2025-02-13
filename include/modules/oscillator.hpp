@@ -32,7 +32,7 @@ public:
         Envelope::Memory* mod_env_mems
     );
     void setFeedback(bool is_feedback);
-    void setLevel(float level);
+    void setLevel(int16_t level);
     void setLevelNonLinear(uint8_t level);
     void setWavetable(uint8_t table_id);
     void setCoarse(float coarse);
@@ -46,9 +46,7 @@ public:
 
 private:
     // 定数
-    static constexpr float F_1ULL32 = static_cast<float>(1ULL << 32);
-    static constexpr float INV_INT16_MAXf = 1.0f / 32768.0f;
-    static constexpr float PHASE_RANGE_F = 4294967296.0f; // 位相最大値
+    static constexpr float PHASE_SCALE_FACTOR = static_cast<float>(1ULL << 32) / SAMPLE_RATE;
 
     // OSC設定
     uint8_t bit_padding; // コンストラクタで初期化
