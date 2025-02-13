@@ -12,7 +12,7 @@ MIDIHandler  midi_hdl;
 
 /* Display */
 #include "display/gfx.hpp"
-GFX_SSD1351  display;
+GFX_SSD1351 display;
 
 /* Modules */
 #include "modules/synth.hpp"
@@ -21,6 +21,7 @@ Synth synth;
 /* Utils */
 #include "utils/debug.hpp"
 #include "utils/state.hpp"
+#include "utils/color.hpp"
 
 /* dev1 */
 #include "dev1/leds.hpp"
@@ -29,9 +30,11 @@ Leds leds;
 Switches switches;
 
 void setup() {
-    Debug::enable();
+    // Debug::enable();
     // Debug::println("Cranberry Synth");
     // Debug::println("Mini Wavetable Synthesizer on Teensy 4.1");
+    display.drawString("Cranberry Synth", 0, 0, Color::WHITE);
+    display.drawString("Dev-1", 0, 12, Color::WHITE);
 }
 
 void loop() {

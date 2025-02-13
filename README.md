@@ -1,3 +1,5 @@
 # Cranberry Synth
-Mini Digital Synthesizer on Teensy 4.1
+Mini Digital FM Synthesizer on Teensy 4.1
 Currently in development.
+
+This is the successor project to [RP-DS16](https://github.com/Saisana299/RP-DS16)
