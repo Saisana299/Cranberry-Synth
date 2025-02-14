@@ -1,5 +1,8 @@
 #pragma once
 
+#include <Adafruit_GFX.h>
+
+#include "display/gfx.hpp"
 #include "handlers/audio.hpp"
 #include "modules/envelope.hpp"
 #include "modules/oscillator.hpp"
@@ -8,6 +11,7 @@
 #include "utils/state.hpp"
 #include "utils/debug.hpp"
 #include "utils/math.hpp"
+#include "utils/color.hpp"
 
 constexpr uint8_t MAX_NOTES = 16;
 constexpr uint8_t MAX_OPERATORS = 6;
@@ -60,6 +64,9 @@ private:
     void updateOrder(uint8_t removed);
     void resetNote(uint8_t index);
 
+    /*debug*/ GFX_SSD1351 gfx;
+    /*debug*/ GFXcanvas16 canvas{SCREEN_WIDTH, 8};
+
 public:
     Synth() {
         instance = this;
@@ -71,4 +78,6 @@ public:
     void update();
     void noteOn(uint8_t note, uint8_t velocity, uint8_t channel);
     void noteOff(uint8_t note, uint8_t channel);
+
+    /*debug*/ void debugFlash();
 };

@@ -52,7 +52,7 @@ void Synth::init() {
 void Synth::generate() {
     if(samples_ready) return;
 
-    // /*debug*/ uint32_t startTime = micros();
+    /*debug*/ uint32_t startTime = micros();
 
     // 定数キャッシュ
     const bool LPF_ENABLED = lpf_enabled;
@@ -217,11 +217,16 @@ void Synth::generate() {
 
     samples_ready = true;
 
-    // /*debug*/ uint32_t endTime = micros();
-    // /*debug*/ uint32_t duration = endTime - startTime;
+    /*debug*/ uint32_t endTime = micros();
+    /*debug*/ uint32_t duration = endTime - startTime;
+    /*debug*/ gfx.drawString(canvas, String(duration) + "us", 0, 0, Color::GREEN);
     // /*debug*/ Serial.println(String(duration) + "us");
     // 2900μs以内に終わらせる必要がある
 }
+
+/*debug*/ void Synth::debugFlash() {
+/*debug*/     gfx.flash(canvas, 0, 24);
+/*debug*/ }
 
 /** @brief シンセ更新 */
 void Synth::update() {

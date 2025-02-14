@@ -3,6 +3,7 @@
 /** @author Saisana299 **/
 
 #include <Arduino.h>
+#include <Adafruit_GFX.h>
 
 /* Handlers */
 #include "handlers/audio.hpp"
@@ -12,7 +13,7 @@ MIDIHandler  midi_hdl;
 
 /* Display */
 #include "display/gfx.hpp"
-GFX_SSD1351 display;
+GFX_SSD1351 gfx;
 
 /* Modules */
 #include "modules/synth.hpp"
@@ -33,12 +34,20 @@ void setup() {
     // Debug::enable();
     // Debug::println("Cranberry Synth");
     // Debug::println("Mini Wavetable Synthesizer on Teensy 4.1");
-    display.drawString("Cranberry Synth", 0, 0, Color::WHITE);
-    display.drawString("Dev-1", 0, 12, Color::WHITE);
+
+    gfx.begin();
+    TextBounds bounds = gfx.getTextBounds("Cranberry Synth", 0, 12);
+    const uint16_t canvas_h = static_cast<uint16_t>(bounds.y) + bounds.h;
+    GFXcanvas16 canvas{bounds.w, canvas_h};
+    gfx.drawString(canvas, "Cranberry Synth", 0, 0, Color::GRAY);
+    gfx.drawString(canvas, "Dev-1", 0, 12, Color::GRAY);
+    gfx.flash(canvas, 0, 0);
 }
 
 void loop() {
     auto& mode_state = State::mode_state;
+
+    /*debug*/ uint8_t count = 0;
 
     while(true) {
         // イベント監視・処理
@@ -55,5 +64,11 @@ void loop() {
             synth.update();
             break;
         }
+
+        /*debug*/ if(count == 32) {
+        /*debug*/     synth.debugFlash();
+        /*debug*/     count = 0;
+        /*debug*/ }
+        /*debug*/ ++count;
     }
 }
