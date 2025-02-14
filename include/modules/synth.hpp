@@ -64,6 +64,7 @@ private:
     void updateOrder(uint8_t removed);
     void resetNote(uint8_t index);
 
+    /*debug*/ uint32_t duration = 0;
     /*debug*/ GFX_SSD1351 gfx;
     /*debug*/ GFXcanvas16 canvas{SCREEN_WIDTH, 8};
 

@@ -9,7 +9,7 @@ void Synth::init() {
 
     operators[0].env.setDecay(400);
     operators[0].env.setSustain(0);
-    operators[0].env.setRelease(300);
+    operators[0].env.setRelease(400);
 
     operators[0].osc.setDetune(3);
 
@@ -31,7 +31,7 @@ void Synth::init() {
 
     operators[2].env.setDecay(2000);
     operators[2].env.setSustain(0);
-    operators[2].env.setRelease(300);
+    operators[2].env.setRelease(400);
 
     // [3]を2のモジュレーターに //todo
     operators[3].mode = OpMode::Modulator;
@@ -41,7 +41,7 @@ void Synth::init() {
 
     operators[3].env.setDecay(2000);
     operators[3].env.setSustain(0);
-    operators[3].env.setRelease(300);
+    operators[3].env.setRelease(400);
 
     // ローパスフィルタ
     filter.setLowPass(6000.0f, 1.0f/sqrt(2.0f));
@@ -218,13 +218,13 @@ void Synth::generate() {
     samples_ready = true;
 
     /*debug*/ uint32_t endTime = micros();
-    /*debug*/ uint32_t duration = endTime - startTime;
-    /*debug*/ gfx.drawString(canvas, String(duration) + "us", 0, 0, Color::GREEN);
+    /*debug*/ duration = endTime - startTime;
     // /*debug*/ Serial.println(String(duration) + "us");
     // 2900μs以内に終わらせる必要がある
 }
 
 /*debug*/ void Synth::debugFlash() {
+/*debug*/     gfx.drawString(canvas, "CALC_TIME " + String(duration) + "us", 0, 0, Color::GREEN);
 /*debug*/     gfx.flash(canvas, 0, 24);
 /*debug*/ }
 

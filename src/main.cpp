@@ -65,7 +65,7 @@ void loop() {
             break;
         }
 
-        /*debug*/ if(count == 32) {
+        /*debug*/ if(count == 16) {
         /*debug*/     synth.debugFlash();
         /*debug*/     count = 0;
         /*debug*/ }
