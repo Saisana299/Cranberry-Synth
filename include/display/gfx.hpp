@@ -27,6 +27,7 @@ private:
 public:
     static inline void begin() {
         display.begin();
+        display.setRotation(3);
         display.fillScreen(Color::BLACK);
     }
 

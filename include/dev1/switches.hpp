@@ -2,9 +2,9 @@
 
 #include <Arduino.h>
 
-constexpr uint8_t BUTTON_PIN = 30;
-constexpr uint8_t A_PIN = 31;
-constexpr uint8_t B_PIN = 29;
+constexpr uint8_t BUTTON_PIN = 16;
+constexpr uint8_t A_PIN = 15;
+constexpr uint8_t B_PIN = 17;
 
 class Switches {
 private:

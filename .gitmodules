@@ -1,0 +1,3 @@
+[submodule "lib/MD_MIDIFile-Teensy"]
+	path = lib/MD_MIDIFile-Teensy
+	url = https://github.com/Saisana299/MD_MIDIFile-Teensy.git

@@ -64,9 +64,9 @@ private:
     void updateOrder(uint8_t removed);
     void resetNote(uint8_t index);
 
-    /*debug*/ uint32_t duration = 0;
-    /*debug*/ GFX_SSD1351 gfx;
-    /*debug*/ GFXcanvas16 canvas{SCREEN_WIDTH, 8};
+    // /*debug*/ uint32_t duration = 0;
+    // /*debug*/ GFX_SSD1351 gfx;
+    // /*debug*/ GFXcanvas16 canvas{SCREEN_WIDTH, 8};
 
 public:
     Synth() {
@@ -80,5 +80,5 @@ public:
     void noteOn(uint8_t note, uint8_t velocity, uint8_t channel);
     void noteOff(uint8_t note, uint8_t channel);
 
-    /*debug*/ void debugFlash();
+    // /*debug*/ void debugFlash();
 };
