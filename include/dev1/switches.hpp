@@ -4,7 +4,7 @@
 
 constexpr uint8_t BUTTON_PIN = 30;
 constexpr uint8_t A_PIN = 31;
-constexpr uint8_t B_PIN = 32;
+constexpr uint8_t B_PIN = 29;
 
 class Switches {
 private:

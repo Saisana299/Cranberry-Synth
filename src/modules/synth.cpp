@@ -213,6 +213,19 @@ void Synth::generate() {
         samples_L[i] = static_cast<int16_t>(left);
         samples_R[i] = static_cast<int16_t>(right);
 
+        // バランス接続用反転
+        if(left == -32768) {
+            samples_LM[i] = 32767;
+        } else {
+            samples_LM[i] = static_cast<int16_t>(-left);
+        }
+
+        if(right == -32768) {
+            samples_RM[i] = 32767;
+        } else {
+            samples_RM[i] = static_cast<int16_t>(-right);
+        }
+
     } // for BUFFER_SIZE
 
     samples_ready = true;
