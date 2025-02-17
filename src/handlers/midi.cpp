@@ -1,6 +1,6 @@
 #include "handlers/midi.hpp"
 
-#include <MD_MIFIFile.h>
+#include <MD_MIDIFile.h>
 
 /** @brief MIDIハンドラ初期化 */
 void MIDIHandler::init() {
