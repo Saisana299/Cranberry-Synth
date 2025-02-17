@@ -25,7 +25,7 @@ void Switches::updateEncoder() {
 }
 
 void Switches::init() {
-    pinMode(BUTTON_PIN, INPUT_PULLUP);
+    pinMode(BUTTON_PIN, INPUT_PULLDOWN);
     attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), Switches::buttonISR, CHANGE);
 
     pinMode(A_PIN, INPUT_PULLUP);
@@ -47,5 +47,9 @@ void Switches::process() {
 
     if (value != lastReportedValue) {
         lastReportedValue = value;
+    }
+
+    if(buttonStateFlag) {
+        FileHandler::stop();
     }
 }

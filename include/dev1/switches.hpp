@@ -2,6 +2,9 @@
 
 #include <Arduino.h>
 
+#include "handlers/file.hpp"
+#include "utils/debug.hpp"
+
 constexpr uint8_t BUTTON_PIN = 16;
 constexpr uint8_t A_PIN = 15;
 constexpr uint8_t B_PIN = 17;

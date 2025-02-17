@@ -10,6 +10,8 @@
 AudioHandler audio_hdl;
 #include "handlers/midi.hpp"
 MIDIHandler  midi_hdl;
+#include "handlers/file.hpp"
+FileHandler  file_hdl;
 
 /* Display */
 #include "display/gfx.hpp"
@@ -42,6 +44,8 @@ void setup() {
     gfx.drawString(canvas, "Cranberry Synth", 0, 0, Color::GRAY);
     gfx.drawString(canvas, "Dev-1", 0, 12, Color::GRAY);
     gfx.flash(canvas, 0, 0);
+
+    FileHandler::play();
 }
 
 void loop() {
@@ -53,6 +57,7 @@ void loop() {
         // イベント監視・処理
         midi_hdl.process();
         audio_hdl.process();
+        file_hdl.process();
 
         // dev1
         leds.process();
