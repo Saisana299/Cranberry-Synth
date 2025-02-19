@@ -45,13 +45,13 @@ void setup() {
     gfx.drawString(canvas, "Dev-1", 0, 12, Color::GRAY);
     gfx.flash(canvas, 0, 0);
 
-    FileHandler::play();
+    //FileHandler::play();
 }
 
 void loop() {
     auto& mode_state = State::mode_state;
 
-    // /*debug*/ uint8_t count = 0;
+    /*debug*/ uint8_t count = 0;
 
     while(true) {
         // イベント監視・処理
@@ -70,10 +70,10 @@ void loop() {
             break;
         }
 
-        // /*debug*/ if(count == 16) {
-        // /*debug*/     synth.debugFlash();
-        // /*debug*/     count = 0;
-        // /*debug*/ }
-        // /*debug*/ ++count;
+        /*debug*/ if(count == 16) {
+        /*debug*/     synth.debugFlash();
+        /*debug*/     count = 0;
+        /*debug*/ }
+        /*debug*/ ++count;
     }
 }

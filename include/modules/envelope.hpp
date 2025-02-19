@@ -27,6 +27,15 @@ public:
         int16_t prev_level = 0;
     };
 
+    void reset(Memory& mem);
+    void release(Memory& mem);
+    void update(Memory& mem);
+
+    void setAttack(int16_t attack_ms);
+    void setDecay(int16_t decay_ms);
+    void setRelease(int16_t release_ms);
+    void setSustain(int16_t sustain_level);
+
     /**
      * @brief 現在のレベルを返します
      *
@@ -44,13 +53,4 @@ public:
     inline bool isFinished(Memory& mem) {
         return (mem.state == State::Release && mem.current_level == 0);
     }
-
-    void reset(Memory& mem);
-    void release(Memory& mem);
-    void update(Memory& mem);
-
-    void setAttack(int16_t attack_ms);
-    void setDecay(int16_t decay_ms);
-    void setRelease(int16_t release_ms);
-    void setSustain(int16_t sustain_level);
 };

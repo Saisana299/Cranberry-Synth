@@ -43,16 +43,41 @@ void Synth::init() {
     operators[3].env.setSustain(0);
     operators[3].env.setRelease(400);
 
+    // [4]をCarrierに
+    operators[4].mode = OpMode::Carrier;
+    operators[4].osc.setLevel(1024);
+    operators[4].osc.enable();
+
+    operators[4].env.setDecay(2000);
+    operators[4].env.setSustain(0);
+    operators[4].env.setRelease(400);
+
+    operators[4].osc.setDetune(-7);
+
+    // [5]を4のモジュレーターに //todo
+    operators[5].mode = OpMode::Modulator;
+    operators[4].osc.setModulation(&operators[5].osc, &operators[5].env, &ope_states[5].osc_mems[0], &ope_states[5].env_mems[0]);
+    operators[5].osc.setLevelNonLinear(79);
+    operators[5].osc.enable();
+
+    operators[5].env.setDecay(2000);
+    operators[5].env.setSustain(0);
+    operators[5].env.setRelease(400);
+
+    operators[5].osc.setDetune(+7);
+
     // ローパスフィルタ
     filter.setLowPass(6000.0f, 1.0f/sqrt(2.0f));
     lpf_enabled = true;
 }
 
 /** @brief シンセ生成 */
+/** @attention ここで呼び出す関数は全てinlineで実装する */
+/** envelopeのupdateはinline不可 */
 void Synth::generate() {
     if(samples_ready) return;
 
-    // /*debug*/ uint32_t startTime = micros();
+    /*debug*/ uint32_t startTime = micros();
 
     // 定数キャッシュ
     const bool LPF_ENABLED = lpf_enabled;
@@ -181,6 +206,58 @@ void Synth::generate() {
                 }
             }
 
+            // オペレーター5
+            {
+                Operator& oper5 = operators[4];
+                auto& state5 = ope_states[4];
+                if (oper5.mode == OpMode::Carrier && oper5.osc.isActive()) {
+                    ++carrier_cnt;
+                    auto& osc_mem5 = state5.osc_mems[n];
+                    auto& env_mem5 = state5.env_mems[n];
+
+                    const int32_t sample = static_cast<int32_t>(oper5.osc.getSample(osc_mem5, n));
+                    const int32_t env_level = static_cast<int32_t>(oper5.env.currentLevel(env_mem5));
+                    const int32_t scaling = (env_level * MASTER_SCALE) >> 10;
+                    const int32_t scaled_sample = (sample * scaling) >> 10;
+
+                    left  += scaled_sample;
+                    right += scaled_sample;
+
+                    oper5.osc.update(osc_mem5, n);
+                    oper5.env.update(env_mem5);
+
+                    if (oper5.env.isFinished(env_mem5)) {
+                        ++r_finished_cnt;
+                    }
+                }
+            }
+
+            // オペレーター6
+            {
+                Operator& oper6 = operators[5];
+                auto& state6 = ope_states[5];
+                if (oper6.mode == OpMode::Carrier && oper6.osc.isActive()) {
+                    ++carrier_cnt;
+                    auto& osc_mem6 = state6.osc_mems[n];
+                    auto& env_mem6 = state6.env_mems[n];
+
+                    const int32_t sample = static_cast<int32_t>(oper6.osc.getSample(osc_mem6, n));
+                    const int32_t env_level = static_cast<int32_t>(oper6.env.currentLevel(env_mem6));
+                    const int32_t scaling = (env_level * MASTER_SCALE) >> 10;
+                    const int32_t scaled_sample = (sample * scaling) >> 10;
+
+                    left  += scaled_sample;
+                    right += scaled_sample;
+
+                    oper6.osc.update(osc_mem6, n);
+                    oper6.env.update(env_mem6);
+
+                    if (oper6.env.isFinished(env_mem6)) {
+                        ++r_finished_cnt;
+                    }
+                }
+            }
+
             // 全てのオペレーターが処理完了
             if(r_finished_cnt == carrier_cnt) {
                 resetNote(n);
@@ -230,16 +307,16 @@ void Synth::generate() {
 
     samples_ready = true;
 
-    // /*debug*/ uint32_t endTime = micros();
-    // /*debug*/ duration = endTime - startTime;
+    /*debug*/ uint32_t endTime = micros();
+    /*debug*/ duration = endTime - startTime;
     // /*debug*/ Serial.println(String(duration) + "us");
     // 2900μs以内に終わらせる必要がある
 }
 
-// /*debug*/ void Synth::debugFlash() {
-// /*debug*/     gfx.drawString(canvas, "CALC_TIME " + String(duration) + "us", 0, 0, Color::GREEN);
-// /*debug*/     gfx.flash(canvas, 0, 24);
-// /*debug*/ }
+/*debug*/ void Synth::debugFlash() {
+/*debug*/     gfx.drawString(canvas, "CALC_TIME " + String(duration) + "us", 0, 0, Color::GREEN);
+/*debug*/     gfx.flash(canvas, 0, 24);
+/*debug*/ }
 
 /** @brief シンセ更新 */
 void Synth::update() {

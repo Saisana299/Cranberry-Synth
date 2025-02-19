@@ -11,13 +11,15 @@ void FileHandler::init() {
 }
 
 void FileHandler::midiCallback(midi_event *pev) {
-    switch (pev->data[0]) {
+    uint8_t status = pev->data[0] & 0xF0;
+    uint8_t channel = pev->data[0] & 0x0F;
+    switch (status) {
         case 0x90:
-            Synth::getInstance()->noteOn(pev->data[1], pev->data[2], 0);
+            Synth::getInstance()->noteOn(pev->data[1], pev->data[2], channel+1);
             break;
 
         case 0x80:
-            Synth::getInstance()->noteOff(pev->data[1], pev->data[2]);
+            Synth::getInstance()->noteOff(pev->data[1], channel+1);
             break;
     }
 }
