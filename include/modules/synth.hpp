@@ -15,6 +15,7 @@
 
 constexpr uint8_t MAX_NOTES = 16;
 constexpr uint8_t MAX_OPERATORS = 6;
+constexpr uint8_t MAX_VOICE = 8;
 
 class Synth {
 private:
@@ -56,7 +57,9 @@ private:
     uint8_t last_index = 0;
     int16_t amp_level = 1 << 10;
     int16_t adjust_level = (1 << 10) / MAX_NOTES;
+    int16_t master_pan = 100;
 
+    // 本来はamp_level * キャリアの数 * adjust_levelで調整する。
     int16_t master_scale = (static_cast<uint32_t>(amp_level) * adjust_level) >> 10;
 
     void init();

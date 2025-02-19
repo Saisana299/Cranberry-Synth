@@ -69,6 +69,9 @@ void Synth::init() {
     // ローパスフィルタ
     filter.setLowPass(6000.0f, 1.0f/sqrt(2.0f));
     lpf_enabled = true;
+
+    // キャリア数が3
+    master_scale = (static_cast<uint32_t>(amp_level / 3) * adjust_level) >> 10;
 }
 
 /** @brief シンセ生成 */
@@ -84,6 +87,7 @@ void Synth::generate() {
     const bool HPF_ENABLED = hpf_enabled;
     const bool DELAY_ENABLED = delay_enabled;
     const int16_t MASTER_SCALE = master_scale;
+    const int16_t MASTER_PAN = master_pan;
 
     // サンプル毎処理
     for(size_t i = 0; i < BUFFER_SIZE; ++i) {
@@ -113,8 +117,8 @@ void Synth::generate() {
 
                     const int32_t sample = static_cast<int32_t>(oper1.osc.getSample(osc_mem1, n));
                     const int32_t env_level = static_cast<int32_t>(oper1.env.currentLevel(env_mem1));
-                    const int32_t scaling = (env_level * MASTER_SCALE) >> 10;
-                    const int32_t scaled_sample = (sample * scaling) >> 10;
+                    const int32_t enved_sample = (sample * env_level) >> 10;
+                    const int32_t scaled_sample = (enved_sample * MASTER_SCALE) >> 10;
 
                     left  += scaled_sample;
                     right += scaled_sample;
@@ -139,8 +143,8 @@ void Synth::generate() {
 
                     const int32_t sample = static_cast<int32_t>(oper2.osc.getSample(osc_mem2, n));
                     const int32_t env_level = static_cast<int32_t>(oper2.env.currentLevel(env_mem2));
-                    const int32_t scaling = (env_level * MASTER_SCALE) >> 10;
-                    const int32_t scaled_sample = (sample * scaling) >> 10;
+                    const int32_t enved_sample = (sample * env_level) >> 10;
+                    const int32_t scaled_sample = (enved_sample * MASTER_SCALE) >> 10;
 
                     left  += scaled_sample;
                     right += scaled_sample;
@@ -165,8 +169,8 @@ void Synth::generate() {
 
                     const int32_t sample = static_cast<int32_t>(oper3.osc.getSample(osc_mem3, n));
                     const int32_t env_level = static_cast<int32_t>(oper3.env.currentLevel(env_mem3));
-                    const int32_t scaling = (env_level * MASTER_SCALE) >> 10;
-                    const int32_t scaled_sample = (sample * scaling) >> 10;
+                    const int32_t enved_sample = (sample * env_level) >> 10;
+                    const int32_t scaled_sample = (enved_sample * MASTER_SCALE) >> 10;
 
                     left  += scaled_sample;
                     right += scaled_sample;
@@ -191,8 +195,8 @@ void Synth::generate() {
 
                     const int32_t sample = static_cast<int32_t>(oper4.osc.getSample(osc_mem4, n));
                     const int32_t env_level = static_cast<int32_t>(oper4.env.currentLevel(env_mem4));
-                    const int32_t scaling = (env_level * MASTER_SCALE) >> 10;
-                    const int32_t scaled_sample = (sample * scaling) >> 10;
+                    const int32_t enved_sample = (sample * env_level) >> 10;
+                    const int32_t scaled_sample = (enved_sample * MASTER_SCALE) >> 10;
 
                     left  += scaled_sample;
                     right += scaled_sample;
@@ -217,8 +221,8 @@ void Synth::generate() {
 
                     const int32_t sample = static_cast<int32_t>(oper5.osc.getSample(osc_mem5, n));
                     const int32_t env_level = static_cast<int32_t>(oper5.env.currentLevel(env_mem5));
-                    const int32_t scaling = (env_level * MASTER_SCALE) >> 10;
-                    const int32_t scaled_sample = (sample * scaling) >> 10;
+                    const int32_t enved_sample = (sample * env_level) >> 10;
+                    const int32_t scaled_sample = (enved_sample * MASTER_SCALE) >> 10;
 
                     left  += scaled_sample;
                     right += scaled_sample;
@@ -243,8 +247,8 @@ void Synth::generate() {
 
                     const int32_t sample = static_cast<int32_t>(oper6.osc.getSample(osc_mem6, n));
                     const int32_t env_level = static_cast<int32_t>(oper6.env.currentLevel(env_mem6));
-                    const int32_t scaling = (env_level * MASTER_SCALE) >> 10;
-                    const int32_t scaled_sample = (sample * scaling) >> 10;
+                    const int32_t enved_sample = (sample * env_level) >> 10;
+                    const int32_t scaled_sample = (enved_sample * MASTER_SCALE) >> 10;
 
                     left  += scaled_sample;
                     right += scaled_sample;
@@ -286,6 +290,10 @@ void Synth::generate() {
             left = delay.process(left, false);
             right = delay.process(right, true);
         }
+
+        // パンを適用
+        left  = (left  * AudioMath::PAN_COS_TABLE[MASTER_PAN]) / INT16_MAX;
+        right = (right * AudioMath::PAN_SIN_TABLE[MASTER_PAN]) / INT16_MAX;
 
         samples_L[i] = static_cast<int16_t>(left);
         samples_R[i] = static_cast<int16_t>(right);

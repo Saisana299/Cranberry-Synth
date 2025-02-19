@@ -128,7 +128,7 @@ private:
 
     // OSC設定
     uint8_t bit_padding; // コンストラクタで初期化
-    int16_t* wavetable = Wavetable::sine;
+    const int16_t* wavetable = Wavetable::sine;
     size_t wavetable_size = sizeof(Wavetable::sine) / sizeof(Wavetable::sine[0]);
     bool enabled = false;
     int16_t level = 0;

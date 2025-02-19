@@ -1,10 +1,8 @@
-ratio/fixed
-coarse/fine/tune
-feedback
-マスターPanの実装
-オシレーターPanの実装
 Monophonicモードの実装
 Glideの実装
-Noiseの実装
-LFOの実装
+feedback
+ratio/fixed
+coarse/fine/tune
 Unisonの実装
+LFOの実装
+オシレーターPanの実装
