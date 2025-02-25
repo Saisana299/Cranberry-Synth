@@ -3,7 +3,6 @@
 #include <Arduino.h>
 
 #include "handlers/file.hpp"
-#include "utils/debug.hpp"
 
 constexpr uint8_t BUTTON_PIN = 16;
 constexpr uint8_t A_PIN = 15;
@@ -19,6 +18,8 @@ private:
 
     static void buttonISR();
     static void updateEncoder();
+
+    int8_t playing = 0;
 
 public:
     Switches() {

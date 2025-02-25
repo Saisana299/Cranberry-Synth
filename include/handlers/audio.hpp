@@ -19,6 +19,19 @@ constexpr int32_t SAMPLE_RATE  = 44100;
 constexpr size_t  BUFFER_SIZE  = 128;
 constexpr uint8_t QUEUE_BLOCKS = 2;
 
+// I2S QUAD
+// BCLK = 21
+// MCLK = 23
+// TX (ch1+2) = 7
+// TX (ch3+4) = 32
+// LRCLK = 20
+
+// I2S2
+// BCLK = 4
+// MCLK = 33
+// RX = 5
+// LRCLK = 3
+
 class AudioHandler {
 private:
     AudioPlayQueue     queue_L  = {}, queue_R  = {};

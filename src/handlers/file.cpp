@@ -28,8 +28,8 @@ void FileHandler::midiCallbackStatic(midi_event *pev) {
     if (instance) instance->midiCallback(pev);
 }
 
-void FileHandler::play() {
-    if (instance) instance->SMF.load(const_cast<const char*>("demo1.mid"));
+void FileHandler::play(const char* path) {
+    if (instance) instance->SMF.load(path);
 }
 
 void FileHandler::stop() {

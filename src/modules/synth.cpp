@@ -316,15 +316,10 @@ void Synth::generate() {
     samples_ready = true;
 
     /*debug*/ uint32_t endTime = micros();
-    /*debug*/ duration = endTime - startTime;
-    // /*debug*/ Serial.println(String(duration) + "us");
+    /*debug*/ uint32_t duration = endTime - startTime;
+    /*debug*/ Serial.println(String(duration) + "us");
     // 2900μs以内に終わらせる必要がある
 }
-
-/*debug*/ void Synth::debugFlash() {
-/*debug*/     gfx.drawString(canvas, "CALC_TIME " + String(duration) + "us", 0, 0, Color::GREEN);
-/*debug*/     gfx.flash(canvas, 0, 24);
-/*debug*/ }
 
 /** @brief シンセ更新 */
 void Synth::update() {

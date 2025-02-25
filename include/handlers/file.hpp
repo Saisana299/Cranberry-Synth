@@ -21,6 +21,6 @@ public:
         init();
     }
     void process();
-    static void play();
+    static void play(const char* path);
     static void stop();
 };

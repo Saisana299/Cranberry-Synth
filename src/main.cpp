@@ -12,6 +12,8 @@ AudioHandler audio_hdl;
 MIDIHandler  midi_hdl;
 #include "handlers/file.hpp"
 FileHandler  file_hdl;
+#include "handlers/serial.hpp"
+SerialHandler serial_hdl;
 
 /* Display */
 #include "display/gfx.hpp"
@@ -22,7 +24,6 @@ GFX_SSD1351 gfx;
 Synth synth;
 
 /* Utils */
-#include "utils/debug.hpp"
 #include "utils/state.hpp"
 #include "utils/color.hpp"
 
@@ -33,9 +34,8 @@ Leds leds;
 Switches switches;
 
 void setup() {
-    // Debug::enable();
-    // Debug::println("Cranberry Synth");
-    // Debug::println("Mini Wavetable Synthesizer on Teensy 4.1");
+    serial_hdl.println("Cranberry Synth");
+    serial_hdl.println("Digital FM Synthesizer on Teensy 4.1");
 
     gfx.begin();
     TextBounds bounds = gfx.getTextBounds("Cranberry Synth", 0, 12);
@@ -45,19 +45,21 @@ void setup() {
     gfx.drawString(canvas, "Dev-1", 0, 12, Color::GRAY);
     gfx.flash(canvas, 0, 0);
 
-    //FileHandler::play();
+    randomSeed(analogRead(0));
+
+    //const char* a = "demo1.mid";
+    //FileHandler::play(a);
 }
 
 void loop() {
     auto& mode_state = State::mode_state;
-
-    /*debug*/ uint8_t count = 0;
 
     while(true) {
         // イベント監視・処理
         midi_hdl.process();
         audio_hdl.process();
         file_hdl.process();
+        serial_hdl.process();
 
         // dev1
         leds.process();
@@ -69,11 +71,5 @@ void loop() {
             synth.update();
             break;
         }
-
-        /*debug*/ if(count == 16) {
-        /*debug*/     synth.debugFlash();
-        /*debug*/     count = 0;
-        /*debug*/ }
-        /*debug*/ ++count;
     }
 }
