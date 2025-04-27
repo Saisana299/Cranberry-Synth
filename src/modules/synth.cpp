@@ -80,7 +80,7 @@ void Synth::init() {
 void Synth::generate() {
     if(samples_ready) return;
 
-    /*debug*/ uint32_t startTime = micros();
+    // /*debug*/ uint32_t startTime = micros();
 
     // 定数キャッシュ
     const bool LPF_ENABLED = lpf_enabled;
@@ -299,14 +299,15 @@ void Synth::generate() {
         samples_R[i] = static_cast<int16_t>(right);
 
         // バランス接続用反転
-        if(left == -32768) {
-            samples_LM[i] = 32767;
+        // left/rightは既にクリッピングされているため-32768～32767の範囲に収まっている
+        if(left == INT16_MIN) {
+            samples_LM[i] = INT16_MAX;
         } else {
             samples_LM[i] = static_cast<int16_t>(-left);
         }
 
-        if(right == -32768) {
-            samples_RM[i] = 32767;
+        if(right == INT16_MIN) {
+            samples_RM[i] = INT16_MAX;
         } else {
             samples_RM[i] = static_cast<int16_t>(-right);
         }
@@ -315,9 +316,9 @@ void Synth::generate() {
 
     samples_ready = true;
 
-    /*debug*/ uint32_t endTime = micros();
-    /*debug*/ uint32_t duration = endTime - startTime;
-    /*debug*/ Serial.println(String(duration) + "us");
+    // /*debug*/ uint32_t endTime = micros();
+    // /*debug*/ uint32_t duration = endTime - startTime;
+    // /*debug*/ Serial.println(String(duration) + "us");
     // 2900μs以内に終わらせる必要がある
 }
 

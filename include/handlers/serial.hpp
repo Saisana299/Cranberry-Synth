@@ -37,6 +37,7 @@ public:
         }
 
         if (command_ready) {
+            /*debug*/ Serial.println("command: " + String(command_buffer[0]) + " " + String(command_buffer[1]) + " " + String(command_buffer[2]));
             command_ready = false;
         }
     }

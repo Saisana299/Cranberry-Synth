@@ -14,10 +14,14 @@ MIDIHandler  midi_hdl;
 FileHandler  file_hdl;
 #include "handlers/serial.hpp"
 SerialHandler serial_hdl;
+#include "handlers/switches.hpp"
+Switches switches;
 
 /* Display */
 #include "display/gfx.hpp"
 GFX_SSD1351 gfx;
+#include "display/leds.hpp"
+Leds leds;
 
 /* Modules */
 #include "modules/synth.hpp"
@@ -26,12 +30,6 @@ Synth synth;
 /* Utils */
 #include "utils/state.hpp"
 #include "utils/color.hpp"
-
-/* dev1 */
-#include "dev1/leds.hpp"
-#include "dev1/switches.hpp"
-Leds leds;
-Switches switches;
 
 void setup() {
     serial_hdl.println("Cranberry Synth");
@@ -55,21 +53,33 @@ void loop() {
     auto& mode_state = State::mode_state;
 
     while(true) {
-        // イベント監視・処理
-        midi_hdl.process();
-        audio_hdl.process();
-        file_hdl.process();
-        serial_hdl.process();
 
-        // dev1
-        leds.process();
-        switches.process();
-
-        // 各モジュールの処理
+        // 優先度0: サウンド生成関連処理
         switch(mode_state) {
         case MODE_SYNTH:
             synth.update();
             break;
         }
+
+        // 優先度:1 音声信号処理(AD/DA)
+        audio_hdl.process();
+
+        // 優先度:2 MIDI入力検知
+        midi_hdl.process();
+
+        // 優先度:3 スイッチ処理
+        switches.process();
+
+        // 優先度:4 UI処理
+        // ui
+
+        // 優先度:5 MIDI Player 処理
+        file_hdl.process();
+
+        // 優先度:6 シリアル通信処理(USB)
+        serial_hdl.process();
+
+        // 優先度:7 LED制御
+        leds.process();
     }
 }

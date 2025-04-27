@@ -1,8 +1,10 @@
-#include "dev1/leds.hpp"
+#include "display/leds.hpp"
 
 void Leds::init() {
     pinMode(MIDI_LED_PIN, OUTPUT);
     pinMode(AUDIO_LED_PIN, OUTPUT);
+    pinMode(LED3_PIN, OUTPUT);
+    pinMode(LED4_PIN, OUTPUT);
 }
 
 void Leds::process() {
