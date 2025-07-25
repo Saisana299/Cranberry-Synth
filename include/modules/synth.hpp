@@ -14,6 +14,7 @@
 
 constexpr uint8_t MAX_NOTES = 16;
 constexpr uint8_t MAX_OPERATORS = 6;
+constexpr uint8_t MAX_CHANNELS = 16; //todo チャンネル別で音色を選択できるようにする エフェクトの個別適用は処理速度を確認
 constexpr uint8_t MAX_VOICE = 8;
 
 class Synth {
@@ -60,6 +61,10 @@ private:
 
     // 本来はamp_level * キャリアの数 * adjust_levelで調整する。
     int16_t master_scale = (static_cast<uint32_t>(amp_level) * adjust_level) >> 10;
+
+    // チャンネル別のバッファ
+    int32_t left[MAX_CHANNELS] = {};
+    int32_t right[MAX_CHANNELS] = {};
 
     void init();
     void generate();

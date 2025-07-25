@@ -3,6 +3,7 @@
 #include <Arduino.h>
 
 #include "handlers/file.hpp"
+#include "utils/state.hpp"
 
 constexpr uint8_t ECB_PIN = 16;
 constexpr uint8_t A_PIN = 15;
