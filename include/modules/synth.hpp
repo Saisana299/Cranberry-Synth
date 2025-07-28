@@ -27,6 +27,9 @@ private:
     };
     SynthNote notes[MAX_NOTES] = {};
 
+    // 非発音時は-1、発音時はnotesのインデックス番号
+    int8_t midi_note_to_index[128];
+
     struct OperatorState {
         Oscillator::Memory osc_mems[MAX_NOTES];
         Envelope::Memory env_mems[MAX_NOTES];
@@ -69,7 +72,8 @@ private:
     void init();
     void generate();
     void updateOrder(uint8_t removed);
-    void resetNote(uint8_t index);
+    void noteReset(uint8_t index);
+    void process();//todo
 
 public:
     Synth() {

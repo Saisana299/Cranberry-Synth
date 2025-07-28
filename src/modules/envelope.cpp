@@ -1,19 +1,15 @@
 #include "modules/envelope.hpp"
-//todo エンベロープの指数カーブ化を検討
-// 案外適当な方が面白いかもしれない
+
 /** @brief エンベロープを初期位置に戻す */
 void Envelope::reset(Memory& mem) {
     mem.state = State::Attack;
-    mem.elapsed = 0;
+    mem.log_level = (EXP_TABLE_SIZE - 1) << FIXED_POINT_SHIFT;
     mem.current_level = 0;
-    mem.prev_level = 0;
 }
 
 /** @brief エンベロープをリリースに移行 */
 void Envelope::release(Memory& mem) {
     if(mem.state != State::Release) {
-        mem.prev_level = mem.current_level;
-        mem.elapsed = 0;
         mem.state = State::Release;
     }
 }
@@ -25,50 +21,53 @@ void Envelope::release(Memory& mem) {
  */
 void Envelope::update(Memory& mem) {
     switch(mem.state) {
+        // ここでは減衰量で音量を変化させる
         case State::Attack:
-            if(mem.elapsed < attack_samples) {
-                const int32_t diff = 1024 - static_cast<int32_t>(mem.prev_level);
-                const int32_t offset = (diff * mem.elapsed * attack_inv) >> 16;
-                mem.current_level = static_cast<int16_t>(mem.prev_level + offset);
-                break;
+            // 減衰量を減らす（音量を増加させる）
+            // rateが最大値だと瞬時に音量が最大になる
+            if (mem.log_level > attack_rate) {
+                mem.log_level -= attack_rate;
             }
-            mem.prev_level = mem.current_level;
-            mem.elapsed -= attack_samples;
-            mem.state = State::Decay;
-            [[fallthrough]];
+            // アタックが終了したら減衰量を0にしてDecayへ
+            else {
+                mem.log_level = 0;
+                mem.state = State::Decay;
+            }
+            break;
 
         case State::Decay:
-            if(mem.elapsed < decay_samples) {
-                if (mem.current_level > sustain_level) {
-                    const int32_t diff = static_cast<int32_t>(mem.prev_level) - static_cast<int32_t>(sustain_level);
-                    const int32_t offset = (diff * mem.elapsed * decay_inv) >> 16;
-                    mem.current_level = static_cast<int16_t>(mem.prev_level - offset);
-                    break;
-                }
-                // サステインと同じ音量になったらSustainへ移行する
+            // 減衰量を増やす（音量を減少させる）
+            // rateが最大値だとすぐにsustain_log_levelになる
+            if (mem.log_level < sustain_log_level) {
+                mem.log_level += decay_rate;
             }
-            mem.prev_level = mem.current_level;
-            mem.elapsed -= decay_samples;
-            mem.state = State::Sustain;
-            [[fallthrough]];
+            // 減衰量が最大
+            else {
+                mem.log_level = sustain_log_level;
+                mem.state = State::Sustain;
+            }
+            break;
 
         case State::Sustain:
-            mem.current_level = sustain_level;
+            // sustain_log_levelが最大値だとフルボリュームで維持
             break;
 
         case State::Release:
-            if(mem.elapsed < release_samples) {
-                const int32_t diff = 0 - static_cast<int32_t>(mem.prev_level);
-                const int32_t abs_diff = (diff ^ (diff >> 31)) - (diff >> 31); // = -diff
-                const int32_t offset = (abs_diff * mem.elapsed * release_inv) >> 16;
-                mem.current_level = static_cast<int16_t>(mem.prev_level - offset);
-            }
-            else {
-                mem.current_level = 0;
+            // 目標値（最大減衰量）を固定小数点スケールに合わせる
+            const uint32_t max_attenuation = (EXP_TABLE_SIZE - 1) << FIXED_POINT_SHIFT;
+            // 減衰量が「最大減衰量 - 変化量」より小さいなら、減衰量を増やす。
+            // rateが最大値なら瞬時に音が消える
+            if (mem.log_level < max_attenuation - release_rate) {
+                mem.log_level += release_rate;
+            // 最大減衰量に達したら終了
+            } else {
+                mem.log_level = max_attenuation;
             }
             break;
     }
-    ++mem.elapsed;
+
+    // 音量レベルを更新
+    mem.current_level = exp_table[mem.log_level >> FIXED_POINT_SHIFT];
 }
 
 /**
@@ -76,10 +75,8 @@ void Envelope::update(Memory& mem) {
  *
  * @param attack_ms 1ms - 10000ms
  */
-void Envelope::setAttack(int16_t attack_ms) {
-    if(attack_ms < 1 || attack_ms > 10000) return;
-    attack_samples = (static_cast<uint32_t>(attack_ms * SAMPLE_RATE)) >> 10;
-    attack_inv = (attack_samples != 0) ? (((uint32_t)1 << 16) + (attack_samples >> 1)) / attack_samples : 0;
+void Envelope::setAttack(uint8_t attack_rate_0_99) {
+    attack_rate = rate_table[attack_rate_0_99];
 }
 
 /**
@@ -87,10 +84,8 @@ void Envelope::setAttack(int16_t attack_ms) {
  *
  * @param decay_ms 1ms - 10000ms
  */
-void Envelope::setDecay(int16_t decay_ms) {
-    if(decay_ms < 1 || decay_ms > 10000) return;
-    decay_samples = (static_cast<uint32_t>(decay_ms * SAMPLE_RATE)) >> 10;
-    decay_inv = (decay_samples != 0) ? (((uint32_t)1 << 16) + (decay_samples >> 1)) / decay_samples : 0;
+void Envelope::setDecay(uint8_t decay_rate_0_99) {
+    decay_rate = rate_table[decay_rate_0_99];
 }
 
 /**
@@ -98,10 +93,8 @@ void Envelope::setDecay(int16_t decay_ms) {
  *
  * @param release_ms 1ms - 10000ms
  */
-void Envelope::setRelease(int16_t release_ms) {
-    if(release_ms < 1 || release_ms > 10000) return;
-    release_samples = (static_cast<uint32_t>(release_ms * SAMPLE_RATE)) >> 10;
-    release_inv = (release_samples != 0) ? (((uint32_t)1 << 16) + (release_samples >> 1)) / release_samples : 0;
+void Envelope::setRelease(uint8_t release_rate_0_99) {
+    release_rate = rate_table[release_rate_0_99];
 }
 
 /**
@@ -109,7 +102,19 @@ void Envelope::setRelease(int16_t release_ms) {
  *
  * @param sustain_level 0 - 1024 (1.0)
  */
-void Envelope::setSustain(int16_t sustain_level) {
-    if(sustain_level < 0 || sustain_level > 1024) return;
-    this->sustain_level = sustain_level;
+void Envelope::setSustain(int16_t sustain_level_0_1023) {
+    // 線形レベルから対数レベルへ簡易変換
+    if(sustain_level_0_1023 < 0) sustain_level_0_1023 = 0;
+    if(sustain_level_0_1023 > 1023) sustain_level_0_1023 = 1023;
+
+    // 目的の線形レベルに最も近い対数レベルを探す (簡易的な逆引き)
+    // 本来はこれもテーブル化するか、より効率的な探索を行う
+    int32_t min_diff = 1024;
+    for (uint32_t i = 0; i < EXP_TABLE_SIZE; ++i) {
+        int32_t diff = std::abs(static_cast<int32_t>(sustain_level_0_1023) - exp_table[i]);
+        if(diff < min_diff) {
+            min_diff = diff;
+            sustain_log_level = i << FIXED_POINT_SHIFT;
+        }
+    }
 }

@@ -2,69 +2,75 @@
 
 /** @brief シンセ初期化 */
 void Synth::init() {
+
+    // ノート情報クリア
+    for (int i = 0; i < 128; ++i) {
+        midi_note_to_index[i] = -1;
+    }
+
     // [0]はCarrier確定
     operators[0].mode = OpMode::Carrier;
     operators[0].osc.setLevel(1024);
     operators[0].osc.enable();
 
-    operators[0].env.setDecay(400);
-    operators[0].env.setSustain(0);
-    operators[0].env.setRelease(400);
+    //operators[0].env.setDecay(400);
+    //operators[0].env.setSustain(0);
+    //operators[0].env.setRelease(400);
 
-    operators[0].osc.setDetune(3);
+    //operators[0].osc.setDetune(3);
 
     // [1]を0のモジュレーターに //todo
-    operators[1].mode = OpMode::Modulator;
-    operators[0].osc.setModulation(&operators[1].osc, &operators[1].env, &ope_states[1].osc_mems[0], &ope_states[1].env_mems[0]);
-    operators[1].osc.setLevelNonLinear(35);
-    operators[1].osc.enable();
+    // operators[1].mode = OpMode::Modulator;
+    // operators[0].osc.setModulation(&operators[1].osc, &operators[1].env, &ope_states[1].osc_mems[0], &ope_states[1].env_mems[0]);
+    // operators[1].osc.setLevelNonLinear(35);
+    // operators[1].osc.enable();
 
-    operators[1].env.setDecay(200);
-    operators[1].env.setSustain(0);
+    // operators[1].env.setDecay(200);
+    // operators[1].env.setSustain(0);
 
-    operators[1].osc.setCoarse(14.0f);
+    // operators[1].osc.setCoarse(14.0f);
 
     // [2]をCarrierに
-    operators[2].mode = OpMode::Carrier;
-    operators[2].osc.setLevel(1024);
-    operators[2].osc.enable();
+    // operators[2].mode = OpMode::Carrier;
+    // operators[2].osc.setLevel(1024);
+    // operators[2].osc.enable();
 
-    operators[2].env.setDecay(2000);
-    operators[2].env.setSustain(0);
-    operators[2].env.setRelease(400);
+    // operators[2].env.setDecay(2000);
+    // operators[2].env.setSustain(0);
+    // operators[2].env.setRelease(400);
 
     // [3]を2のモジュレーターに //todo
-    operators[3].mode = OpMode::Modulator;
-    operators[2].osc.setModulation(&operators[3].osc, &operators[3].env, &ope_states[3].osc_mems[0], &ope_states[3].env_mems[0]);
-    operators[3].osc.setLevelNonLinear(89);
-    operators[3].osc.enable();
+    // operators[3].mode = OpMode::Modulator;
+    // operators[2].osc.setModulation(&operators[3].osc, &operators[3].env, &ope_states[3].osc_mems[0], &ope_states[3].env_mems[0]);
+    // operators[3].osc.setLevelNonLinear(89);
+    // operators[3].osc.enable();
 
-    operators[3].env.setDecay(2000);
-    operators[3].env.setSustain(0);
-    operators[3].env.setRelease(400);
+    // operators[3].env.setDecay(2000);
+    // operators[3].env.setSustain(0);
+    // operators[3].env.setRelease(400);
 
     // [4]をCarrierに
-    operators[4].mode = OpMode::Carrier;
-    operators[4].osc.setLevel(1024);
-    operators[4].osc.enable();
+    // operators[4].mode = OpMode::Carrier;
+    // operators[4].osc.setLevel(1024);
+    // operators[4].osc.enable();
 
-    operators[4].env.setDecay(2000);
-    operators[4].env.setSustain(0);
-    operators[4].env.setRelease(400);
+    // operators[4].env.setDecay(2000);
+    // operators[4].env.setSustain(0);
+    // operators[4].env.setRelease(400);
 
-    operators[4].osc.setDetune(-7);
+    // operators[4].osc.setDetune(-7);
 
     // [5]を4のモジュレーターに //todo
-    operators[5].mode = OpMode::Modulator;
-    operators[4].osc.setModulation(&operators[5].osc, &operators[5].env, &ope_states[5].osc_mems[0], &ope_states[5].env_mems[0]);
-    operators[5].osc.setLevelNonLinear(79);
-    operators[5].osc.enable();
+    // operators[5].mode = OpMode::Modulator;
+    // operators[4].osc.setModulation(&operators[5].osc, &operators[5].env, &ope_states[5].osc_mems[0], &ope_states[5].env_mems[0]);
+    // operators[5].osc.setLevelNonLinear(79);
+    // operators[5].osc.enable();
 
-    operators[5].env.setDecay(2000);
-    operators[5].env.setSustain(0);
-    operators[5].env.setRelease(400);
+    // operators[5].env.setDecay(2000);
+    // operators[5].env.setSustain(0);
+    // operators[5].env.setRelease(400);
 
-    operators[5].osc.setDetune(+7);
+    // operators[5].osc.setDetune(+7);
 
     // ローパスフィルタ
     filter.setLowPass(6000.0f, 1.0f/sqrt(2.0f));
@@ -268,7 +274,7 @@ void Synth::generate() {
 
             // 全てのオペレーターが処理完了
             if(r_finished_cnt == carrier_cnt) {
-                resetNote(n);
+                noteReset(n);
             }
         } // for active note
 
@@ -324,6 +330,7 @@ void Synth::generate() {
     // /*debug*/ uint32_t duration = endTime - startTime;
     // /*debug*/ Serial.println(String(duration) + "us");
     // 2900μs以内に終わらせる必要がある
+    // sine波1音+LPFで62µs以内目標
 }
 
 /** @brief シンセ更新 */
@@ -367,23 +374,22 @@ void Synth::updateOrder(uint8_t removed) {
  */
 void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
     // 既に同じノートを演奏している場合
-    for (uint8_t i = 0; i < MAX_NOTES; ++i) {
-        if(notes[i].note == note) {
-            for(uint8_t op = 0; op < MAX_OPERATORS; ++op) {
-                // リリース中でなければ何もしない。
-                // if(ope_states[op].env_mems[i].state != Envelope::State::Release) return;
-            }
-            // リリース状態であれば強制リリース後発音 //todo
-        }
+    if(midi_note_to_index[note] != -1) {
+        //for(uint8_t op = 0; op < MAX_OPERATORS; ++op) {
+            // リリース中でなければ何もしない。
+            // if(ope_states[op].env_mems[i].state != Envelope::State::Release) return;
+        //}
+        // リリース状態であれば強制リリース後発音 //todo: 強制リリース
     }
     // MAX_NOTES個ノートを演奏中の場合
     if(order_max == MAX_NOTES) {
         // 一番古いノートを強制停止する //todo: 強制リリース
-        resetNote(last_index);
+        noteReset(last_index);
     }
     // ノートを追加する
     for (uint8_t i = 0; i < MAX_NOTES; ++i) {
         if (notes[i].order == 0) {
+            midi_note_to_index[note] = i;
             auto& it = notes[i];
             if(order_max < MAX_NOTES) ++order_max;
             it.order = order_max;
@@ -408,13 +414,12 @@ void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
  * @param channel MIDIチャンネル
  */
 void Synth::noteOff(uint8_t note, uint8_t channel) {
-    for (uint8_t i = 0; i < MAX_NOTES; ++i) {
-        if (notes[i].note == note) {
-            for(uint8_t op = 0; op < MAX_OPERATORS; ++op) {
-                auto& oper = operators[op];
-                auto& env_mem = ope_states[op].env_mems[i];
-                oper.env.release(env_mem);
-            }
+    if (midi_note_to_index[note] != -1) {
+        uint8_t i = midi_note_to_index[note];
+        for(uint8_t op = 0; op < MAX_OPERATORS; ++op) {
+            auto& oper = operators[op];
+            auto& env_mem = ope_states[op].env_mems[i];
+            oper.env.release(env_mem);
         }
     }
 }
@@ -424,9 +429,10 @@ void Synth::noteOff(uint8_t note, uint8_t channel) {
  *
  * @param index リセットするノートのインデックス
  */
-void Synth::resetNote(uint8_t index) {
+void Synth::noteReset(uint8_t index) {
     auto& it = notes[index];
     uint8_t removed_order = it.order;
+    midi_note_to_index[it.note] = -1;
     it.order = 0;
     it.note = 255;
     it.velocity = 0;
