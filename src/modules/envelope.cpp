@@ -3,7 +3,7 @@
 /** @brief エンベロープを初期位置に戻す */
 void Envelope::reset(Memory& mem) {
     mem.state = State::Attack;
-    mem.log_level = (EXP_TABLE_SIZE - 1) << FIXED_POINT_SHIFT;
+    mem.log_level = MAX_ATTENUATION;
     mem.current_level = 0;
 }
 
@@ -53,15 +53,13 @@ void Envelope::update(Memory& mem) {
             break;
 
         case State::Release:
-            // 目標値（最大減衰量）を固定小数点スケールに合わせる
-            const uint32_t max_attenuation = (EXP_TABLE_SIZE - 1) << FIXED_POINT_SHIFT;
             // 減衰量が「最大減衰量 - 変化量」より小さいなら、減衰量を増やす。
             // rateが最大値なら瞬時に音が消える
-            if (mem.log_level < max_attenuation - release_rate) {
+            if (mem.log_level < MAX_ATTENUATION - release_rate) {
                 mem.log_level += release_rate;
             // 最大減衰量に達したら終了
             } else {
-                mem.log_level = max_attenuation;
+                mem.log_level = MAX_ATTENUATION;
             }
             break;
     }
@@ -73,48 +71,39 @@ void Envelope::update(Memory& mem) {
 /**
  * @brief アタックを設定
  *
- * @param attack_ms 1ms - 10000ms
+ * @param rate_0_99 0 - 99
  */
-void Envelope::setAttack(uint8_t attack_rate_0_99) {
-    attack_rate = rate_table[attack_rate_0_99];
+void Envelope::setAttack(uint8_t rate_0_99) {
+    if(rate_0_99 > 99) rate_0_99 = 99;
+    attack_rate = rate_table[rate_0_99];
 }
 
 /**
  * @brief ディケイを設定
  *
- * @param decay_ms 1ms - 10000ms
+ * @param rate_0_99 0 - 99
  */
-void Envelope::setDecay(uint8_t decay_rate_0_99) {
-    decay_rate = rate_table[decay_rate_0_99];
+void Envelope::setDecay(uint8_t rate_0_99) {
+    if(rate_0_99 > 99) rate_0_99 = 99;
+    decay_rate = rate_table[rate_0_99];
 }
 
 /**
  * @brief リリースを設定
  *
- * @param release_ms 1ms - 10000ms
+ * @param rate_0_99 0 - 99
  */
-void Envelope::setRelease(uint8_t release_rate_0_99) {
-    release_rate = rate_table[release_rate_0_99];
+void Envelope::setRelease(uint8_t rate_0_99) {
+    if(rate_0_99 > 99) rate_0_99 = 99;
+    release_rate = rate_table[rate_0_99];
 }
 
 /**
  * @brief サステインを設定
  *
- * @param sustain_level 0 - 1024 (1.0)
+ * @param level_0_99 0 - 99
  */
-void Envelope::setSustain(int16_t sustain_level_0_1023) {
-    // 線形レベルから対数レベルへ簡易変換
-    if(sustain_level_0_1023 < 0) sustain_level_0_1023 = 0;
-    if(sustain_level_0_1023 > 1023) sustain_level_0_1023 = 1023;
-
-    // 目的の線形レベルに最も近い対数レベルを探す (簡易的な逆引き)
-    // 本来はこれもテーブル化するか、より効率的な探索を行う
-    int32_t min_diff = 1024;
-    for (uint32_t i = 0; i < EXP_TABLE_SIZE; ++i) {
-        int32_t diff = std::abs(static_cast<int32_t>(sustain_level_0_1023) - exp_table[i]);
-        if(diff < min_diff) {
-            min_diff = diff;
-            sustain_log_level = i << FIXED_POINT_SHIFT;
-        }
-    }
+void Envelope::setSustain(uint8_t level_0_99) {
+    if(level_0_99 > 99) level_0_99 = 99;
+    sustain_log_level = level_to_attenuation_table[level_0_99];
 }
