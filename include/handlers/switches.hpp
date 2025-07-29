@@ -31,15 +31,17 @@ private:
         uint8_t pin;
         uint32_t pushCount;
         bool longPushed;
+        uint8_t state;
+        uint8_t stateLong;
     };
     Button buttons[7] = {
-        {UP_PIN,  0, false},
-        {DN_PIN,  0, false},
-        {L_PIN,   0, false},
-        {R_PIN,   0, false},
-        {ET_PIN,  0, false},
-        {CXL_PIN, 0, false},
-        {ECB_PIN, 0, false}
+        {UP_PIN,  0, false, BTN_UP,  BTN_UP_LONG},
+        {DN_PIN,  0, false, BTN_DN,  BTN_DN_LONG},
+        {L_PIN,   0, false, BTN_L,   BTN_L_LONG},
+        {R_PIN,   0, false, BTN_R,   BTN_R_LONG},
+        {ET_PIN,  0, false, BTN_ET,  BTN_ET_LONG},
+        {CXL_PIN, 0, false, BTN_CXL, BTN_CXL_LONG},
+        {ECB_PIN, 0, false, BTN_EC,  BTN_EC_LONG}
     };
 
     uint32_t intervalCount = 0;

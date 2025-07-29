@@ -39,29 +39,19 @@ void Switches::process() {
         // ボタンが押されている時
         if(digitalRead(button.pin) == (button.pin == ECB_PIN ? HIGH : LOW)) {
             if(button.pushCount <= PUSH_SHORT) button.pushCount++;
-            else {
-                //
+            else if(button.pushCount == PUSH_SHORT+1) {
+                State::btn_state = button.state;
+                button.pushCount++;
             }
         }
         // ボタンを離している時
         else {
             if(button.pushCount >= PUSH_SHORT && intervalCount >= PUSH_LONG) {
                 intervalCount = 0;
+                State::btn_state = button.stateLong;
             }
             button.pushCount = 0;
         }
     }
     if(intervalCount <= PUSH_LONG) intervalCount++;
-
-    // if(buttonStateFlag) {
-    //     FileHandler::stop();
-    //     const char* a = "demo1.mid";
-    //     const char* b = "demo2.mid";
-    //     const char* c = "demo3.mid";
-    //     if(playing == 0) FileHandler::play(a);
-    //     else if(playing == 1) FileHandler::play(b);
-    //     else if(playing == 2) FileHandler::play(c);
-    //     playing = (playing + 1) % 4;
-    //     buttonStateFlag = false;
-    // }
 }

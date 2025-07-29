@@ -23,6 +23,11 @@ GFX_SSD1351 gfx;
 #include "display/leds.hpp"
 Leds leds;
 
+/* UI */
+#include "ui/screens/title.hpp"
+#include "ui/ui.hpp"
+UIManager ui;
+
 /* Modules */
 #include "modules/synth.hpp"
 Synth synth;
@@ -36,17 +41,9 @@ void setup() {
     serial_hdl.println("Digital FM Synthesizer on Teensy 4.1");
 
     gfx.begin();
-    TextBounds bounds = gfx.getTextBounds("Cranberry Synth", 0, 12);
-    const uint16_t canvas_h = static_cast<uint16_t>(bounds.y) + bounds.h;
-    GFXcanvas16 canvas{bounds.w, canvas_h};
-    gfx.drawString(canvas, "Cranberry Synth", 0, 0, Color::GRAY);
-    gfx.drawString(canvas, "Dev-1", 0, 12, Color::GRAY);
-    gfx.flash(canvas, 0, 0);
+    ui.pushScreen(new TitleScreen());
 
     randomSeed(analogRead(0));
-
-    //const char* a = "demo1.mid";
-    //FileHandler::play(a);
 }
 
 void loop() {
@@ -71,7 +68,7 @@ void loop() {
         switches.process();
 
         // 優先度:4 UI処理
-        // ui
+        ui.render();
 
         // 優先度:5 MIDI Player 処理
         file_hdl.process();
