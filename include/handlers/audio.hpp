@@ -25,10 +25,9 @@ private:
 // Audio Object
 // --------------
     // I2S 入力 -> RecordQueue(Left, Right)
-    // AudioInputI2S    i2s   = {}; // BCLK=21, MCLK=23, LRCLK=20, RX=8
-    // AudioRecordQueue rec_L = {}; // L
-    // AudioRecordQueue rec_R = {}; // R
-    // todo
+    AudioInputI2S    i2s   = {}; // BCLK=21, MCLK=23, LRCLK=20, RX=8
+    AudioRecordQueue rec_L = {}; // L
+    AudioRecordQueue rec_R = {}; // R
 
     // I2SQuad 出力 (4ch: L+, L-, R+, R-)
     AudioOutputI2SQuad i2s_quad = {}; // BCLK=21, MCLK=23, LRCLK=20, TX(1+2)=7, TX(3+4)=32
@@ -41,9 +40,8 @@ private:
 // Audio Connection
 // --------------
     // I2S 入力 -> RecordQueue(Left, Right)
-    // AudioConnection  patchCord5 = {i2s, 0, rec_L, 0};
-    // AudioConnection  patchCord6 = {i2s, 1, rec_R, 0};
-    // todo
+    AudioConnection  patchCord5 = {i2s, 0, rec_L, 0};
+    AudioConnection  patchCord6 = {i2s, 1, rec_R, 0};
 
     // PlayQueue -> I2SQuad 出力  (チャネル順: 0=L+, 1=L-, 2=R+, 3=R-)
     AudioConnection  patchCord1 = {queue_L,  0, i2s_quad, 0};
@@ -58,4 +56,6 @@ public:
         init();
     }
     void process();
+    void beginRecord();
+    void endRecord();
 };

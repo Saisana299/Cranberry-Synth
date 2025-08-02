@@ -57,4 +57,8 @@ public:
         canvas.getTextBounds(text, x, y, &bounds.x, &bounds.y, &bounds.w, &bounds.h);
         return bounds;
     }
+
+    static inline void drawCanvas(GFXcanvas16& target, GFXcanvas16& canvas, int16_t x = 0, int16_t y = 0) {
+        target.drawRGBBitmap(x, y, canvas.getBuffer(), canvas.width(), canvas.height());
+    }
 };
