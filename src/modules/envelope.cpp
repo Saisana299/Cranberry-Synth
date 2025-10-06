@@ -2,15 +2,15 @@
 
 /** @brief エンベロープを初期位置に戻す */
 void Envelope::reset(Memory& mem) {
-    mem.state = State::Attack;
+    mem.state = EnvelopeState::Attack;
     mem.log_level = MAX_ATTENUATION;
     mem.current_level = 0;
 }
 
 /** @brief エンベロープをリリースに移行 */
 void Envelope::release(Memory& mem) {
-    if(mem.state != State::Release) {
-        mem.state = State::Release;
+    if(mem.state != EnvelopeState::Release) {
+        mem.state = EnvelopeState::Release;
     }
 }
 
@@ -22,7 +22,7 @@ void Envelope::release(Memory& mem) {
 void Envelope::update(Memory& mem) {
     switch(mem.state) {
         // ここでは減衰量で音量を変化させる
-        case State::Attack:
+        case EnvelopeState::Attack:
             // 減衰量を減らす（音量を増加させる）
             // rateが最大値だと瞬時に音量が最大になる
             if (mem.log_level > attack_rate) {
@@ -31,11 +31,11 @@ void Envelope::update(Memory& mem) {
             // アタックが終了したら減衰量を0にしてDecayへ
             else {
                 mem.log_level = 0;
-                mem.state = State::Decay;
+                mem.state = EnvelopeState::Decay;
             }
             break;
 
-        case State::Decay:
+        case EnvelopeState::Decay:
             // 減衰量を増やす（音量を減少させる）
             // rateが最大値だとすぐにsustain_log_levelになる
             if (mem.log_level < sustain_log_level) {
@@ -44,15 +44,15 @@ void Envelope::update(Memory& mem) {
             // 減衰量が最大
             else {
                 mem.log_level = sustain_log_level;
-                mem.state = State::Sustain;
+                mem.state = EnvelopeState::Sustain;
             }
             break;
 
-        case State::Sustain:
+        case EnvelopeState::Sustain:
             // sustain_log_levelが最大値だとフルボリュームで維持
             break;
 
-        case State::Release:
+        case EnvelopeState::Release:
             // 減衰量が「最大減衰量 - 変化量」より小さいなら、減衰量を増やす。
             // rateが最大値なら瞬時に音が消える
             if (mem.log_level < MAX_ATTENUATION - release_rate) {

@@ -377,7 +377,7 @@ void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
     if(midi_note_to_index[note] != -1) {
         //for(uint8_t op = 0; op < MAX_OPERATORS; ++op) {
             // リリース中でなければ何もしない。
-            // if(ope_states[op].env_mems[i].state != Envelope::State::Release) return;
+            // if(ope_states[op].env_mems[i].state != Envelope::EnvelopeState::Release) return;
         //}
         // リリース状態であれば強制リリース後発音 //todo: 強制リリース
     }

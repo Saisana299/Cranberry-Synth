@@ -86,12 +86,12 @@ public:
     // レベル -> 減衰量 変換テーブル
     inline static const std::array<uint32_t, LEVEL_TABLE_SIZE> level_to_attenuation_table = generate_level_to_attenuation_table();
 
-    enum class State {
+    enum class EnvelopeState {
         Attack, Decay, Sustain, Release
     };
 
     struct Memory {
-        State state = State::Attack;
+        EnvelopeState state = EnvelopeState::Attack;
         uint32_t log_level = MAX_ATTENUATION; // 対数スケールの内部レベル（減衰量）
         int16_t current_level = 0;  // 線形スケールの最終出力レベル
     };
@@ -120,6 +120,6 @@ public:
      * @return 終了していれば `true` を返す
      */
     inline bool isFinished(Memory& mem) {
-        return (mem.state == State::Release && mem.log_level >= MAX_ATTENUATION);
+        return (mem.state == EnvelopeState::Release && mem.log_level >= MAX_ATTENUATION);
     }
 };
