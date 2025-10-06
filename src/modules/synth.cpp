@@ -13,64 +13,64 @@ void Synth::init() {
     operators[0].osc.setLevel(1024);
     operators[0].osc.enable();
 
-    //operators[0].env.setDecay(400);
-    //operators[0].env.setSustain(0);
-    //operators[0].env.setRelease(400);
+    operators[0].env.setDecay(60);
+    operators[0].env.setSustain(0);
+    operators[0].env.setRelease(80);
 
-    //operators[0].osc.setDetune(3);
+    operators[0].osc.setDetune(3);
 
     // [1]を0のモジュレーターに //todo
-    // operators[1].mode = OpMode::Modulator;
-    // operators[0].osc.setModulation(&operators[1].osc, &operators[1].env, &ope_states[1].osc_mems[0], &ope_states[1].env_mems[0]);
-    // operators[1].osc.setLevelNonLinear(35);
-    // operators[1].osc.enable();
+    operators[1].mode = OpMode::Modulator;
+    operators[0].osc.setModulation(&operators[1].osc, &operators[1].env, &ope_states[1].osc_mems[0], &ope_states[1].env_mems[0]);
+    operators[1].osc.setLevelNonLinear(35);
+    operators[1].osc.enable();
 
-    // operators[1].env.setDecay(200);
-    // operators[1].env.setSustain(0);
+    operators[1].env.setDecay(60);
+    operators[1].env.setSustain(0);
 
-    // operators[1].osc.setCoarse(14.0f);
+    operators[1].osc.setCoarse(14.0f);
 
     // [2]をCarrierに
-    // operators[2].mode = OpMode::Carrier;
-    // operators[2].osc.setLevel(1024);
-    // operators[2].osc.enable();
+    operators[2].mode = OpMode::Carrier;
+    operators[2].osc.setLevel(1024);
+    operators[2].osc.enable();
 
-    // operators[2].env.setDecay(2000);
-    // operators[2].env.setSustain(0);
-    // operators[2].env.setRelease(400);
+    operators[2].env.setDecay(94);
+    operators[2].env.setSustain(0);
+    operators[2].env.setRelease(80);
 
     // [3]を2のモジュレーターに //todo
-    // operators[3].mode = OpMode::Modulator;
-    // operators[2].osc.setModulation(&operators[3].osc, &operators[3].env, &ope_states[3].osc_mems[0], &ope_states[3].env_mems[0]);
-    // operators[3].osc.setLevelNonLinear(89);
-    // operators[3].osc.enable();
+    operators[3].mode = OpMode::Modulator;
+    operators[2].osc.setModulation(&operators[3].osc, &operators[3].env, &ope_states[3].osc_mems[0], &ope_states[3].env_mems[0]);
+    operators[3].osc.setLevelNonLinear(89);
+    operators[3].osc.enable();
 
-    // operators[3].env.setDecay(2000);
-    // operators[3].env.setSustain(0);
-    // operators[3].env.setRelease(400);
+    operators[3].env.setDecay(94);
+    operators[3].env.setSustain(0);
+    operators[3].env.setRelease(80);
 
     // [4]をCarrierに
-    // operators[4].mode = OpMode::Carrier;
-    // operators[4].osc.setLevel(1024);
-    // operators[4].osc.enable();
+    operators[4].mode = OpMode::Carrier;
+    operators[4].osc.setLevel(1024);
+    operators[4].osc.enable();
 
-    // operators[4].env.setDecay(2000);
-    // operators[4].env.setSustain(0);
-    // operators[4].env.setRelease(400);
+    operators[4].env.setDecay(94);
+    operators[4].env.setSustain(0);
+    operators[4].env.setRelease(80);
 
-    // operators[4].osc.setDetune(-7);
+    operators[4].osc.setDetune(-7);
 
     // [5]を4のモジュレーターに //todo
-    // operators[5].mode = OpMode::Modulator;
-    // operators[4].osc.setModulation(&operators[5].osc, &operators[5].env, &ope_states[5].osc_mems[0], &ope_states[5].env_mems[0]);
-    // operators[5].osc.setLevelNonLinear(79);
-    // operators[5].osc.enable();
+    operators[5].mode = OpMode::Modulator;
+    operators[4].osc.setModulation(&operators[5].osc, &operators[5].env, &ope_states[5].osc_mems[0], &ope_states[5].env_mems[0]);
+    operators[5].osc.setLevelNonLinear(79);
+    operators[5].osc.enable();
 
-    // operators[5].env.setDecay(2000);
-    // operators[5].env.setSustain(0);
-    // operators[5].env.setRelease(400);
+    operators[5].env.setDecay(94);
+    operators[5].env.setSustain(0);
+    operators[5].env.setRelease(80);
 
-    // operators[5].osc.setDetune(+7);
+    operators[5].osc.setDetune(+7);
 
     // ローパスフィルタ
     filter.setLowPass(6000.0f, 1.0f/sqrt(2.0f));
@@ -447,4 +447,10 @@ void Synth::noteReset(uint8_t index) {
     if(order_max > 0) --order_max;
     // 他ノートorder更新
     updateOrder(removed_order);
+}
+
+void Synth::reset() {
+    for(uint8_t i = 0; i < MAX_NOTES; ++i) {
+        noteReset(i);
+    }
 }

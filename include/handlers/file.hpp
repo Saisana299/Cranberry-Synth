@@ -3,6 +3,7 @@
 #include <MD_MIDIFile.h>
 
 #include "modules/synth.hpp"
+#include "utils/state.hpp"
 
 class FileHandler {
 private:

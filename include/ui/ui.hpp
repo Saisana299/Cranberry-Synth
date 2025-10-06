@@ -5,12 +5,14 @@
 #include "screens/screen.hpp"
 #include "display/gfx.hpp"
 #include "utils/state.hpp"
+#include "handlers/file.hpp"
 
 class UIManager {
 private:
     std::stack<Screen*> screenStack; // 画面をポインタで管理するスタック
     GFXcanvas16 canvas;              // 描画用のキャンバス
     bool redraw = true;              // 再描画が必要かどうかのフラグ
+    int8_t playing = 0; //todo TEST
 
 public:
     UIManager() : canvas(SCREEN_WIDTH, SCREEN_HEIGHT) {}
@@ -51,6 +53,22 @@ public:
             screenStack.top()->handleInput(button);
             redraw = true;
         }
+        //todo デモ用----------------------------------------
+        if(button == BTN_ET){
+            FileHandler::stop();
+            const char* a = "demo1.mid";
+            const char* b = "demo2.mid";
+            const char* c = "demo3.mid";
+            if(playing == 0) FileHandler::play(a);
+            else if(playing == 1) FileHandler::play(b);
+            else if(playing == 2) FileHandler::play(c);
+            playing = (playing + 1) % 4;
+        }
+        if(button == BTN_CXL){
+            FileHandler::stop();
+            playing = 0;
+        }
+        //todo ------------------------------------------------
     }
 
     // 描画処理（ループ）

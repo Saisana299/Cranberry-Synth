@@ -86,4 +86,5 @@ public:
     void update();
     void noteOn(uint8_t note, uint8_t velocity, uint8_t channel);
     void noteOff(uint8_t note, uint8_t channel);
+    void reset();
 };
