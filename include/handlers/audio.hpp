@@ -49,10 +49,11 @@ private:
     AudioConnection  patchCord3 = {queue_R,  0, i2s_quad, 2};
     AudioConnection  patchCord4 = {queue_RM, 0, i2s_quad, 3};
 
+    State& state_;
     void init();
 
 public:
-    AudioHandler() {
+    AudioHandler(State& state) : state_(state) {
         init();
     }
     void process();

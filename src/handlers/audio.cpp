@@ -18,13 +18,11 @@ void AudioHandler::init() {
 
 /** @brief オーディオ処理 */
 void AudioHandler::process() {
-    auto& led_audio = State::led_audio;
-
     if(samples_ready
         && queue_L.available() && queue_R.available()
         && queue_LM.available() && queue_RM.available())
     {
-        led_audio = true;
+        state_.setLedAudio(true);
         queue_L.play(samples_L, BUFFER_SIZE);
         queue_R.play(samples_R, BUFFER_SIZE);
         queue_LM.play(samples_LM, BUFFER_SIZE);
@@ -32,7 +30,7 @@ void AudioHandler::process() {
         samples_ready = false;
     }
     else {
-        led_audio = false;
+        state_.setLedAudio(false);
     }
 }
 

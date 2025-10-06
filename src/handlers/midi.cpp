@@ -17,7 +17,7 @@ void MIDIHandler::init() {
  * @param velocity ベロシティ
  */
 void MIDIHandler::handleNoteOn(uint8_t ch, uint8_t note, uint8_t velocity) {
-    auto& mode_state = State::mode_state;
+    auto mode_state = state_.getModeState();
     if (mode_state == MODE_SYNTH) {
         Synth::getInstance()->noteOn(note, velocity, ch);
     }
@@ -31,7 +31,7 @@ void MIDIHandler::handleNoteOn(uint8_t ch, uint8_t note, uint8_t velocity) {
  * @param velocity ベロシティ
  */
 void MIDIHandler::handleNoteOff(uint8_t ch, uint8_t note, uint8_t velocity) {
-    auto& mode_state = State::mode_state;
+    auto mode_state = state_.getModeState();
     if (mode_state == MODE_SYNTH) {
         Synth::getInstance()->noteOff(note, ch);
     }
@@ -39,7 +39,6 @@ void MIDIHandler::handleNoteOff(uint8_t ch, uint8_t note, uint8_t velocity) {
 
 /** @brief MIDIデータ読み込み */
 void MIDIHandler::process() {
-    auto& led_midi = State::led_midi;
     bool temp = false;
     if(usbMIDI.read()){
         temp = true;
@@ -47,7 +46,8 @@ void MIDIHandler::process() {
     if(MIDI.read()){
         temp = true;
     }
-    led_midi = temp;
+
+    state_.setLedMidi(temp);
 }
 
 /** @brief instance->handleNoteOn */

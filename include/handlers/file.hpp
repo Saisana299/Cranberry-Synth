@@ -13,11 +13,13 @@ private:
 
     static inline FileHandler* instance = nullptr;
 
+    State& state_;
+
     void init();
     void midiCallback(midi_event *pev);
 
 public:
-    FileHandler() {
+    FileHandler(State& state) : state_(state) {
         instance = this;
         init();
     }

@@ -13,8 +13,8 @@ void FileHandler::init() {
 void FileHandler::midiCallback(midi_event *pev) {
     uint8_t status = pev->data[0] & 0xF0;
     uint8_t channel = pev->data[0] & 0x0F;
-    auto& led_midi = State::led_midi;//todo
     bool temp = false;//todo
+
     switch (status) {
         case 0x90:
             Synth::getInstance()->noteOn(pev->data[1], pev->data[2], channel+1);
@@ -26,7 +26,8 @@ void FileHandler::midiCallback(midi_event *pev) {
             temp = false;//todo
             break;
     }
-    led_midi = temp;//todo
+
+    state_.setLedMidi(temp);//todo
 }
 
 void FileHandler::midiCallbackStatic(midi_event *pev) {

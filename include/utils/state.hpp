@@ -26,8 +26,25 @@ constexpr uint8_t BTN_EC_LONG  = 0x17;
 
 class State {
 public:
-    static inline bool led_midi = false;
-    static inline bool led_audio = false;
-    static inline uint8_t mode_state = MODE_SYNTH;
-    static inline uint8_t btn_state = BTN_NONE;
+    // MIDIステータスLED
+    bool getLedMidi() const { return led_midi; }
+    void setLedMidi(bool value) { led_midi = value; }
+
+    // AUDIOステータスLED
+    bool getLedAudio() const { return led_audio; }
+    void setLedAudio(bool value) { led_audio = value; }
+
+    // モードステータス
+    uint8_t getModeState() const { return mode_state; }
+    void setModeState(uint8_t value) { mode_state = value; }
+
+    // ボタンステータス
+    uint8_t getBtnState() const { return btn_state; }
+    void setBtnState(uint8_t value) { btn_state = value; }
+
+private:
+    bool led_midi = false;
+    bool led_audio = false;
+    uint8_t mode_state = MODE_SYNTH;
+    uint8_t btn_state = BTN_NONE;
 };

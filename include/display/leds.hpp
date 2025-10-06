@@ -19,13 +19,14 @@ constexpr uint8_t LED4_PIN = 35;
 
 class Leds {
 private:
+    State& state_;
     bool before_led_midi = false;
     bool before_led_audio = false;
 
     void init();
 
 public:
-    Leds() {
+    Leds(State& state) : state_(state) {
         init();
     }
     void process();

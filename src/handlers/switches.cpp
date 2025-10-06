@@ -40,7 +40,7 @@ void Switches::process() {
         if(digitalRead(button.pin) == (button.pin == ECB_PIN ? HIGH : LOW)) {
             if(button.pushCount <= PUSH_SHORT) button.pushCount++;
             else if(button.pushCount == PUSH_SHORT+1) {
-                State::btn_state = button.state;
+                state_.setBtnState(button.state);
                 button.pushCount++;
             }
         }
@@ -48,7 +48,7 @@ void Switches::process() {
         else {
             if(button.pushCount >= PUSH_SHORT && intervalCount >= PUSH_LONG) {
                 intervalCount = 0;
-                State::btn_state = button.stateLong;
+                state_.setBtnState(button.stateLong);
             }
             button.pushCount = 0;
         }

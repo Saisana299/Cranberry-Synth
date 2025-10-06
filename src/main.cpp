@@ -4,37 +4,35 @@
 
 #include <Arduino.h>
 #include <Adafruit_GFX.h>
-
 /* Handlers */
 #include "handlers/audio.hpp"
-AudioHandler audio_hdl;
 #include "handlers/midi.hpp"
-MIDIHandler  midi_hdl;
 #include "handlers/file.hpp"
-FileHandler  file_hdl;
 #include "handlers/serial.hpp"
-SerialHandler serial_hdl;
 #include "handlers/switches.hpp"
-Switches switches;
-
 /* Display */
 #include "display/gfx.hpp"
-GFX_SSD1351 gfx;
 #include "display/leds.hpp"
-Leds leds;
-
 /* UI */
 #include "ui/screens/title.hpp"
 #include "ui/ui.hpp"
-UIManager ui;
-
 /* Modules */
 #include "modules/synth.hpp"
-Synth synth;
-
 /* Utils */
 #include "utils/state.hpp"
 #include "utils/color.hpp"
+
+/* インスタンス生成 */
+State state;
+AudioHandler audio_hdl(state);
+MIDIHandler  midi_hdl(state);
+FileHandler  file_hdl(state);
+SerialHandler serial_hdl;
+Switches switches(state);
+GFX_SSD1351 gfx;
+Leds leds(state);
+UIManager ui(state);
+Synth synth;
 
 void setup() {
     serial_hdl.println("Cranberry Synth");
@@ -47,15 +45,15 @@ void setup() {
 }
 
 void loop() {
-    auto& mode_state = State::mode_state;
+    auto mode_state = state.getModeState();
 
     while(true) {
 
         // 優先度0: サウンド生成関連処理
         switch(mode_state) {
-        case MODE_SYNTH:
-            synth.update();
-            break;
+            case MODE_SYNTH:
+                synth.update();
+                break;
         }
 
         // 優先度:1 音声信号処理(AD/DA)

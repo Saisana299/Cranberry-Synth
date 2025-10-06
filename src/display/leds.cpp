@@ -8,8 +8,8 @@ void Leds::init() {
 }
 
 void Leds::process() {
-    auto& led_midi = State::led_midi;
-    auto& led_audio = State::led_audio;
+    auto led_midi = state_.getLedMidi();
+    auto led_audio = state_.getLedAudio();
 
     // MIDIインジケーターの状態切替
     if(led_midi != before_led_midi) {

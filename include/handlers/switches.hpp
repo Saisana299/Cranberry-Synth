@@ -23,6 +23,8 @@ class Switches {
 private:
     static volatile uint8_t lastEncoded;
 
+    State& state_;
+
     void init();
 
     static void updateEncoder();
@@ -48,7 +50,7 @@ private:
     int8_t playing = 0;
 
 public:
-    Switches() {
+    Switches(State& state) : state_(state) {
         init();
     }
     void process();

@@ -13,9 +13,11 @@ private:
     GFXcanvas16 canvas;              // 描画用のキャンバス
     bool redraw = true;              // 再描画が必要かどうかのフラグ
     int8_t playing = 0; //todo TEST
+    State& state_;
 
 public:
-    UIManager() : canvas(SCREEN_WIDTH, SCREEN_HEIGHT) {}
+    UIManager(State& state)
+        : canvas(SCREEN_WIDTH, SCREEN_HEIGHT), state_(state) {}
 
     // スタックに残っている画面を全て削除
     ~UIManager() {
@@ -74,9 +76,10 @@ public:
     // 描画処理（ループ）
     void render() {
         // Stateを確認してボタンが押されていたらhandleInputを呼び出す
-        if (State::btn_state != BTN_NONE) {
-            handleInput(State::btn_state);
-            State::btn_state = BTN_NONE;
+        auto btn_state = state_.getBtnState();
+        if (btn_state != BTN_NONE) {
+            handleInput(btn_state);
+            state_.setBtnState(BTN_NONE);
         }
 
         // 再描画確認

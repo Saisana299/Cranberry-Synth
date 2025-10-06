@@ -16,12 +16,14 @@ private:
 
     static inline MIDIHandler* instance = nullptr;
 
+    State& state_;
+
     void init();
     void handleNoteOn(uint8_t ch, uint8_t note, uint8_t velocity);
     void handleNoteOff(uint8_t ch, uint8_t note, uint8_t velocity);
 
 public:
-    MIDIHandler() {
+    MIDIHandler(State& state) : state_(state) {
         instance = this;
         init();
     }
