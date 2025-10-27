@@ -2,7 +2,7 @@
 
 void FileHandler::init() {
     if(!SD.begin(BUILTIN_SDCARD)) {
-        //
+        //todo SDが無い場合を考慮
         while(true);
     }
     SMF.begin(&(SD.sdfs));

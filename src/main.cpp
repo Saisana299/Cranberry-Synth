@@ -3,6 +3,7 @@
 /** @author Saisana299 **/
 
 #include <Arduino.h>
+#include <Entropy.h>
 #include <Adafruit_GFX.h>
 /* Handlers */
 #include "handlers/audio.hpp"
@@ -41,13 +42,14 @@ void setup() {
     gfx.begin();
     ui.pushScreen(new TitleScreen());
 
-    randomSeed(analogRead(0));
+    Entropy.Initialize();
+    randomSeed(Entropy.random());
 }
 
 void loop() {
-    auto mode_state = state.getModeState();
-
+    // 1ループ2900µs以内
     while(true) {
+        auto mode_state = state.getModeState();
 
         // 優先度0: サウンド生成関連処理
         switch(mode_state) {
