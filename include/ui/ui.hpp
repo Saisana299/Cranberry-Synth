@@ -5,7 +5,7 @@
 #include "screens/screen.hpp"
 #include "display/gfx.hpp"
 #include "utils/state.hpp"
-#include "handlers/file.hpp"
+#include "tools/player.hpp"
 
 class UIManager {
 private:
@@ -57,17 +57,17 @@ public:
         }
         //todo デモ用----------------------------------------
         if(button == BTN_ET){
-            FileHandler::stop();
+            MIDIPlayer::stop();
             const char* a = "demo1.mid";
             const char* b = "demo2.mid";
             const char* c = "demo3.mid";
-            if(playing == 0) FileHandler::play(a);
-            else if(playing == 1) FileHandler::play(b);
-            else if(playing == 2) FileHandler::play(c);
+            if(playing == 0) MIDIPlayer::play(a);
+            else if(playing == 1) MIDIPlayer::play(b);
+            else if(playing == 2) MIDIPlayer::play(c);
             playing = (playing + 1) % 4;
         }
         if(button == BTN_CXL){
-            FileHandler::stop();
+            MIDIPlayer::stop();
             playing = 0;
         }
         //todo ------------------------------------------------

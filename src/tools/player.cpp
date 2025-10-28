@@ -1,6 +1,6 @@
-#include "handlers/file.hpp"
+#include "tools/player.hpp"
 
-void FileHandler::init() {
+void MIDIPlayer::init() {
     if(!SD.begin(BUILTIN_SDCARD)) {
         //todo SDが無い場合を考慮
         while(true);
@@ -10,7 +10,7 @@ void FileHandler::init() {
     SMF.looping(true);
 }
 
-void FileHandler::midiCallback(midi_event *pev) {
+void MIDIPlayer::midiCallback(midi_event *pev) {
     uint8_t status = pev->data[0] & 0xF0;
     uint8_t channel = pev->data[0] & 0x0F;
     bool temp = false;//todo
@@ -30,22 +30,22 @@ void FileHandler::midiCallback(midi_event *pev) {
     state_.setLedMidi(temp);//todo
 }
 
-void FileHandler::midiCallbackStatic(midi_event *pev) {
+void MIDIPlayer::midiCallbackStatic(midi_event *pev) {
     if (instance) instance->midiCallback(pev);
 }
 
-void FileHandler::play(const char* path) {
+void MIDIPlayer::play(const char* path) {
     if (instance) instance->SMF.load(path);
 }
 
-void FileHandler::stop() {
+void MIDIPlayer::stop() {
     if (instance) {
         instance->SMF.close();
         Synth::getInstance()->reset();
     }
 }
 
-void FileHandler::process() {
+void MIDIPlayer::process() {
     if (!SMF.isEOF()) {
         SMF.getNextEvent();
     }

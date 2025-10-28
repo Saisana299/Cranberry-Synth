@@ -5,13 +5,13 @@
 #include "modules/synth.hpp"
 #include "utils/state.hpp"
 
-class FileHandler {
+class MIDIPlayer {
 private:
     MD_MIDIFile SMF = {};
 
     static inline void midiCallbackStatic(midi_event *pev);
 
-    static inline FileHandler* instance = nullptr;
+    static inline MIDIPlayer* instance = nullptr;
 
     State& state_;
 
@@ -19,7 +19,7 @@ private:
     void midiCallback(midi_event *pev);
 
 public:
-    FileHandler(State& state) : state_(state) {
+    MIDIPlayer(State& state) : state_(state) {
         instance = this;
         init();
     }

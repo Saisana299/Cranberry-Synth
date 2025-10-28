@@ -16,7 +16,7 @@ void AudioHandler::init() {
     AudioMemory(QUEUE_BLOCKS*6 + 4 + 2);
 }
 
-/** @brief オーディオ処理 */
+/** @brief バッファに格納されたオーディオデータを再生 */
 void AudioHandler::process() {
     if(samples_ready
         && queue_L.available() && queue_R.available()
@@ -34,6 +34,7 @@ void AudioHandler::process() {
     }
 }
 
+/** @brief 録音開始 */ // todo
 void AudioHandler::beginRecord() {
     rec_L.clear();
     rec_R.clear();
@@ -41,6 +42,7 @@ void AudioHandler::beginRecord() {
     rec_R.begin();
 }
 
+/** @brief 録音終了 */ // todo
 void AudioHandler::endRecord() {
     rec_L.end();
     rec_R.end();

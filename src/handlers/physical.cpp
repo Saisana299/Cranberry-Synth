@@ -1,8 +1,8 @@
-#include "handlers/switches.hpp"
+#include "handlers/physical.hpp"
 
-volatile uint8_t Switches::lastEncoded = 0;
+volatile uint8_t PhysicalHandler::lastEncoded = 0;
 
-void Switches::updateEncoder() {
+void PhysicalHandler::updateEncoder() {
     uint8_t MSB = digitalRead(A_PIN);
     uint8_t LSB = digitalRead(B_PIN);
     uint8_t encoded = (MSB << 1) | LSB;
@@ -18,15 +18,15 @@ void Switches::updateEncoder() {
     lastEncoded = encoded;
 }
 
-void Switches::init() {
+void PhysicalHandler::init() {
     // ENC_AB
     pinMode(A_PIN, INPUT_PULLUP);
     pinMode(B_PIN, INPUT_PULLUP);
 
     lastEncoded = (digitalRead(A_PIN) << 1) | digitalRead(B_PIN);
 
-    attachInterrupt(digitalPinToInterrupt(A_PIN), Switches::updateEncoder, CHANGE);
-    attachInterrupt(digitalPinToInterrupt(B_PIN), Switches::updateEncoder, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(A_PIN), PhysicalHandler::updateEncoder, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(B_PIN), PhysicalHandler::updateEncoder, CHANGE);
 
     // BTN
     for (auto &button : buttons) {
@@ -34,7 +34,7 @@ void Switches::init() {
     }
 }
 
-void Switches::process() {
+void PhysicalHandler::process() {
     for(auto &button : buttons) {
         // ボタンが押されている時
         if(digitalRead(button.pin) == (button.pin == ECB_PIN ? HIGH : LOW)) {

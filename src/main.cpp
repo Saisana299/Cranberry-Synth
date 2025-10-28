@@ -8,9 +8,8 @@
 /* Handlers */
 #include "handlers/audio.hpp"
 #include "handlers/midi.hpp"
-#include "handlers/file.hpp"
 #include "handlers/serial.hpp"
-#include "handlers/switches.hpp"
+#include "handlers/physical.hpp"
 /* Display */
 #include "display/gfx.hpp"
 #include "display/leds.hpp"
@@ -22,14 +21,16 @@
 /* Utils */
 #include "utils/state.hpp"
 #include "utils/color.hpp"
+/* Tools */
+#include "tools/player.hpp"
 
 /* インスタンス生成 */
 State state;
 AudioHandler audio_hdl(state);
 MIDIHandler  midi_hdl(state);
-FileHandler  file_hdl(state);
+MIDIPlayer  midi_player(state);
 SerialHandler serial_hdl;
-Switches switches(state);
+PhysicalHandler physical(state);
 GFX_SSD1351 gfx;
 Leds leds(state);
 UIManager ui(state);
@@ -64,14 +65,14 @@ void loop() {
         // 優先度:2 MIDI入力検知
         midi_hdl.process();
 
-        // 優先度:3 スイッチ処理
-        switches.process();
+        // 優先度:3 物理ボタン処理
+        physical.process();
 
         // 優先度:4 UI処理
         ui.render();
 
         // 優先度:5 MIDI Player 処理
-        file_hdl.process();
+        midi_player.process();
 
         // 優先度:6 シリアル通信処理(USB)
         serial_hdl.process();

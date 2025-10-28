@@ -8,16 +8,21 @@
 
 #include "utils/state.hpp"
 
-// サンプルバッファと状態は公開
-extern int16_t samples_L[];
-extern int16_t samples_R[];
-extern int16_t samples_LM[];
-extern int16_t samples_RM[];
-extern bool    samples_ready;
+// --------------
+// Audio Buffer
+// --------------
+extern int16_t samples_L[];   // L
+extern int16_t samples_R[];   // R
+extern int16_t samples_LM[];  // L (位相反転)
+extern int16_t samples_RM[];  // R (位相反転)
+extern bool    samples_ready; // サンプルの送信準備が完了したか
 
-constexpr int32_t SAMPLE_RATE  = 44100;
-constexpr size_t  BUFFER_SIZE  = 128;
-constexpr uint8_t QUEUE_BLOCKS = 2;
+// --------------
+// Audio Setting
+// --------------
+constexpr int32_t SAMPLE_RATE  = 44100; // サンプリング周波数
+constexpr size_t  BUFFER_SIZE  = 128;   // AudioBufferのサイズ
+constexpr uint8_t QUEUE_BLOCKS = 2;     // AudioPlayQueueのバッファ数
 
 class AudioHandler {
 private:
@@ -56,7 +61,13 @@ public:
     AudioHandler(State& state) : state_(state) {
         init();
     }
+
+    /** @brief バッファに格納されたオーディオデータを再生 */
     void process();
+
+    /** @brief 録音開始 */
     void beginRecord();
+
+    /** @brief 録音終了 */
     void endRecord();
 };
