@@ -17,6 +17,7 @@ void MIDIHandler::init() {
  * @param velocity ベロシティ
  */
 void MIDIHandler::handleNoteOn(uint8_t ch, uint8_t note, uint8_t velocity) {
+    if(note > 127 || velocity > 127) return;
     auto mode_state = state_.getModeState();
     if (mode_state == MODE_SYNTH) {
         Synth::getInstance()->noteOn(note, velocity, ch);
@@ -31,6 +32,7 @@ void MIDIHandler::handleNoteOn(uint8_t ch, uint8_t note, uint8_t velocity) {
  * @param velocity ベロシティ
  */
 void MIDIHandler::handleNoteOff(uint8_t ch, uint8_t note, uint8_t velocity) {
+    if(note > 127 || velocity > 127) return;
     auto mode_state = state_.getModeState();
     if (mode_state == MODE_SYNTH) {
         Synth::getInstance()->noteOff(note, ch);

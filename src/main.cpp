@@ -43,8 +43,7 @@ void setup() {
     gfx.begin();
     ui.pushScreen(new TitleScreen());
 
-    Entropy.Initialize();
-    randomSeed(Entropy.random());
+    randomSeed(analogRead(0));
 }
 
 void loop() {

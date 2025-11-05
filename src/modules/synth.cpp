@@ -101,7 +101,7 @@ void Synth::generate() {
         int32_t left = 0;
         int32_t right = 0;
 
-        // todo バッファをチャンネル別で用意すればエフェクトの適用が楽になるかも
+        //todo discordに記載
 
         // ノート毎処理
         for(uint8_t n = 0; n < MAX_NOTES; ++n) {
