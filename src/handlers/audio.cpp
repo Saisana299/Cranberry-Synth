@@ -4,7 +4,7 @@ int16_t samples_L[BUFFER_SIZE];
 int16_t samples_R[BUFFER_SIZE];
 int16_t samples_LM[BUFFER_SIZE];
 int16_t samples_RM[BUFFER_SIZE];
-bool samples_ready = false;
+volatile bool samples_ready = false;
 
 /** @brief オーディオハンドラ初期化処理 */
 void AudioHandler::init() {

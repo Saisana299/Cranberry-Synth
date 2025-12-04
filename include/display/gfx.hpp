@@ -6,13 +6,17 @@
 
 #include "utils/color.hpp"
 
+// WaveShare 1.5inch RGB OLED Module 128x128 16bit
 constexpr uint16_t SCREEN_WIDTH = 128;
 constexpr uint16_t SCREEN_HEIGHT = 128;
 
-// MOSI1_PIN = 26, SCK1_PIN  = 27
-constexpr int8_t DC_PIN = 40;
+// MOSI, SCKはSPI1に接続 (26, 27)
 constexpr int8_t CS_PIN = 38;
+constexpr int8_t DC_PIN = 40;
 constexpr int8_t RST_PIN = 41;
+
+// フォントの高さ
+constexpr int16_t DEFAULT_FONT_HEIGHT = 8;
 
 struct TextBounds{
     int16_t x, y;
@@ -22,7 +26,6 @@ struct TextBounds{
 class GFX_SSD1351 {
 private:
     static inline Adafruit_SSD1351 display = {SCREEN_WIDTH, SCREEN_HEIGHT, &SPI1, CS_PIN, DC_PIN, RST_PIN};
-    static inline GFXcanvas16 max_canvas = {SCREEN_WIDTH, SCREEN_HEIGHT};
 
 public:
     static inline void begin() {
@@ -31,6 +34,9 @@ public:
         display.fillScreen(Color::BLACK);
     }
 
+    /**
+     * @brief キャンバスの内容をディスプレイに転送
+     */
     static inline void flash(GFXcanvas16& canvas, int16_t x = 0, int16_t y = 0) {
         const int16_t w = canvas.width();
         const int16_t h = canvas.height();
@@ -39,25 +45,33 @@ public:
         display.endWrite();
     }
 
-    static inline void drawString(GFXcanvas16& canvas, String text, int16_t x = 0, int16_t y = 0, uint16_t color = Color::WHITE) {
-        canvas.fillRect(x, y, canvas.width(), 8, Color::BLACK);
+    /**
+     * @brief 文字列を描画
+     */
+    static inline void drawString(GFXcanvas16& canvas, const String& text, int16_t x = 0, int16_t y = 0, uint16_t color = Color::WHITE) {
+        canvas.fillRect(x, y, canvas.width(), DEFAULT_FONT_HEIGHT, Color::BLACK);
         canvas.setCursor(x, y);
         canvas.setTextColor(color);
         canvas.print(text);
     }
 
-    static inline TextBounds getTextBounds(String text, int16_t x = 0, int16_t y = 0) {
+    /**
+     * @brief 文字列の描画範囲を取得
+     */
+    static inline TextBounds getTextBounds(const String& text, int16_t x = 0, int16_t y = 0) {
         TextBounds bounds;
-        max_canvas.getTextBounds(text, x, y, &bounds.x, &bounds.y, &bounds.w, &bounds.h);
+        display.getTextBounds(text, x, y, &bounds.x, &bounds.y, &bounds.w, &bounds.h);
         return bounds;
     }
-
-    static inline TextBounds getTextBounds(GFXcanvas16& canvas, String text, int16_t x = 0, int16_t y = 0) {
+    static inline TextBounds getTextBounds(GFXcanvas16& canvas, const String& text, int16_t x = 0, int16_t y = 0) {
         TextBounds bounds;
         canvas.getTextBounds(text, x, y, &bounds.x, &bounds.y, &bounds.w, &bounds.h);
         return bounds;
     }
 
+    /**
+     * @brief 別のキャンバスにキャンバスを描画
+     */
     static inline void drawCanvas(GFXcanvas16& target, GFXcanvas16& canvas, int16_t x = 0, int16_t y = 0) {
         target.drawRGBBitmap(x, y, canvas.getBuffer(), canvas.width(), canvas.height());
     }

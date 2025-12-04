@@ -23,11 +23,8 @@ private:
     bool before_led_midi = false;
     bool before_led_audio = false;
 
-    void init();
-
 public:
-    Leds(State& state) : state_(state) {
-        init();
-    }
+    Leds(State& state) : state_(state) {}
+    void init();
     void process();
 };

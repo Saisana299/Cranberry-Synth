@@ -69,20 +69,23 @@ private:
     int32_t left[MAX_CHANNELS] = {};
     int32_t right[MAX_CHANNELS] = {};
 
-    void init();
     void generate();
     void updateOrder(uint8_t removed);
     void noteReset(uint8_t index);
     void process();//todo
 
+    Synth() {}
+
 public:
-    Synth() {
-        instance = this;
-        init();
-    }
-    static inline Synth* getInstance() {
+    Synth(const Synth&) = delete;
+    void operator=(const Synth&) = delete;
+
+    static Synth& getInstance() {
+        static Synth instance;
         return instance;
     };
+
+    void init();
     void update();
     void noteOn(uint8_t note, uint8_t velocity, uint8_t channel);
     void noteOff(uint8_t note, uint8_t channel);

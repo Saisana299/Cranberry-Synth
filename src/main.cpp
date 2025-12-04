@@ -22,7 +22,7 @@
 #include "utils/state.hpp"
 #include "utils/color.hpp"
 /* Tools */
-#include "tools/player.hpp"
+#include "tools/midi_player.hpp"
 
 /* インスタンス生成 */
 State state;
@@ -34,9 +34,11 @@ PhysicalHandler physical(state);
 GFX_SSD1351 gfx;
 Leds leds(state);
 UIManager ui(state);
-Synth synth;
+
+Synth& synth = Synth::getInstance();
 
 void setup() {
+    serial_hdl.begin();
     serial_hdl.println("Cranberry Synth");
     serial_hdl.println("Digital FM Synthesizer on Teensy 4.1");
 
@@ -44,6 +46,12 @@ void setup() {
     ui.pushScreen(new TitleScreen());
 
     randomSeed(analogRead(0));
+
+    synth.init();
+    audio_hdl.init();
+    midi_hdl.init();
+    physical.init();
+    leds.init();
 }
 
 void loop() {

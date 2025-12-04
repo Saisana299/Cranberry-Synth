@@ -4,51 +4,53 @@
 
 class SerialHandler {
 private:
-    static inline bool initialized = false;
-    static inline uint8_t command_buffer[3];
-    static inline uint8_t command_index = 0;
-    static inline bool command_ready = false;
+    bool initialized = false;
+    uint8_t command_buffer[3];
+    uint8_t command_index = 0;
 
-    static inline void init() {
+    void executeCommand() {
+        Serial.printf("CMD: %02X %02X %02X\n",
+            command_buffer[0], command_buffer[1], command_buffer[2]);
+    }
+
+public:
+    SerialHandler() {};
+
+    void begin() {
         if (!initialized) {
             Serial.begin(115200);
             initialized = true;
         }
     }
 
-public:
-    SerialHandler() {
-        init();
-    }
-
-    inline void process() {
+    void process() {
         if(!initialized) return;
         while (Serial.available() > 0) {
-            uint8_t data = Serial.read();
-            command_buffer[command_index] = data;
+            int inByte = Serial.read();
+            if (inByte < 0) break;
+
+            command_buffer[command_index] = static_cast<uint8_t>(inByte);
             command_index++;
 
-            if (command_index >= 3) {
-                command_ready = true;
+            if(command_index >= 3) {
+                executeCommand();
                 command_index = 0;
-            } else {
-                command_ready = false;
             }
         }
-
-        if (command_ready) {
-            /*debug*/ Serial.println("command: " + String(command_buffer[0]) + " " + String(command_buffer[1]) + " " + String(command_buffer[2]));
-            command_ready = false;
-        }
     }
 
-    static inline void println(const String& msg) {
-        if(!initialized) return;
-        Serial.println(msg);
+    template <typename... Args>
+     void print(const char *format, Args... args) {
+        if(initialized) Serial.printf(format, args...);
     }
 
-    static inline void print(const String& msg) {
-        if(!initialized) return;
-        Serial.print(msg);
+    void println(const char* msg) {
+        if(initialized) Serial.println(msg);
+    }
+
+    void println(const String& msg) {
+        if(initialized) Serial.print(msg);
     }
 };
+
+extern SerialHandler serial_hdl;

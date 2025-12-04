@@ -13,15 +13,13 @@ private:
     MIDI_NAMESPACE::MidiInterface<MIDI_NAMESPACE::SerialMIDI<HardwareSerial>> MIDI = serialMIDI;
 
     // Callback
-    static inline void handleNoteOnStatic(uint8_t ch, uint8_t note, uint8_t velocity);
-    static inline void handleNoteOffStatic(uint8_t ch, uint8_t note, uint8_t velocity);
+    static void handleNoteOnStatic(uint8_t ch, uint8_t note, uint8_t velocity);
+    static void handleNoteOffStatic(uint8_t ch, uint8_t note, uint8_t velocity);
 
     // インスタンス保持用
     static inline MIDIHandler* instance = nullptr;
 
     State& state_;
-
-    void init();
 
     /**
      * @brief ノートON受信時の処理
@@ -44,8 +42,9 @@ private:
 public:
     MIDIHandler(State& state) : state_(state) {
         instance = this;
-        init();
     }
+
+    void init();
 
     /** @brief MIDIデータ読み込み */
     void process();

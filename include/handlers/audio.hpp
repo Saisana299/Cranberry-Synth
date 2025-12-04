@@ -15,7 +15,7 @@ extern int16_t samples_L[];   // L
 extern int16_t samples_R[];   // R
 extern int16_t samples_LM[];  // L (位相反転)
 extern int16_t samples_RM[];  // R (位相反転)
-extern bool    samples_ready; // サンプルの送信準備が完了したか
+extern volatile bool samples_ready; // サンプルの送信準備が完了したか
 
 // --------------
 // Audio Setting
@@ -55,12 +55,12 @@ private:
     AudioConnection  patchCord4 = {queue_RM, 0, i2s_quad, 3};
 
     State& state_;
-    void init();
+
 
 public:
-    AudioHandler(State& state) : state_(state) {
-        init();
-    }
+    AudioHandler(State& state) : state_(state) {}
+
+    void init();
 
     /** @brief バッファに格納されたオーディオデータを再生 */
     void process();

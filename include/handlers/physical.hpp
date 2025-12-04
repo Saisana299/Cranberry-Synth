@@ -2,60 +2,59 @@
 
 #include <Arduino.h>
 
-#include "tools/player.hpp"
+#include "tools/midi_player.hpp"
 #include "utils/state.hpp"
 
 // エンコーダーのピン
-constexpr uint8_t ECB_PIN = 16;
-constexpr uint8_t A_PIN = 15;
-constexpr uint8_t B_PIN = 17;
+constexpr uint8_t ENC_A_PIN = 15;
+constexpr uint8_t ENC_B_PIN = 17;
 
 // タクトスイッチのピン
-constexpr uint8_t UP_PIN  = 3;
-constexpr uint8_t DN_PIN  = 4;
-constexpr uint8_t L_PIN   = 5;
-constexpr uint8_t R_PIN   = 2;
-constexpr uint8_t ET_PIN  = 19;
-constexpr uint8_t CXL_PIN = 18;
+constexpr uint8_t SW_UP_PIN  = 3;
+constexpr uint8_t SW_DN_PIN  = 4;
+constexpr uint8_t SW_L_PIN   = 5;
+constexpr uint8_t SW_R_PIN   = 2;
+constexpr uint8_t SW_ENT_PIN = 19;
+constexpr uint8_t SW_CXL_PIN = 18;
+constexpr uint8_t SW_ENC_PIN = 16;
 
 // 押下判定までの時間
-constexpr uint32_t PUSH_SHORT = 200;
-constexpr uint32_t PUSH_LONG  = 65000;
+constexpr uint32_t TIME_DEBOUNCE    = 10;
+constexpr uint32_t TIME_LONG_PRESS  = 1000;
 
 class PhysicalHandler {
 private:
-    static volatile uint8_t lastEncoded;
-
     State& state_;
 
-    void init();
+    static volatile int32_t encoder_value;
+    static volatile uint8_t last_encoded;
 
-    static void updateEncoder();
+    static void updateEncoderISR();
 
     /** @brief ボタンの状態を保持 */
     struct Button {
-        uint8_t pin;        // ピン番号
-        uint32_t pushCount; // 押されてからの経過時間
-        bool longPushed;    // 長押し判定
-        uint8_t state;      // 短押しのstate
-        uint8_t stateLong;  // 長押しのstate
+        const uint8_t pin;        // ピン番号
+        const uint8_t id_short;
+        const uint8_t id_long;
+
+        bool is_pressed = false;
+        bool long_triggered = false;
+        uint32_t press_start_time = 0;
     };
     Button buttons[7] = {
-        {UP_PIN,  0, false, BTN_UP,  BTN_UP_LONG},
-        {DN_PIN,  0, false, BTN_DN,  BTN_DN_LONG},
-        {L_PIN,   0, false, BTN_L,   BTN_L_LONG},
-        {R_PIN,   0, false, BTN_R,   BTN_R_LONG},
-        {ET_PIN,  0, false, BTN_ET,  BTN_ET_LONG},
-        {CXL_PIN, 0, false, BTN_CXL, BTN_CXL_LONG},
-        {ECB_PIN, 0, false, BTN_EC,  BTN_EC_LONG}
+        {SW_UP_PIN,  BTN_UP,  BTN_UP_LONG},
+        {SW_DN_PIN,  BTN_DN,  BTN_DN_LONG},
+        {SW_L_PIN,   BTN_L,   BTN_L_LONG},
+        {SW_R_PIN,   BTN_R,   BTN_R_LONG},
+        {SW_ENT_PIN, BTN_ET,  BTN_ET_LONG},
+        {SW_CXL_PIN, BTN_CXL, BTN_CXL_LONG},
+        {SW_ENC_PIN, BTN_EC,  BTN_EC_LONG}
     };
 
-    // 長押し判定に使用
-    uint32_t intervalCount = 0;
-
 public:
-    PhysicalHandler(State& state) : state_(state) {
-        init();
-    }
+    PhysicalHandler(State& state) : state_(state) {}
+
+    void init();
+
     void process();
 };
