@@ -3,6 +3,7 @@
 /**
  * @brief oscillatorの周波数を設定
  *
+ * @param mem オシレーターメモリ
  * @param note MIDIノート番号
  */
 void Oscillator::setFrequency(Memory& mem, uint8_t note) {
@@ -12,6 +13,7 @@ void Oscillator::setFrequency(Memory& mem, uint8_t note) {
 /**
  * @brief オシレーターのベロシティボリュームを設定
  *
+ * @param mem オシレーターメモリ
  * @param velocity ベロシティ値
  */
 void Oscillator::setVelocity(Memory& mem, uint8_t velocity) {
@@ -64,10 +66,15 @@ void Oscillator::setModulation(
     Oscillator::Memory* mod_osc_mems,
     Envelope::Memory* mod_env_mems
 ) {
+    if(!mod_osc || !mod_env || !mod_osc_mems || !mod_env_mems) {
+        has_modulation = false;
+        return;
+    }
     this->mod_osc = mod_osc;
     this->mod_env = mod_env;
     this->mod_osc_mems = mod_osc_mems;
     this->mod_env_mems = mod_env_mems;
+    this->has_modulation = true;
 }
 
 /**
@@ -76,8 +83,12 @@ void Oscillator::setModulation(
  * @param level 0~1024 (1.0)
  */
 void Oscillator::setLevel(int16_t level) {
-    if(level < 0 || level > 1024) return;
-    this->level = level;
+    this->level = clamp_level(level);
+}
+
+void Oscillator::setLevelNonLinear(uint8_t level) {
+    uint8_t clamped_level = std::clamp<uint8_t>(level, 0, 99);
+    this->level = level_table[clamped_level];
 }
 
 /**
@@ -86,43 +97,21 @@ void Oscillator::setLevel(int16_t level) {
  * @param table_id id
  */
 void Oscillator::setWavetable(uint8_t table_id) {
-    switch(table_id) {
-    case 0:
-        wavetable = Wavetable::sine;
-        wavetable_size = sizeof(Wavetable::sine) / sizeof(Wavetable::sine[0]);
-        break;
-    case 1:
-        wavetable = Wavetable::triangle;
-        wavetable_size = sizeof(Wavetable::triangle) / sizeof(Wavetable::triangle[0]);
-        break;
-    case 2:
-        wavetable = Wavetable::saw;
-        wavetable_size = sizeof(Wavetable::saw) / sizeof(Wavetable::saw[0]);
-        break;
-    case 3:
-        wavetable = Wavetable::square;
-        wavetable_size = sizeof(Wavetable::square) / sizeof(Wavetable::square[0]);
-        break;
+    if(table_id < 4) {
+        wavetable = WAVETABLES[table_id].data;
+        wavetable_size = WAVETABLES[table_id].size;
+        bit_padding = AudioMath::bitPadding32(wavetable_size);
     }
 }
 
 void Oscillator::setCoarse(float coarse) {
-    // todo条件式
-    this->coarse = coarse;
+    this->coarse = clamp_coarse(coarse);
 }
 
 void Oscillator::setFine(float fine_level) {
-    // todo条件式
-    this->fine_level = fine_level;
+    this->fine_level = clamp_fine(fine_level);
 }
 
 void Oscillator::setDetune(int8_t detune_cents) {
-    // todo条件式
-    this->detune_cents = detune_cents;
-}
-
-void Oscillator::setLevelNonLinear(uint8_t level) {
-    float x = level / 100.0f;
-    const float exponent = log(0.5f) / log(0.75f);
-    this->level = static_cast<int16_t>(powf(x, exponent) * 1024.0f);
+    this->detune_cents = clamp_detune(detune_cents);
 }

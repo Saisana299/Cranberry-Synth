@@ -55,7 +55,6 @@ private:
     bool lpf_enabled = false;
     bool hpf_enabled = false;
 
-    static inline Synth* instance = nullptr;
     uint8_t order_max = 0;
     uint8_t last_index = 0;
     int16_t amp_level = 1 << 10;

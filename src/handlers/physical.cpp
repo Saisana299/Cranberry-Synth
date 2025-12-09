@@ -1,23 +1,30 @@
 #include "handlers/physical.hpp"
 
-volatile int32_t PhysicalHandler::encoder_value = 0;
-volatile uint8_t PhysicalHandler::last_encoded = 0;
+volatile std::atomic<int32_t> PhysicalHandler::encoder_raw_value = 0;
+volatile std::atomic<uint8_t> PhysicalHandler::encoder_last_encoded = 0;
 
 void PhysicalHandler::updateEncoderISR() {
-    uint8_t MSB = digitalRead(ENC_A_PIN);
-    uint8_t LSB = digitalRead(ENC_B_PIN);
+    // 高速ピン読み込み
+    uint32_t gpio_state = GPIO6_PSR;
+    uint8_t MSB = (gpio_state & ENC_A_MASK) ? 1 : 0;
+    uint8_t LSB = (gpio_state & ENC_B_MASK) ? 1 : 0;
 
     uint8_t encoded = (MSB << 1) | LSB;
+    uint8_t last_encoded = encoder_last_encoded.load(std::memory_order_relaxed);
     uint8_t sum = (last_encoded << 2) | encoded;
 
-    if (sum == 0b1101 || sum == 0b0100 || sum == 0b0010 || sum == 0b1011) {
-        encoder_value++;
-    }
-    if (sum == 0b1110 || sum == 0b0111 || sum == 0b0001 || sum == 0b1000) {
-        encoder_value--;
+    switch(sum) {
+        case 0b1101: case 0b0100: case 0b0010: case 0b1011:
+            encoder_raw_value.fetch_add(1, std::memory_order_relaxed);
+            break;
+        case 0b1110: case 0b0111: case 0b0001: case 0b1000:
+            encoder_raw_value.fetch_sub(1, std::memory_order_relaxed);
+            break;
+        default:
+            break;
     }
 
-    last_encoded = encoded;
+    encoder_last_encoded.store(encoded, std::memory_order_relaxed);
 }
 
 void PhysicalHandler::init() {
@@ -25,70 +32,72 @@ void PhysicalHandler::init() {
     pinMode(ENC_A_PIN, INPUT_PULLUP);
     pinMode(ENC_B_PIN, INPUT_PULLUP);
 
-    uint8_t MSB = digitalRead(ENC_A_PIN);
-    uint8_t LSB = digitalRead(ENC_B_PIN);
-    last_encoded = (MSB << 1) | LSB;
+    uint32_t gpio_state = GPIO6_PSR;
+    uint8_t MSB = (gpio_state & ENC_A_MASK) ? 1 : 0;
+    uint8_t LSB = (gpio_state & ENC_B_MASK) ? 1 : 0;
+    encoder_last_encoded.store((MSB << 1) | LSB, std::memory_order_relaxed);
 
     attachInterrupt(digitalPinToInterrupt(ENC_A_PIN), updateEncoderISR, CHANGE);
     attachInterrupt(digitalPinToInterrupt(ENC_B_PIN), updateEncoderISR, CHANGE);
 
     // BTN
-    for (auto &btn : buttons) {
-        pinMode(btn.pin, btn.pin == SW_ENC_PIN ? INPUT_PULLDOWN : INPUT_PULLUP);
+    for (size_t i = 0; i < 7; ++i) {
+        const auto& cfg = BUTTON_CONFIGS[i];
+        pinMode(cfg.pin, cfg.active_high ? INPUT_PULLDOWN : INPUT_PULLUP);
+    }
+}
+
+void PhysicalHandler::process_button(size_t btn_idx, uint32_t now) {
+    const auto& cfg = BUTTON_CONFIGS[btn_idx];
+    auto& state = button_states[btn_idx];
+
+    // 高速ピン読み込み
+    uint32_t gpio_state = GPIO6_PSR | GPIO7_PSR | GPIO9_PSR;
+    bool is_active = ((gpio_state & cfg.pin_mask) != 0) == cfg.active_high;
+
+    if(is_active) {
+        // ボタンが押されている
+        if(!state.is_pressed) {
+            // 押下開始
+            state.is_pressed = true;
+            state.press_start_time = now;
+            state.long_triggered = false;
+        } else if(!state.long_triggered && (now - state.press_start_time > TIME_LONG_PRESS)) {
+            // 長押し判定
+            state_.setBtnState(cfg.id_long);
+            state.long_triggered = true;
+        }
+    } else {
+        // ボタンが押されていない
+        if(state.is_pressed) {
+            // チャタリング対策
+            if(now - state.press_start_time > TIME_DEBOUNCE) {
+                if(!state.long_triggered) {
+                    // 短押し判定
+                    state_.setBtnState(cfg.id_short);
+                }
+            }
+            state.is_pressed = false;
+        }
     }
 }
 
 void PhysicalHandler::process() {
-    if(encoder_value != 0) {
-        noInterrupts();
-        int32_t delta = encoder_value;
-        encoder_value = 0;
-        interrupts();
-
-        if(delta > 0) {
-            // 時計回り
-        } else if(delta < 0) {
-            // 反時計回り
-        }
-    }
-
     uint32_t now = millis();
 
-    for(auto &btn: buttons) {
-        bool is_active = false;
-        if(btn.pin == SW_ENC_PIN) {
-            is_active = (digitalRead(btn.pin) == HIGH);
-        } else {
-            is_active = (digitalRead(btn.pin) == LOW);
+    // エンコーダーのデバウンス処理（メインループで実行）
+    if(now - last_encoder_debounce_time > TIME_ENCODER_DEBOUNCE) {
+        int32_t delta = encoder_raw_value.exchange(0, std::memory_order_acq_rel);
+
+        if(delta != 0) {
+            //state_.setEncoderDelta(delta);
         }
 
-        if(is_active) {
-            // ボタンを押している
-            if(!btn.is_pressed) {
-                // 押下開始
-                btn.is_pressed = true;
-                btn.press_start_time = now;
-                btn.long_triggered = false;
-            } else {
-                // 押下中
-                if(!btn.long_triggered && (now - btn.press_start_time > TIME_LONG_PRESS)) {
-                    state_.setBtnState(btn.id_long);
-                    btn.long_triggered = true;
-                }
-            }
-        }
+        last_encoder_debounce_time = now;
+    }
 
-        else {
-            // ボタンが離されている
-            if(btn.is_pressed) {
-                // チャタリング防止
-                if(now - btn.press_start_time > TIME_DEBOUNCE) {
-                    if(!btn.long_triggered) {
-                        state_.setBtnState(btn.id_short);
-                    }
-                }
-                btn.is_pressed = false;
-            }
-        }
+    // ボタン処理
+    for(size_t i = 0; i < 7; ++i) {
+        process_button(i, now);
     }
 }

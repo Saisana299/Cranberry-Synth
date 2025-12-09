@@ -48,8 +48,12 @@ public:
     /**
      * @brief 文字列を描画
      */
-    static inline void drawString(GFXcanvas16& canvas, const String& text, int16_t x = 0, int16_t y = 0, uint16_t color = Color::WHITE) {
-        canvas.fillRect(x, y, canvas.width(), DEFAULT_FONT_HEIGHT, Color::BLACK);
+    static inline void drawString(GFXcanvas16& canvas, const String& text, int16_t x = 0, int16_t y = 0, uint16_t color = Color::WHITE, bool fill = true) {
+        if(fill) {
+            TextBounds bounds = getTextBounds(canvas, text, x, y);
+            uint16_t clear_width = bounds.w > 0 ? bounds.w + 2 : canvas.width();
+            canvas.fillRect(x, y, clear_width, DEFAULT_FONT_HEIGHT, Color::BLACK);
+        }
         canvas.setCursor(x, y);
         canvas.setTextColor(color);
         canvas.print(text);

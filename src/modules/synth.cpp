@@ -84,7 +84,7 @@ void Synth::init() {
 /** @attention ここで呼び出す関数は全てinlineで実装する */
 /** envelopeのupdateはinline不可 */
 void Synth::generate() {
-    if(samples_ready) return;
+    if(samples_ready_flags != 0) return;
 
     // /*debug*/ uint32_t startTime = micros();
 
@@ -285,20 +285,20 @@ void Synth::generate() {
 
         // LPFを適用
         if(LPF_ENABLED) {
-            left = filter.processLpf(left, false);
-            right = filter.processLpf(right, true);
+            left = filter.processLpfL(left);
+            right = filter.processLpfR(right);
         }
 
         // HPFを適用
         if(HPF_ENABLED) {
-            left = filter.processHpf(left, false);
-            right = filter.processHpf(right, true);
+            left = filter.processHpfL(left);
+            right = filter.processHpfR(right);
         }
 
         // ディレイを適用
         if(DELAY_ENABLED) {
-            left = delay.process(left, false);
-            right = delay.process(right, true);
+            left = delay.processL(left);
+            right = delay.processR(right);
         }
 
         // パンを適用
@@ -324,7 +324,7 @@ void Synth::generate() {
 
     } // for BUFFER_SIZE
 
-    samples_ready = true;
+    samples_ready_flags = 1;
 
     // /*debug*/ uint32_t endTime = micros();
     // /*debug*/ uint32_t duration = endTime - startTime;

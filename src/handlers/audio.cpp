@@ -4,7 +4,7 @@ int16_t samples_L[BUFFER_SIZE];
 int16_t samples_R[BUFFER_SIZE];
 int16_t samples_LM[BUFFER_SIZE];
 int16_t samples_RM[BUFFER_SIZE];
-volatile bool samples_ready = false;
+std::atomic<uint32_t> samples_ready_flags = 0;
 
 /** @brief オーディオハンドラ初期化処理 */
 void AudioHandler::init() {
@@ -12,22 +12,21 @@ void AudioHandler::init() {
     queue_R.setMaxBuffers(QUEUE_BLOCKS);
     queue_LM.setMaxBuffers(QUEUE_BLOCKS);
     queue_RM.setMaxBuffers(QUEUE_BLOCKS);
-    // QUEUE_BLOCKS*queue + record_queue + 2(予備)
-    AudioMemory(QUEUE_BLOCKS*6 + 4 + 2);
+    AudioMemory(AUDIO_MEMORY);
 }
 
 /** @brief バッファに格納されたオーディオデータを再生 */
 void AudioHandler::process() {
-    if(samples_ready
-        && queue_L.available() && queue_R.available()
-        && queue_LM.available() && queue_RM.available())
-    {
+    if(!samples_ready_flags.load()) return;
+
+    if(queue_L.available() && queue_R.available()
+        && queue_LM.available() && queue_RM.available()){
         state_.setLedAudio(true);
         queue_L.play(samples_L, BUFFER_SIZE);
         queue_R.play(samples_R, BUFFER_SIZE);
         queue_LM.play(samples_LM, BUFFER_SIZE);
         queue_RM.play(samples_RM, BUFFER_SIZE);
-        samples_ready = false;
+        samples_ready_flags.store(0);
     }
     else {
         state_.setLedAudio(false);

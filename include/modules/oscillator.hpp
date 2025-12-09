@@ -38,13 +38,14 @@ public:
     void setDetune(int8_t detune_cents);
 
     /** @brief オシレーターの状態 */
-    inline bool isActive() {
+    inline bool isActive() const {
         return enabled;
     }
 
     /**
      * @brief オシレーターの状態を更新
      *
+     * @param mem オシレーターメモリ
      * @param note_id ノートID
     */
     inline void update(Memory& mem, uint8_t note_id) {
@@ -54,7 +55,7 @@ public:
         mem.phase += mem.delta;
 
         // Modulationあり
-        if (mod_osc && mod_env && mod_osc_mems && mod_env_mems) {
+        if (has_modulation) {
             //------ 危険地帯：mod_osc_memsとmod_env_memsの要素数がnote_id以上という前提 ------//
 
             // キャッシュ
@@ -71,7 +72,9 @@ public:
     /**
      * @brief oscillatorのサンプルを取得
      *
+     * @param mem オシレーターメモリ
      * @param note_id ノートID
+     * @return int16_t オシレーター出力サンプル
      */
     inline int16_t getSample(Memory& mem, uint8_t note_id) {
         if(!enabled) return 0;
@@ -84,7 +87,7 @@ public:
         uint32_t base_phase = local_phase;
 
         // モジュレーションがある場合
-        if(mod_osc && mod_env && mod_osc_mems && mod_env_mems) {
+        if(has_modulation) {
             //------ 危険地帯：mod_osc_memsとmod_env_memsの要素数がnote_id以上という前提 ------//
 
             // ローカルキャッシュ
@@ -105,7 +108,7 @@ public:
             // モジュレーション度合いを計算
             const int32_t mod_product = (static_cast<int32_t>(mod_sample) * static_cast<int32_t>(mod_env_level)) >> 10;
             // モジュレーションの位相オフセット
-            const uint32_t mod_phase_offset = static_cast<uint32_t>(abs(mod_product)) * 131072; // 131072 = (1 << 32) / 32768
+            const uint32_t mod_phase_offset = (static_cast<uint32_t>(abs(mod_product)) * MOD_PHASE_SCALE) >> MOD_PHASE_SHIFT;
 
             // base_phase に加減算
             base_phase += (mod_product < 0) ? -mod_phase_offset : mod_phase_offset;
@@ -125,6 +128,47 @@ public:
 private:
     // 定数
     static constexpr float PHASE_SCALE_FACTOR = static_cast<float>(1ULL << 32) / SAMPLE_RATE;
+    static constexpr uint32_t MOD_PHASE_SCALE = 262144; // 2^18
+    static constexpr int MOD_PHASE_SHIFT = 15; // シフト量：(mod_product * 2^18) >> 15 = mod_product * 8
+    struct WavetableInfo {
+        const int16_t* data;
+        size_t size;
+    };
+
+    static constexpr WavetableInfo WAVETABLES[4] = {
+        {Wavetable::sine,     sizeof(Wavetable::sine) / sizeof(Wavetable::sine[0])},
+        {Wavetable::triangle, sizeof(Wavetable::triangle) / sizeof(Wavetable::triangle[0])},
+        {Wavetable::saw,      sizeof(Wavetable::saw) / sizeof(Wavetable::saw[0])},
+        {Wavetable::square,   sizeof(Wavetable::square) / sizeof(Wavetable::square[0])},
+    };
+
+    // 非線形レベルテーブル
+    static constexpr std::array<int16_t, 100> generate_level_table() {
+        std::array<int16_t, 100> table{};
+        for (size_t i = 0; i < 100; ++i) {
+            float x = i / 99.0f;
+            const float exponent = std::log(0.5f) / std::log(0.75f);
+            table[i] = static_cast<int16_t>(std::pow(x, exponent) * 1024.0f);
+        }
+        return table;
+    }
+
+    // パラメータ検証
+    static inline int16_t clamp_level(int16_t value) {
+        return std::clamp<int16_t>(value, 0, 1024);
+    }
+
+    static inline float clamp_coarse(float value) {
+        return std::clamp<float>(value, 0.1f, 10.0f);
+    }
+
+    static inline float clamp_fine(float value) {
+        return std::clamp<float>(value, -1.0f, 1.0f);
+    }
+
+    static inline int8_t clamp_detune(int8_t value) {
+        return std::clamp<int8_t>(value, -50, 50);
+    }
 
     // OSC設定
     uint8_t bit_padding; // コンストラクタで初期化
@@ -142,10 +186,13 @@ private:
     bool is_fixed = false;
 
     // モジュレーション関連
+    bool has_modulation = false;
     bool is_feedback = false;
     float feedback = 0.0f;
     Oscillator* mod_osc = nullptr;
     Envelope* mod_env = nullptr;
     Oscillator::Memory* mod_osc_mems = nullptr;
     Envelope::Memory* mod_env_mems = nullptr;
+
+    static inline const std::array<int16_t, 100> level_table = generate_level_table();
 };

@@ -29,7 +29,6 @@ State state;
 AudioHandler audio_hdl(state);
 MIDIHandler  midi_hdl(state);
 MIDIPlayer  midi_player(state);
-SerialHandler serial_hdl;
 PhysicalHandler physical(state);
 GFX_SSD1351 gfx;
 Leds leds(state);

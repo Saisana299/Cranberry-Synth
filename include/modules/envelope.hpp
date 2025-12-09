@@ -34,10 +34,9 @@ private:
         std::array<uint32_t, RATE_TABLE_SIZE> table{};
         // パラメータ0-99を、10秒(10000ms)からほぼ0秒までの対数的なカーブにマッピング
         for (size_t i = 0; i < RATE_TABLE_SIZE; ++i) {
-            double time_ms = 10000.0 * std::pow(0.9, i * 0.7);
-            table[99 - i] = ms_to_rate(time_ms);
+            double time_ms = 10000.0 * std::pow(0.9, (RATE_TABLE_SIZE - 1 - i) * 0.7);
+            table[i] = ms_to_rate(time_ms);
         }
-        table[99] = ms_to_rate(0); // レート99は最速
         return table;
     }
 
@@ -61,7 +60,7 @@ private:
 
             // 次に、その線形レベルに最も近い減衰量(attenuation)を探す
             int32_t min_diff = 1024;
-            uint32_t best_index = 4095;
+            uint32_t best_index = EXP_TABLE_SIZE - 1;
             for (uint32_t j = 0; j < EXP_TABLE_SIZE; ++j) {
                 int32_t diff = std::abs(static_cast<int16_t>(linear_level) - exp_tab[j]);
                 if (diff < min_diff) {
@@ -72,6 +71,10 @@ private:
             table[i] = best_index << FIXED_POINT_SHIFT;
         }
         return table;
+    }
+
+    static inline uint8_t clamp_param(uint8_t value) {
+        return std::min<uint8_t>(value, RATE_TABLE_SIZE - 1);
     }
 
 public:
@@ -110,7 +113,7 @@ public:
      *
      * @return int16_t Min: 0, Max: 1024
      */
-    inline int16_t currentLevel(Memory& mem) {
+    inline int16_t currentLevel(const Memory& mem) const {
         return mem.current_level;
     }
 
@@ -119,7 +122,7 @@ public:
      *
      * @return 終了していれば `true` を返す
      */
-    inline bool isFinished(Memory& mem) {
+    inline bool isFinished(const Memory& mem) const {
         return (mem.state == EnvelopeState::Release && mem.log_level >= MAX_ATTENUATION);
     }
 };

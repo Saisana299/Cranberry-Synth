@@ -17,9 +17,9 @@ void MIDIHandler::init() {
  * @param velocity ベロシティ
  */
 void MIDIHandler::handleNoteOn(uint8_t ch, uint8_t note, uint8_t velocity) {
-    if(note > 127 || velocity > 127) return;
-    auto mode_state = state_.getModeState();
-    if (mode_state == MODE_SYNTH) {
+    if(!isValidNoteOn(note, velocity)) return;
+
+    if (state_.getModeState() == MODE_SYNTH) {
         Synth::getInstance().noteOn(note, velocity, ch);
     }
 }
@@ -32,24 +32,30 @@ void MIDIHandler::handleNoteOn(uint8_t ch, uint8_t note, uint8_t velocity) {
  * @param velocity ベロシティ
  */
 void MIDIHandler::handleNoteOff(uint8_t ch, uint8_t note, uint8_t velocity) {
-    if(note > 127 || velocity > 127) return;
-    auto mode_state = state_.getModeState();
-    if (mode_state == MODE_SYNTH) {
+    if(!isValidNoteOff(note, velocity)) return;
+
+    if (state_.getModeState() == MODE_SYNTH) {
         Synth::getInstance().noteOff(note, ch);
     }
 }
 
 /** @brief MIDIデータ読み込み */
 void MIDIHandler::process() {
-    bool temp = false;
-    if(usbMIDI.read()){
-        temp = true;
+    bool midi_activity = false;
+
+    while(usbMIDI.read()) {
+        // コールバックで自動処理
+        midi_activity = true;
     }
-    if(MIDI.read()){
-        temp = true;
+    while(MIDI.read()) {
+        // コールバックで自動処理
+        midi_activity = true;
     }
 
-    state_.setLedMidi(temp);
+    if(midi_activity != last_midi_state) {
+        last_midi_state = midi_activity;
+        state_.setLedMidi(midi_activity);
+    }
 }
 
 /** @brief instance->handleNoteOn */

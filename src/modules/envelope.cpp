@@ -74,8 +74,7 @@ void Envelope::update(Memory& mem) {
  * @param rate_0_99 0 - 99
  */
 void Envelope::setAttack(uint8_t rate_0_99) {
-    if(rate_0_99 > 99) rate_0_99 = 99;
-    attack_rate = rate_table[rate_0_99];
+    attack_rate = rate_table[clamp_param(rate_0_99)];
 }
 
 /**
@@ -84,8 +83,7 @@ void Envelope::setAttack(uint8_t rate_0_99) {
  * @param rate_0_99 0 - 99
  */
 void Envelope::setDecay(uint8_t rate_0_99) {
-    if(rate_0_99 > 99) rate_0_99 = 99;
-    decay_rate = rate_table[rate_0_99];
+    decay_rate = rate_table[clamp_param(rate_0_99)];
 }
 
 /**
@@ -94,8 +92,7 @@ void Envelope::setDecay(uint8_t rate_0_99) {
  * @param rate_0_99 0 - 99
  */
 void Envelope::setRelease(uint8_t rate_0_99) {
-    if(rate_0_99 > 99) rate_0_99 = 99;
-    release_rate = rate_table[rate_0_99];
+    release_rate = rate_table[clamp_param(rate_0_99)];
 }
 
 /**
@@ -104,6 +101,5 @@ void Envelope::setRelease(uint8_t rate_0_99) {
  * @param level_0_99 0 - 99
  */
 void Envelope::setSustain(uint8_t level_0_99) {
-    if(level_0_99 > 99) level_0_99 = 99;
-    sustain_log_level = level_to_attenuation_table[level_0_99];
+    sustain_log_level = level_to_attenuation_table[clamp_param(level_0_99)];
 }
