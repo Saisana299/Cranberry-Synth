@@ -2,7 +2,7 @@
 
 void MIDIPlayer::init() {
     if(!SD.begin(BUILTIN_SDCARD)) {
-        //todo SDが無い場合を考慮
+        //TODO SDが無い場合を考慮
         while(true);
     }
     SMF.begin(&(SD.sdfs));
@@ -13,21 +13,21 @@ void MIDIPlayer::init() {
 void MIDIPlayer::midiCallback(midi_event *pev) {
     uint8_t status = pev->data[0] & 0xF0;
     uint8_t channel = pev->data[0] & 0x0F;
-    //bool temp = false;//todo demo
+    //bool temp = false;//TODO demo
 
     switch (status) {
         case 0x90:
             Synth::getInstance().noteOn(pev->data[1], pev->data[2], channel+1);
-            //temp = true;//todo demo
+            //temp = true;//TODO demo
             break;
 
         case 0x80:
             Synth::getInstance().noteOff(pev->data[1], channel+1);
-            //temp = false;//todo demo
+            //temp = false;//TODO demo
             break;
     }
 
-    //state_.setLedMidi(temp);//todo demo
+    //state_.setLedMidi(temp);//TODO demo
 }
 
 void MIDIPlayer::midiCallbackStatic(midi_event *pev) {

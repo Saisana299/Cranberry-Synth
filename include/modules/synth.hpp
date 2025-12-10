@@ -14,7 +14,7 @@
 
 constexpr uint8_t MAX_NOTES = 16;
 constexpr uint8_t MAX_OPERATORS = 6;
-constexpr uint8_t MAX_CHANNELS = 16; //todo チャンネル別で音色を選択できるようにする エフェクトの個別適用は処理速度を確認
+constexpr uint8_t MAX_CHANNELS = 16; //TODO チャンネル別で音色を選択できるようにする エフェクトの個別適用は処理速度を確認
 constexpr uint8_t MAX_VOICE = 8;
 
 class Synth {
@@ -40,7 +40,7 @@ private:
         Carrier, Modulator
     };
 
-    struct Operator { //todo Operator ON/OFF機能
+    struct Operator { //TODO Operator ON/OFF機能
         OpMode mode = OpMode::Modulator;
         Oscillator osc = Oscillator{};
         Envelope env = Envelope{};
@@ -71,7 +71,7 @@ private:
     void generate();
     void updateOrder(uint8_t removed);
     void noteReset(uint8_t index);
-    void process();//todo
+    void process();//TODO
 
     Synth() {}
 

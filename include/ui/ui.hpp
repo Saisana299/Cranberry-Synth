@@ -12,7 +12,7 @@ private:
     std::stack<Screen*> screenStack; // 画面をポインタで管理するスタック
     GFXcanvas16 canvas;              // 描画用のキャンバス
     bool redraw = true;              // 再描画が必要かどうかのフラグ
-    int8_t playing = 0; //todo TEST
+    int8_t playing = 0; //TODO TEST
     State& state_;
 
 public:
@@ -55,7 +55,7 @@ public:
             screenStack.top()->handleInput(button);
             redraw = true;
         }
-        //todo デモ用----------------------------------------
+        //TODO デモ用----------------------------------------
         // if(button == BTN_ET){
         //     MIDIPlayer::stop();
         //     const char* a = "demo1.mid";
@@ -70,7 +70,7 @@ public:
         //     MIDIPlayer::stop();
         //     playing = 0;
         // }
-        //todo ------------------------------------------------
+        //TODO ------------------------------------------------
     }
 
     // 描画処理（ループ）

@@ -19,7 +19,7 @@ void Synth::init() {
 
     operators[0].osc.setDetune(3);
 
-    // [1]を0のモジュレーターに //todo
+    // [1]を0のモジュレーターに //TODO
     operators[1].mode = OpMode::Modulator;
     operators[0].osc.setModulation(&operators[1].osc, &operators[1].env, &ope_states[1].osc_mems[0], &ope_states[1].env_mems[0]);
     operators[1].osc.setLevelNonLinear(35);
@@ -39,7 +39,7 @@ void Synth::init() {
     operators[2].env.setSustain(0);
     operators[2].env.setRelease(80);
 
-    // [3]を2のモジュレーターに //todo
+    // [3]を2のモジュレーターに //TODO
     operators[3].mode = OpMode::Modulator;
     operators[2].osc.setModulation(&operators[3].osc, &operators[3].env, &ope_states[3].osc_mems[0], &ope_states[3].env_mems[0]);
     operators[3].osc.setLevelNonLinear(89);
@@ -60,7 +60,7 @@ void Synth::init() {
 
     operators[4].osc.setDetune(-7);
 
-    // [5]を4のモジュレーターに //todo
+    // [5]を4のモジュレーターに //TODO
     operators[5].mode = OpMode::Modulator;
     operators[4].osc.setModulation(&operators[5].osc, &operators[5].env, &ope_states[5].osc_mems[0], &ope_states[5].env_mems[0]);
     operators[5].osc.setLevelNonLinear(79);
@@ -101,7 +101,7 @@ void Synth::generate() {
         int32_t left = 0;
         int32_t right = 0;
 
-        //todo discordに記載
+        //TODO discordに記載
 
         // ノート毎処理
         for(uint8_t n = 0; n < MAX_NOTES; ++n) {
@@ -114,7 +114,7 @@ void Synth::generate() {
             // オペレーター処理 手動ループ展開
             // キャリアの場合のみここで処理を行う
 
-            //todo ノートのチャンネルを特定して処理する
+            //TODO ノートのチャンネルを特定して処理する
 
             // オペレーター1
             {
@@ -379,11 +379,11 @@ void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
             // リリース中でなければ何もしない。
             // if(ope_states[op].env_mems[i].state != Envelope::EnvelopeState::Release) return;
         //}
-        // リリース状態であれば強制リリース後発音 //todo: 強制リリース
+        // リリース状態であれば強制リリース後発音 //TODO: 強制リリース
     }
     // MAX_NOTES個ノートを演奏中の場合
     if(order_max == MAX_NOTES) {
-        // 一番古いノートを強制停止する //todo: 強制リリース
+        // 一番古いノートを強制停止する //TODO: 強制リリース
         noteReset(last_index);
     }
     // ノートを追加する

@@ -21,5 +21,5 @@ public:
         return all_algorithms_[algorithm_id];
     }
 private:
-    static const Algorithm all_algorithms_[32];//todo
+    static const Algorithm all_algorithms_[32];//TODO
 };

@@ -33,7 +33,7 @@ void AudioHandler::process() {
     }
 }
 
-/** @brief 録音開始 */ // todo
+/** @brief 録音開始 */ // TODO
 void AudioHandler::beginRecord() {
     rec_L.clear();
     rec_R.clear();
@@ -41,7 +41,7 @@ void AudioHandler::beginRecord() {
     rec_R.begin();
 }
 
-/** @brief 録音終了 */ // todo
+/** @brief 録音終了 */ // TODO
 void AudioHandler::endRecord() {
     rec_L.end();
     rec_R.end();

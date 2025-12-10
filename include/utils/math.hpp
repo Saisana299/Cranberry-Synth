@@ -54,6 +54,24 @@ public:
             0,
     };
 
+    // MIDI Note (0-127) to Frequency Table
+    static inline const float NOTE_FREQ_TABLE[128] = {
+           8.176f,    8.662f,    9.177f,    9.723f,    10.301f,    10.913f,    11.562f,    12.250f,   12.978f,   13.750f,   14.568f,   15.434f,
+          16.352f,   17.324f,   18.354f,   19.445f,    20.602f,    21.827f,    23.125f,    24.500f,   25.957f,   27.500f,   29.135f,   30.868f,
+          32.703f,   34.648f,   36.708f,   38.891f,    41.203f,    43.654f,    46.249f,    49.000f,   51.913f,   55.000f,   58.270f,   61.735f,
+          65.406f,   69.296f,   73.416f,   77.782f,    82.407f,    87.307f,    92.499f,    97.999f,  103.826f,  110.000f,  116.541f,  123.471f,
+         130.813f,  138.591f,  146.832f,  155.563f,   164.814f,   174.614f,   184.997f,   195.998f,  207.652f,  220.000f,  233.082f,  246.942f,
+         261.626f,  277.183f,  293.665f,  311.127f,   329.628f,   349.228f,   369.994f,   391.995f,  415.305f,  440.000f,  466.164f,  493.883f,
+         523.251f,  554.365f,  587.330f,  622.254f,   659.255f,   698.456f,   739.989f,   783.991f,  830.609f,  880.000f,  932.328f,  987.767f,
+        1046.502f, 1108.731f, 1174.659f, 1244.508f,  1318.510f,  1396.913f,  1479.978f,  1567.982f, 1661.219f, 1760.000f, 1864.655f, 1975.533f,
+        2093.005f, 2217.461f, 2349.318f, 2489.016f,  2637.020f,  2793.826f,  2959.955f,  3135.963f, 3322.438f, 3520.000f, 3729.310f, 3951.066f,
+        4186.009f, 4434.922f, 4698.636f, 4978.032f,  5274.041f,  5587.652f,  5919.911f,  6271.927f, 6644.875f, 7040.000f, 7458.620f, 7902.133f,
+        8372.018f, 8869.844f, 9397.273f, 9956.063f, 10548.080f, 11175.300f, 11839.820f, 12543.850f
+    };
+
+    static constexpr float ONE_OVER_127 = 1.0f / 127.0f;
+    static constexpr float INT16_TO_FLOAT = 1.0f / 32767.0f;
+
     /**
      * @brief MIDIノートを周波数に変換
      *
@@ -61,7 +79,8 @@ public:
      * @return float
      */
     static inline float noteToFrequency(uint8_t note) {
-        return 440.0f * powf(2.0f, (note - 69) / 12.0f);
+        if (note > 127) note = 127;
+        return NOTE_FREQ_TABLE[note];
     }
 
     /**
@@ -74,13 +93,16 @@ public:
      * @return float
      */
     static inline float ratioToFrequency(uint8_t note, int8_t detune_cents, float coarse, float fine_level) {
-        float pitch = coarse + (coarse * fine_level);
-        float detune_factor = powf(2.0, detune_cents / 1200.0f);
-        return noteToFrequency(note) * pitch * detune_factor;
+        float pitch_mod = coarse * (1.0f + fine_level);
+        float detune_factor = 1.0f;
+        if(detune_cents != 0) {
+            detune_factor = powf(2.0f, detune_cents * 0.00083333333f);
+        }
+        return noteToFrequency(note) * pitch_mod * detune_factor;
     }
 
     static inline float fixedToFrequency(int8_t detune_cents, float coarse, float fine_level) {
-        //todo
+        //TODO
         return 0.0f;
     }
 
@@ -91,7 +113,7 @@ public:
      * @return float
      */
     static inline float velocityToAmplitude(uint8_t velocity) {
-        return velocity / 127.0f;
+        return velocity * ONE_OVER_127;
     }
 
     /**
@@ -113,12 +135,8 @@ public:
      * @return uint8_t
      */
     static inline uint8_t bitPadding32(size_t size) {
-        uint8_t shift = 0;
-        while (size > 1) {
-            size >>= 1;
-            shift++;
-        }
-        return 32 - shift;
+        if(size == 0) return 32;
+        return __builtin_clz(size) + 1;
     }
 
     /**
@@ -128,8 +146,7 @@ public:
      * @return float
      */
     static inline float lChPanCoef(float m_pan) {
-        float normalized_pan = (m_pan + 1.0f) * 0.5f;
-        return static_cast<float>(cos(HALF_PI * normalized_pan));
+        return getPanFromTable(m_pan, PAN_COS_TABLE);
     }
 
     /**
@@ -139,20 +156,39 @@ public:
      * @return float
      */
     static inline float rChPanCoef(float m_pan) {
-        float normalized_pan = (m_pan + 1.0f) * 0.5f;
-        return static_cast<float>(sin(HALF_PI * normalized_pan));
+        return getPanFromTable(m_pan, PAN_SIN_TABLE);
     }
 
-    static inline int16_t fastClampInt16(int32_t x) {
+    static inline float getPanFromTable(float pan, const int16_t* table) {
+        // pan -1.0 ~ 1.0 を 0 ~ 200 に変換
+        float index_f = (pan + 1.0f) * 100.0f;
+
+        // 範囲制限
+        if (index_f <= 0.0f) return table[0] * INT16_TO_FLOAT;
+        if (index_f >= 200.0f) return table[200] * INT16_TO_FLOAT;
+
+        // 整数部と小数部に分離
+        int index_i = static_cast<int>(index_f);
+        float frac = index_f - index_i;
+
+        // 線形補間: table[i] * (1-t) + table[i+1] * t
+        float val1 = table[index_i];
+        float val2 = table[index_i + 1];
+
+        return (val1 + frac * (val2 - val1)) * INT16_TO_FLOAT;
+    }
+
+    static inline int16_t fastClampInt16(int32_t in) {
         // ARMv7E-M の DSP命令(SSAT)を直接使う例
         // SSAT <Rd>, #<imm>, <Rn> : <Rn>を符号付で#<imm>ビット飽和して<Rd>へ格納
         // #<imm> = 16 なら 16ビット範囲(-32768..32767)へ飽和
+        int32_t out;
         __asm__ volatile(
             "ssat %0, #16, %1\n\t"
-            : "=r" (x)
-            : "r"  (x)
+            : "=r" (out)
+            : "r"  (in)
         );
-        return static_cast<int16_t>(x);
+        return static_cast<int16_t>(out);
     }
 
     static inline float fastAbsf(float in) {

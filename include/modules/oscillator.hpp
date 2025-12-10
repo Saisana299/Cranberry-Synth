@@ -108,7 +108,7 @@ public:
             // モジュレーション度合いを計算
             const int32_t mod_product = (static_cast<int32_t>(mod_sample) * static_cast<int32_t>(mod_env_level)) >> 10;
             // モジュレーションの位相オフセット
-            const uint32_t mod_phase_offset = (static_cast<uint32_t>(abs(mod_product)) * MOD_PHASE_SCALE) >> MOD_PHASE_SHIFT;
+            const uint32_t mod_phase_offset = static_cast<uint32_t>(abs(mod_product)) * MOD_PHASE_SCALE_FACTOR;
 
             // base_phase に加減算
             base_phase += (mod_product < 0) ? -mod_phase_offset : mod_phase_offset;
@@ -128,8 +128,7 @@ public:
 private:
     // 定数
     static constexpr float PHASE_SCALE_FACTOR = static_cast<float>(1ULL << 32) / SAMPLE_RATE;
-    static constexpr uint32_t MOD_PHASE_SCALE = 262144; // 2^18
-    static constexpr int MOD_PHASE_SHIFT = 15; // シフト量：(mod_product * 2^18) >> 15 = mod_product * 8
+    static constexpr uint32_t MOD_PHASE_SCALE_FACTOR = 131072; // 2^17
     struct WavetableInfo {
         const int16_t* data;
         size_t size;
@@ -159,15 +158,15 @@ private:
     }
 
     static inline float clamp_coarse(float value) {
-        return std::clamp<float>(value, 0.1f, 10.0f);
+        return std::clamp<float>(value, 0.5f, 31.0f);
     }
 
     static inline float clamp_fine(float value) {
-        return std::clamp<float>(value, -1.0f, 1.0f);
+        return std::clamp<float>(value, 1.0f, 1.99f);
     }
 
     static inline int8_t clamp_detune(int8_t value) {
-        return std::clamp<int8_t>(value, -50, 50);
+        return std::clamp<int8_t>(value, -7, 7);
     }
 
     // OSC設定
