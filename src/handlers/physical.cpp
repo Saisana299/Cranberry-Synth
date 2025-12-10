@@ -62,10 +62,13 @@ void PhysicalHandler::process_button(size_t btn_idx, uint32_t now) {
             state.is_pressed = true;
             state.press_start_time = now;
             state.long_triggered = false;
-        } else if(!state.long_triggered && (now - state.press_start_time > TIME_LONG_PRESS)) {
-            // 長押し判定
-            state_.setBtnState(cfg.id_long);
-            state.long_triggered = true;
+        } else if(now - state.press_start_time > TIME_LONG_PRESS) {
+            if(!state.long_triggered || (now - state.last_repeat_time > TIME_REPEAT_INTERVAL)) {
+                // 長押し判定
+                state_.setBtnState(cfg.id_long);
+                state.long_triggered = true;
+                state.last_repeat_time = now;
+            }
         }
     } else {
         // ボタンが押されていない
