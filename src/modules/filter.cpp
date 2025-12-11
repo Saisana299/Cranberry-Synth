@@ -14,37 +14,44 @@ Filter::Coefs Filter::calculate_biquad(float cutoff, float resonance, bool is_hi
     resonance = std::clamp(resonance, RESONANCE_MIN, RESONANCE_MAX);
 
     // 角周波数と減衰係数を計算
-    float omega = 2.0f * M_PI * cutoff / static_cast<float>(SAMPLE_RATE);
-    float alpha = std::sin(omega) / (2.0f * resonance);
+    float omega = 2.0f * M_PI * cutoff / (float)SAMPLE_RATE;
+    float sn, cs;
+
+    sn = std::sin(omega);
+    cs = std::cos(omega);
+
+    float alpha = sn / (2.0f * resonance);
 
     // フィルタ係数（正規化）
     float a0 = 1.0f + alpha;
-    float a1 = -2.0f * std::cos(omega);
+    float a1 = -2.0f * cs;
     float a2 = 1.0f - alpha;
 
     float b0, b1, b2;
 
     if(is_highpass) {
         // ハイパスフィルタ係数
-        b0 = (1.0f + std::cos(omega)) / 2.0f;
-        b1 = -(1.0f + std::cos(omega));
-        b2 = (1.0f + std::cos(omega)) / 2.0f;
+        b0 = (1.0f + cs) * 0.5f;
+        b1 = -(1.0f + cs);
+        b2 = (1.0f + cs) * 0.5f;
     } else {
         // ローパスフィルタ係数
-        b0 = (1.0f - std::cos(omega)) / 2.0f;
-        b1 = 1.0f - std::cos(omega);
-        b2 = (1.0f - std::cos(omega)) / 2.0f;
+        b0 = (1.0f - cs) * 0.5f;
+        b1 = 1.0f - cs;
+        b2 = (1.0f - cs) * 0.5f;
     }
 
-    // 係数を正規化して固定小数点に変換
-    Coefs coefs;
-    coefs.f0 = static_cast<int32_t>((b0 / a0) * COEF_SCALE);
-    coefs.f1 = static_cast<int32_t>((b1 / a0) * COEF_SCALE);
-    coefs.f2 = static_cast<int32_t>((b2 / a0) * COEF_SCALE);
-    coefs.f3 = static_cast<int32_t>((a1 / a0) * COEF_SCALE);
-    coefs.f4 = static_cast<int32_t>((a2 / a0) * COEF_SCALE);
+    float inv_a0 = 1.0f / a0;
 
-    return coefs;
+    // 係数を正規化して固定小数点に変換
+    Coefs c;
+    c.b0 = (int32_t)((b0 * inv_a0) * COEF_SCALE);
+    c.b1 = (int32_t)((b1 * inv_a0) * COEF_SCALE);
+    c.b2 = (int32_t)((b2 * inv_a0) * COEF_SCALE);
+    c.a1 = (int32_t)((a1 * inv_a0) * COEF_SCALE);
+    c.a2 = (int32_t)((a2 * inv_a0) * COEF_SCALE);
+
+    return c;
 }
 
 /**
@@ -54,9 +61,7 @@ Filter::Coefs Filter::calculate_biquad(float cutoff, float resonance, bool is_hi
  * @param resonance Q値
  */
 void Filter::setLowPass(float cutoff, float resonance) {
-    auto coefs = calculate_biquad(cutoff, resonance, false);
-    lpf_coefs_L = coefs;
-    lpf_coefs_R = coefs;
+    lpf_coefs = calculate_biquad(cutoff, resonance, false);
 }
 
 /**
@@ -66,7 +71,40 @@ void Filter::setLowPass(float cutoff, float resonance) {
  * @param resonance Q値
  */
 void Filter::setHighPass(float cutoff, float resonance) {
-    auto coefs = calculate_biquad(cutoff, resonance, true);
-    hpf_coefs_L = coefs;
-    hpf_coefs_R = coefs;
+    hpf_coefs = calculate_biquad(cutoff, resonance, true);
+}
+
+void Filter::reset() {
+    lpf_state_L = {}; lpf_state_R = {};
+    hpf_state_L = {}; hpf_state_R = {};
+}
+
+FASTRUN void Filter::processBlock(int16_t* bufL, int16_t* bufR, size_t size) {
+    // ローカル変数にコピーしてアクセス速度向上
+    const bool lpf_active = (lpf_mix > 0);
+    const bool hpf_active = (hpf_mix > 0);
+
+    // 両方バイパスなら即リターン
+    if (!lpf_active && !hpf_active) return;
+
+    for (size_t i = 0; i < size; ++i) {
+        int16_t l = bufL[i];
+        int16_t r = bufR[i];
+
+        // LPF適用
+        if (lpf_active) {
+            // Mix最大(1024)のときは関数内で分岐最適化される
+            l = process_with_mix(lpf_coefs, lpf_state_L, l, lpf_mix);
+            r = process_with_mix(lpf_coefs, lpf_state_R, r, lpf_mix);
+        }
+
+        // HPF適用
+        if (hpf_active) {
+            l = process_with_mix(hpf_coefs, hpf_state_L, l, hpf_mix);
+            r = process_with_mix(hpf_coefs, hpf_state_R, r, hpf_mix);
+        }
+
+        bufL[i] = l;
+        bufR[i] = r;
+    }
 }
