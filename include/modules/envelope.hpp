@@ -5,16 +5,28 @@
 
 class Envelope {
 
-private:
-    static const uint32_t RATE_TABLE_SIZE = 100;
-    static const uint32_t LEVEL_TABLE_SIZE = 100;
-    static const uint32_t EXP_TABLE_SIZE = 4096;
+public:
+    static constexpr uint32_t RATE_TABLE_SIZE = 100;
+    static constexpr uint32_t LEVEL_TABLE_SIZE = 100;
+    static constexpr uint32_t EXP_TABLE_SIZE = 4096;
+    static constexpr uint32_t EXP_TABLE_MASK = EXP_TABLE_SIZE - 1; // 0xFFF
 
     // 固定小数点のシフト量を定義 (8ビット = 1/256)
     static constexpr int FIXED_POINT_SHIFT = 8;
 
     static constexpr uint32_t MAX_ATTENUATION = (EXP_TABLE_SIZE - 1) << FIXED_POINT_SHIFT;
 
+    enum class EnvelopeState {
+        Attack, Decay, Sustain, Release, Idle
+    };
+
+    struct Memory {
+        EnvelopeState state = EnvelopeState::Idle;
+        uint32_t log_level = MAX_ATTENUATION; // 対数スケールの内部レベル（減衰量）
+        int16_t current_level = 0;  // 線形スケールの最終出力レベル
+    };
+
+private:
     // 非線形レートと対数サステインレベルを保持する変数
     // レートの最大値は (EXP_TABLE_SIZE - 1) << FIXED_POINT_SHIFT まで
     uint32_t attack_rate = MAX_ATTENUATION;
@@ -25,7 +37,7 @@ private:
     // rate_tableを再設計
     // 音楽的な時間(ms)からレート値を計算するヘルパー
     static constexpr uint32_t ms_to_rate(double ms) {
-        if (ms <= 0) return (EXP_TABLE_SIZE << FIXED_POINT_SHIFT);
+        if (ms <= 0.001) return MAX_ATTENUATION;
         // (4095スケール * 固定小数点スケール) / (時間ms * 1秒あたりのサンプル数)
         return static_cast<uint32_t>(MAX_ATTENUATION / (ms / 1000.0 * SAMPLE_RATE));
     }
@@ -35,6 +47,7 @@ private:
         // パラメータ0-99を、10秒(10000ms)からほぼ0秒までの対数的なカーブにマッピング
         for (size_t i = 0; i < RATE_TABLE_SIZE; ++i) {
             double time_ms = 10000.0 * std::pow(0.9, (RATE_TABLE_SIZE - 1 - i) * 0.7);
+            if (i == RATE_TABLE_SIZE - 1) time_ms = 0.0;
             table[i] = ms_to_rate(time_ms);
         }
         return table;
@@ -74,10 +87,8 @@ private:
     }
 
     static inline uint8_t clamp_param(uint8_t value) {
-        return std::min<uint8_t>(value, RATE_TABLE_SIZE - 1);
+        return (value >= RATE_TABLE_SIZE) ? (RATE_TABLE_SIZE - 1) : value;
     }
-
-public:
 
     // レートテーブル（0-99）-> 実際の増分値へ。非線形なカーブを持つ。
     inline static const std::array<uint32_t, RATE_TABLE_SIZE> rate_table = generate_rate_table();
@@ -89,19 +100,12 @@ public:
     // レベル -> 減衰量 変換テーブル
     inline static const std::array<uint32_t, LEVEL_TABLE_SIZE> level_to_attenuation_table = generate_level_to_attenuation_table();
 
-    enum class EnvelopeState {
-        Attack, Decay, Sustain, Release
-    };
-
-    struct Memory {
-        EnvelopeState state = EnvelopeState::Attack;
-        uint32_t log_level = MAX_ATTENUATION; // 対数スケールの内部レベル（減衰量）
-        int16_t current_level = 0;  // 線形スケールの最終出力レベル
-    };
-
+public:
     void reset(Memory& mem);
     void release(Memory& mem);
-    void update(Memory& mem);
+
+    FASTRUN void update(Memory& mem);
+    FASTRUN void processBlock(Memory& mem, int16_t* output_buffer, size_t num_samples);
 
     void setAttack(uint8_t rate_0_99);
     void setDecay(uint8_t rate_0_99);
@@ -123,6 +127,6 @@ public:
      * @return 終了していれば `true` を返す
      */
     inline bool isFinished(const Memory& mem) const {
-        return (mem.state == EnvelopeState::Release && mem.log_level >= MAX_ATTENUATION);
+        return mem.state == EnvelopeState::Idle;
     }
 };

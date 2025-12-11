@@ -398,9 +398,12 @@ void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
             it.channel = channel;
             for(uint8_t op = 0; op < MAX_OPERATORS; ++op) {
                 auto& osc_mem = ope_states[op].osc_mems[i];
+                auto& env_mem = ope_states[op].env_mems[i];
                 operators[op].osc.setVelocity(osc_mem, velocity);
                 operators[op].osc.setFrequency(osc_mem, note);
                 operators[op].osc.setPhase(osc_mem, 0);
+                // 初期化IdleからAttackへ
+                operators[op].env.reset(env_mem);
             }
             break;
         }
