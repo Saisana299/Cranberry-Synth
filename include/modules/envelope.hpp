@@ -62,7 +62,7 @@ private:
         return table;
     }
 
-    // +++ レベル->減衰量 変換テーブルを生成するヘルパー +++
+    // レベル->減衰量 変換テーブルを生成するヘルパー
     static constexpr std::array<uint32_t, LEVEL_TABLE_SIZE> generate_level_to_attenuation_table() {
         std::array<uint32_t, LEVEL_TABLE_SIZE> table{};
         const auto exp_tab = generate_exp_table(); // 既存のテーブルを一時利用
@@ -112,7 +112,7 @@ public:
     void setSustain(uint8_t level_0_99);
 
     /**
-     * @brief 現在のレベルを返します
+     * @brief 現在のレベルを返す
      *
      * @return int16_t Min: 0, Max: 1024
      */

@@ -43,11 +43,11 @@ void MIDIHandler::handleNoteOff(uint8_t ch, uint8_t note, uint8_t velocity) {
 void MIDIHandler::process() {
     bool midi_activity = false;
 
-    while(usbMIDI.read()) {
+    if(usbMIDI.read()) {
         // コールバックで自動処理
         midi_activity = true;
     }
-    while(MIDI.read()) {
+    if(MIDI.read()) {
         // コールバックで自動処理
         midi_activity = true;
     }
