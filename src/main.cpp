@@ -44,7 +44,7 @@ void setup() {
     gfx.begin();
     ui.pushScreen(new TitleScreen());
 
-    randomSeed(analogRead(0));
+    randomSeed(Entropy.random());
 
     synth.init();
     audio_hdl.init();
@@ -54,36 +54,43 @@ void setup() {
 }
 
 void loop() {
-    // 1ループ2900µs以内
-    while(true) {
-        auto mode_state = state.getModeState();
+    // 1ループ2900μs以内
+    // /*debug*/ uint32_t startTime = micros();
 
-        // 優先度0: サウンド生成関連処理
-        switch(mode_state) {
-            case MODE_SYNTH:
-                synth.update();
-                break;
-        }
+    auto mode_state = state.getModeState();
 
-        // 優先度:1 音声信号処理(AD/DA)
-        audio_hdl.process();
-
-        // 優先度:2 MIDI入力検知
-        midi_hdl.process();
-
-        // 優先度:3 物理ボタン処理
-        physical.process();
-
-        // 優先度:4 UI処理
-        ui.render();
-
-        // 優先度:5 MIDI Player 処理
-        midi_player.process();
-
-        // 優先度:6 シリアル通信処理(USB)
-        serial_hdl.process();
-
-        // 優先度:7 LED制御
-        leds.process();
+    // 優先度0: サウンド生成関連処理
+    switch(mode_state) {
+        case MODE_SYNTH:
+            synth.update();
+            break;
     }
+
+    // 優先度:1 音声信号処理(AD/DA)
+    audio_hdl.process();
+
+    // 優先度:2 MIDI入力検知
+    midi_hdl.process();
+
+    // 優先度:3 物理ボタン処理
+    physical.process();
+
+    // 優先度:4 UI処理
+    ui.render();
+
+    // 優先度:5 MIDI Player 処理
+    midi_player.process();
+
+    // 優先度:6 シリアル通信処理(USB)
+    serial_hdl.process();
+
+    // 優先度:7 LED制御
+    leds.process();
+
+    // /*debug*/ uint32_t endTime = micros();
+    // /*debug*/ uint32_t duration = endTime - startTime;
+    // /*debug*/ Serial.println(String(duration) + "us");
+    // sine波1音+LPFで62µs以内目標
+
+    asm volatile("yield");
 }

@@ -105,7 +105,6 @@ public:
     void release(Memory& mem);
 
     FASTRUN void update(Memory& mem);
-    FASTRUN void processBlock(Memory& mem, int16_t* output_buffer, size_t num_samples);
 
     void setAttack(uint8_t rate_0_99);
     void setDecay(uint8_t rate_0_99);

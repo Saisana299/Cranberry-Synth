@@ -86,8 +86,6 @@ void Synth::init() {
 void Synth::generate() {
     if(samples_ready_flags != 0) return;
 
-    // /*debug*/ uint32_t startTime = micros();
-
     // 定数キャッシュ
     const bool LPF_ENABLED = lpf_enabled;
     const bool HPF_ENABLED = hpf_enabled;
@@ -325,12 +323,6 @@ void Synth::generate() {
     } // for BUFFER_SIZE
 
     samples_ready_flags = 1;
-
-    // /*debug*/ uint32_t endTime = micros();
-    // /*debug*/ uint32_t duration = endTime - startTime;
-    // /*debug*/ Serial.println(String(duration) + "us");
-    // 2900μs以内に終わらせる必要がある
-    // sine波1音+LPFで62µs以内目標
 }
 
 /** @brief シンセ更新 */

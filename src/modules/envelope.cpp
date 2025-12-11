@@ -25,53 +25,101 @@ FASTRUN void Envelope::update(Memory& mem) {
     switch(mem.state) {
         // ここでは減衰量で音量を変化させる
         case EnvelopeState::Attack:
-            // 減衰量を減らす（音量を増加させる）
-            // rateが最大値だと瞬時に音量が最大になる
-            if (mem.log_level > attack_rate) {
-                mem.log_level -= attack_rate;
-            }
-            // アタックが終了したら減衰量を0にしてDecayへ
-            else {
+            // Attack: 減衰量を小さくしていき、音量を上げる
+            // rate が最大値の場合はアタックをスキップして即 Decay へ
+            if (attack_rate == MAX_ATTENUATION) {
                 mem.log_level = 0;
                 mem.state = EnvelopeState::Decay;
+            } else {
+                // 最大音量に達していないので上昇させる
+                if (mem.log_level > attack_rate) {
+                    mem.log_level -= attack_rate;
+                }
+                // 上昇しきったら減衰量を0にしてDecayへ
+                else {
+                    mem.log_level = 0;
+                    mem.state = EnvelopeState::Decay;
+                }
             }
             break;
 
         case EnvelopeState::Decay:
-            // 減衰量を増やす（音量を減少させる）
-            // rateが最大値だとすぐにsustain_log_levelになる
-            if (mem.log_level + decay_rate < sustain_log_level) {
-                mem.log_level += decay_rate;
-            }
-            // 減衰量が最大
-            else {
+            // Decay: 減衰量を増やして音量を減らし、サスティン値へ向かう
+            // rate が最大の場合はサスティン値に即移行
+            if (decay_rate == MAX_ATTENUATION) {
                 mem.log_level = sustain_log_level;
                 mem.state = EnvelopeState::Sustain;
+            } else {
+                // オーバーフロー防止しつつ log_level を増やす
+                uint32_t next = mem.log_level + decay_rate;
+                if (next < mem.log_level) next = MAX_ATTENUATION;
+
+                // サスティン値に達していなければ増加
+                if (next < sustain_log_level) {
+                    mem.log_level += decay_rate;
+                }
+                // 到達または超過したらサスティンへ移行
+                else {
+                    mem.log_level = sustain_log_level;
+                    mem.state = EnvelopeState::Sustain;
+                }
             }
             break;
 
         case EnvelopeState::Sustain:
-            // sustain_log_levelが最大値だとフルボリュームで維持
-            // 途中でsustainが変更された場合の処理
-            if(mem.log_level != sustain_log_level) {
-                if(mem.log_level < sustain_log_level) mem.log_level += decay_rate;
-                else mem.log_level = sustain_log_level;
+            // Sustain: 指定された log_level を維持
+            if (mem.log_level == sustain_log_level) {
+                // 保持
+            }
+
+            // 現在値がサスティンより低い → 上方向へ追従
+            else if (mem.log_level < sustain_log_level) {
+                uint32_t next = mem.log_level + decay_rate;
+                if (next < mem.log_level) next = sustain_log_level;
+                mem.log_level = (next < sustain_log_level) ? next : sustain_log_level;
+            }
+
+            // 現在値がサスティンより高い → 下方向へ追従
+            else {
+                if (decay_rate == 0) {
+                    mem.log_level = sustain_log_level;
+                } else {
+                    uint32_t step = decay_rate;
+                    if (mem.log_level > step) {
+                        uint32_t next = mem.log_level - step;
+                        mem.log_level = (next > sustain_log_level) ? next : sustain_log_level;
+                    } else {
+                        mem.log_level = sustain_log_level;
+                    }
+                }
             }
             break;
 
         case EnvelopeState::Release:
-            // 減衰量が「最大減衰量 - 変化量」より小さいなら、減衰量を増やす。
+            // Release: 減衰量を増やし、音量をゼロへ向かわせる
             // rateが最大値なら瞬時に音が消える
-            if (mem.log_level + release_rate < MAX_ATTENUATION) {
-                mem.log_level += release_rate;
-            // 最大減衰量に達したら終了
-            } else {
+            if (release_rate == MAX_ATTENUATION) {
                 mem.log_level = MAX_ATTENUATION;
                 mem.state = EnvelopeState::Idle;
+            } else {
+                uint32_t next = mem.log_level + release_rate;
+                if (next < mem.log_level) next = MAX_ATTENUATION;
+
+                // まだ完全に減衰しきっていない
+                if (next < MAX_ATTENUATION) {
+                    mem.log_level = next;
+                }
+
+                // 無音に達したら Idle
+                else {
+                    mem.log_level = MAX_ATTENUATION;
+                    mem.state = EnvelopeState::Idle;
+                }
             }
             break;
 
         case EnvelopeState::Idle:
+        default:
             mem.log_level = MAX_ATTENUATION;
             break;
     }
@@ -79,13 +127,6 @@ FASTRUN void Envelope::update(Memory& mem) {
     // 音量レベルを更新
     uint32_t index = (mem.log_level >> FIXED_POINT_SHIFT) & EXP_TABLE_MASK;
     mem.current_level = exp_table[index];
-}
-
-FASTRUN void Envelope::processBlock(Memory& mem, int16_t* output_buffer, size_t num_samples) {
-    for (size_t i = 0; i < num_samples; ++i) {
-        update(mem);
-        output_buffer[i] = mem.current_level;
-    }
 }
 
 /**
