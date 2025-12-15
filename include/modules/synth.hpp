@@ -68,7 +68,7 @@ private:
     int32_t left[MAX_CHANNELS] = {};
     int32_t right[MAX_CHANNELS] = {};
 
-    void generate();
+    FASTRUN void generate();
     void updateOrder(uint8_t removed);
     void noteReset(uint8_t index);
     void process();//TODO
@@ -85,7 +85,7 @@ public:
     };
 
     void init();
-    void update();
+    FASTRUN void update();
     void noteOn(uint8_t note, uint8_t velocity, uint8_t channel);
     void noteOff(uint8_t note, uint8_t channel);
     void reset();

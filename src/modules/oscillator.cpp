@@ -1,5 +1,8 @@
 #include "modules/oscillator.hpp"
 
+int16_t Oscillator::level_table[100] = {};
+bool Oscillator::table_initialized = false;
+
 /**
  * @brief oscillatorの周波数を設定
  *
@@ -30,11 +33,6 @@ void Oscillator::setPhase(Memory& mem, uint32_t phase) {
     mem.phase = phase;
 }
 
-/** @brief feedbackを設定 */
-void Oscillator::setFeedback(bool is_feedback) {
-    this->is_feedback = is_feedback;
-}
-
 /** @brief オシレーターを有効化 */
 void Oscillator::enable() {
     enabled = true;
@@ -50,31 +48,6 @@ void Oscillator::reset(Memory& mem) {
     mem.phase = 0;
     mem.delta = 0;
     mem.vel_vol = 0;
-}
-
-/**
- * @brief オシレーターのモジュレーションを設定
- *
- * @param mod_osc モジュレーターオシレーター
- * @param mod_env モジュレーターエンベロープ
- * @param mod_osc_mems モジュレーターオシレーターのメモリ(ノートごと)
- * @param mod_env_mems モジュレーターエンベロープのメモリ(ノートごと)
- */
-void Oscillator::setModulation(
-    Oscillator* mod_osc,
-    Envelope* mod_env,
-    Oscillator::Memory* mod_osc_mems,
-    Envelope::Memory* mod_env_mems
-) {
-    if(!mod_osc || !mod_env || !mod_osc_mems || !mod_env_mems) {
-        has_modulation = false;
-        return;
-    }
-    this->mod_osc = mod_osc;
-    this->mod_env = mod_env;
-    this->mod_osc_mems = mod_osc_mems;
-    this->mod_env_mems = mod_env_mems;
-    this->has_modulation = true;
 }
 
 /**

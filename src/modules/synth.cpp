@@ -7,70 +7,61 @@ void Synth::init() {
     for (int i = 0; i < 128; ++i) {
         midi_note_to_index[i] = -1;
     }
+    Oscillator::initTable();
 
-    // [0]はCarrier確定
+    // --- ペア1: Op1(Mod) -> Op0(Car) ---
+    // Carrier: Op0
     operators[0].mode = OpMode::Carrier;
     operators[0].osc.setLevel(1024);
     operators[0].osc.enable();
-
+    operators[0].osc.setDetune(3);
     operators[0].env.setDecay(60);
     operators[0].env.setSustain(0);
     operators[0].env.setRelease(80);
 
-    operators[0].osc.setDetune(3);
-
-    // [1]を0のモジュレーターに //TODO
+    // Modulator: Op1
     operators[1].mode = OpMode::Modulator;
-    operators[0].osc.setModulation(&operators[1].osc, &operators[1].env, &ope_states[1].osc_mems[0], &ope_states[1].env_mems[0]);
     operators[1].osc.setLevelNonLinear(35);
     operators[1].osc.enable();
-
+    operators[1].osc.setCoarse(14.0f);
     operators[1].env.setDecay(60);
     operators[1].env.setSustain(0);
 
-    operators[1].osc.setCoarse(14.0f);
-
-    // [2]をCarrierに
+    // --- ペア2: Op3(Mod) -> Op2(Car) ---
+    // Carrier: Op2
     operators[2].mode = OpMode::Carrier;
     operators[2].osc.setLevel(1024);
     operators[2].osc.enable();
-
     operators[2].env.setDecay(94);
     operators[2].env.setSustain(0);
     operators[2].env.setRelease(80);
 
-    // [3]を2のモジュレーターに //TODO
+    // Modulator: Op3
     operators[3].mode = OpMode::Modulator;
-    operators[2].osc.setModulation(&operators[3].osc, &operators[3].env, &ope_states[3].osc_mems[0], &ope_states[3].env_mems[0]);
     operators[3].osc.setLevelNonLinear(89);
     operators[3].osc.enable();
-
     operators[3].env.setDecay(94);
     operators[3].env.setSustain(0);
     operators[3].env.setRelease(80);
 
-    // [4]をCarrierに
+    // --- ペア3: Op5(Mod) -> Op4(Car) ---
+    // Carrier: Op4
     operators[4].mode = OpMode::Carrier;
     operators[4].osc.setLevel(1024);
     operators[4].osc.enable();
-
+    operators[4].osc.setDetune(-7);
     operators[4].env.setDecay(94);
     operators[4].env.setSustain(0);
     operators[4].env.setRelease(80);
 
-    operators[4].osc.setDetune(-7);
-
-    // [5]を4のモジュレーターに //TODO
+    // Modulator: Op5
     operators[5].mode = OpMode::Modulator;
-    operators[4].osc.setModulation(&operators[5].osc, &operators[5].env, &ope_states[5].osc_mems[0], &ope_states[5].env_mems[0]);
     operators[5].osc.setLevelNonLinear(79);
     operators[5].osc.enable();
-
+    operators[5].osc.setDetune(+7);
     operators[5].env.setDecay(94);
     operators[5].env.setSustain(0);
     operators[5].env.setRelease(80);
-
-    operators[5].osc.setDetune(+7);
 
     // ローパスフィルタ
     filter.setLowPass(6000.0f, 1.0f/sqrt(2.0f));
@@ -81,9 +72,7 @@ void Synth::init() {
 }
 
 /** @brief シンセ生成 */
-/** @attention ここで呼び出す関数は全てinlineで実装する */
-/** envelopeのupdateはinline不可 */
-void Synth::generate() {
+FASTRUN void Synth::generate() {
     if(samples_ready_flags != 0) return;
 
     // 定数キャッシュ
@@ -99,182 +88,127 @@ void Synth::generate() {
         int32_t left = 0;
         int32_t right = 0;
 
-        //TODO discordに記載
-
         // ノート毎処理
         for(uint8_t n = 0; n < MAX_NOTES; ++n) {
             // 発音中でなければスキップ
             if(notes[n].order == 0) continue;
 
-            uint8_t carrier_cnt = 0;
-            uint8_t r_finished_cnt = 0;
+            // キャリアのエンベロープが全て終わっているか判定
+            bool note_is_active = false;
 
-            // オペレーター処理 手動ループ展開
-            // キャリアの場合のみここで処理を行う
-
-            //TODO ノートのチャンネルを特定して処理する
-
-            // オペレーター1
+            // --- Pair 1: Op1 (Mod) -> Op0 (Car) ---
             {
-                Operator& oper1 = operators[0];
-                auto& state1 = ope_states[0];
-                if (oper1.mode == OpMode::Carrier && oper1.osc.isActive()) {
-                    ++carrier_cnt;
-                    auto& osc_mem1 = state1.osc_mems[n];
-                    auto& env_mem1 = state1.env_mems[n];
+                // 1. Modulator (Op1)
+                Operator& mod = operators[1];
+                auto& mod_mem = ope_states[1].osc_mems[n];
+                auto& mod_env_mem = ope_states[1].env_mems[n];
 
-                    const int32_t sample = static_cast<int32_t>(oper1.osc.getSample(osc_mem1, n));
-                    const int32_t env_level = static_cast<int32_t>(oper1.env.currentLevel(env_mem1));
-                    const int32_t enved_sample = (sample * env_level) >> 10;
-                    const int32_t scaled_sample = (enved_sample * MASTER_SCALE) >> 10;
+                // モジュレーターは変調なし(0)で波形取得
+                int16_t mod_raw = mod.osc.getSample(mod_mem, 0);
+                int32_t mod_env_lvl = mod.env.currentLevel(mod_env_mem);
+                // 変調量を計算 (波形 * エンベロープ)
+                int32_t mod_product = (static_cast<int32_t>(mod_raw) * mod_env_lvl) >> 10;
 
-                    left  += scaled_sample;
-                    right += scaled_sample;
+                mod.osc.update(mod_mem);
+                mod.env.update(mod_env_mem);
 
-                    oper1.osc.update(osc_mem1, n);
-                    oper1.env.update(env_mem1);
+                // 2. Carrier (Op0)
+                Operator& car = operators[0];
+                auto& car_mem = ope_states[0].osc_mems[n];
+                auto& car_env_mem = ope_states[0].env_mems[n];
 
-                    if (oper1.env.isFinished(env_mem1)) {
-                        ++r_finished_cnt;
-                    }
-                }
+                // モジュレーターの出力(mod_product)を渡す
+                int16_t car_raw = car.osc.getSample(car_mem, mod_product);
+                int32_t car_env_lvl = car.env.currentLevel(car_env_mem);
+                int32_t car_out = (static_cast<int32_t>(car_raw) * car_env_lvl) >> 10;
+
+                // 出力加算
+                left += car_out;
+                right += car_out;
+
+                car.osc.update(car_mem);
+                car.env.update(car_env_mem);
+
+                // キャリアが終わっていなければ生存フラグON
+                if (!car.env.isFinished(car_env_mem)) note_is_active = true;
             }
 
-            // オペレーター2
+            // --- Pair 2: Op3 (Mod) -> Op2 (Car) ---
             {
-                Operator& oper2 = operators[1];
-                auto& state2 = ope_states[1];
-                if (oper2.mode == OpMode::Carrier && oper2.osc.isActive()) {
-                    ++carrier_cnt;
-                    auto& osc_mem2 = state2.osc_mems[n];
-                    auto& env_mem2 = state2.env_mems[n];
+                // Modulator (Op3)
+                Operator& mod = operators[3];
+                auto& mod_mem = ope_states[3].osc_mems[n];
+                auto& mod_env_mem = ope_states[3].env_mems[n];
 
-                    const int32_t sample = static_cast<int32_t>(oper2.osc.getSample(osc_mem2, n));
-                    const int32_t env_level = static_cast<int32_t>(oper2.env.currentLevel(env_mem2));
-                    const int32_t enved_sample = (sample * env_level) >> 10;
-                    const int32_t scaled_sample = (enved_sample * MASTER_SCALE) >> 10;
+                int16_t mod_raw = mod.osc.getSample(mod_mem, 0);
+                int32_t mod_env_lvl = mod.env.currentLevel(mod_env_mem);
+                int32_t mod_product = (static_cast<int32_t>(mod_raw) * mod_env_lvl) >> 10;
 
-                    left  += scaled_sample;
-                    right += scaled_sample;
+                mod.osc.update(mod_mem);
+                mod.env.update(mod_env_mem);
 
-                    oper2.osc.update(osc_mem2, n);
-                    oper2.env.update(env_mem2);
+                // Carrier (Op2)
+                Operator& car = operators[2];
+                auto& car_mem = ope_states[2].osc_mems[n];
+                auto& car_env_mem = ope_states[2].env_mems[n];
 
-                    if (oper2.env.isFinished(env_mem2)) {
-                        ++r_finished_cnt;
-                    }
-                }
+                // 変調入力
+                int16_t car_raw = car.osc.getSample(car_mem, mod_product);
+                int32_t car_env_lvl = car.env.currentLevel(car_env_mem);
+                int32_t car_out = (static_cast<int32_t>(car_raw) * car_env_lvl) >> 10;
+
+                left += car_out;
+                right += car_out;
+
+                car.osc.update(car_mem);
+                car.env.update(car_env_mem);
+
+                if (!car.env.isFinished(car_env_mem)) note_is_active = true;
             }
 
-            // オペレーター3
+            // --- Pair 3: Op5 (Mod) -> Op4 (Car) ---
             {
-                Operator& oper3 = operators[2];
-                auto& state3 = ope_states[2];
-                if (oper3.mode == OpMode::Carrier && oper3.osc.isActive()) {
-                    ++carrier_cnt;
-                    auto& osc_mem3 = state3.osc_mems[n];
-                    auto& env_mem3 = state3.env_mems[n];
+                // Modulator (Op5)
+                Operator& mod = operators[5];
+                auto& mod_mem = ope_states[5].osc_mems[n];
+                auto& mod_env_mem = ope_states[5].env_mems[n];
 
-                    const int32_t sample = static_cast<int32_t>(oper3.osc.getSample(osc_mem3, n));
-                    const int32_t env_level = static_cast<int32_t>(oper3.env.currentLevel(env_mem3));
-                    const int32_t enved_sample = (sample * env_level) >> 10;
-                    const int32_t scaled_sample = (enved_sample * MASTER_SCALE) >> 10;
+                int16_t mod_raw = mod.osc.getSample(mod_mem, 0);
+                int32_t mod_env_lvl = mod.env.currentLevel(mod_env_mem);
+                int32_t mod_product = (static_cast<int32_t>(mod_raw) * mod_env_lvl) >> 10;
 
-                    left  += scaled_sample;
-                    right += scaled_sample;
+                mod.osc.update(mod_mem);
+                mod.env.update(mod_env_mem);
 
-                    oper3.osc.update(osc_mem3, n);
-                    oper3.env.update(env_mem3);
+                // Carrier (Op4)
+                Operator& car = operators[4];
+                auto& car_mem = ope_states[4].osc_mems[n];
+                auto& car_env_mem = ope_states[4].env_mems[n];
 
-                    if (oper3.env.isFinished(env_mem3)) {
-                        ++r_finished_cnt;
-                    }
-                }
+                // 変調入力
+                int16_t car_raw = car.osc.getSample(car_mem, mod_product);
+                int32_t car_env_lvl = car.env.currentLevel(car_env_mem);
+                int32_t car_out = (static_cast<int32_t>(car_raw) * car_env_lvl) >> 10;
+
+                left += car_out;
+                right += car_out;
+
+                car.osc.update(car_mem);
+                car.env.update(car_env_mem);
+
+                if (!car.env.isFinished(car_env_mem)) note_is_active = true;
             }
 
-            // オペレーター4
-            {
-                Operator& oper4 = operators[3];
-                auto& state4 = ope_states[3];
-                if (oper4.mode == OpMode::Carrier && oper4.osc.isActive()) {
-                    ++carrier_cnt;
-                    auto& osc_mem4 = state4.osc_mems[n];
-                    auto& env_mem4 = state4.env_mems[n];
-
-                    const int32_t sample = static_cast<int32_t>(oper4.osc.getSample(osc_mem4, n));
-                    const int32_t env_level = static_cast<int32_t>(oper4.env.currentLevel(env_mem4));
-                    const int32_t enved_sample = (sample * env_level) >> 10;
-                    const int32_t scaled_sample = (enved_sample * MASTER_SCALE) >> 10;
-
-                    left  += scaled_sample;
-                    right += scaled_sample;
-
-                    oper4.osc.update(osc_mem4, n);
-                    oper4.env.update(env_mem4);
-
-                    if (oper4.env.isFinished(env_mem4)) {
-                        ++r_finished_cnt;
-                    }
-                }
-            }
-
-            // オペレーター5
-            {
-                Operator& oper5 = operators[4];
-                auto& state5 = ope_states[4];
-                if (oper5.mode == OpMode::Carrier && oper5.osc.isActive()) {
-                    ++carrier_cnt;
-                    auto& osc_mem5 = state5.osc_mems[n];
-                    auto& env_mem5 = state5.env_mems[n];
-
-                    const int32_t sample = static_cast<int32_t>(oper5.osc.getSample(osc_mem5, n));
-                    const int32_t env_level = static_cast<int32_t>(oper5.env.currentLevel(env_mem5));
-                    const int32_t enved_sample = (sample * env_level) >> 10;
-                    const int32_t scaled_sample = (enved_sample * MASTER_SCALE) >> 10;
-
-                    left  += scaled_sample;
-                    right += scaled_sample;
-
-                    oper5.osc.update(osc_mem5, n);
-                    oper5.env.update(env_mem5);
-
-                    if (oper5.env.isFinished(env_mem5)) {
-                        ++r_finished_cnt;
-                    }
-                }
-            }
-
-            // オペレーター6
-            {
-                Operator& oper6 = operators[5];
-                auto& state6 = ope_states[5];
-                if (oper6.mode == OpMode::Carrier && oper6.osc.isActive()) {
-                    ++carrier_cnt;
-                    auto& osc_mem6 = state6.osc_mems[n];
-                    auto& env_mem6 = state6.env_mems[n];
-
-                    const int32_t sample = static_cast<int32_t>(oper6.osc.getSample(osc_mem6, n));
-                    const int32_t env_level = static_cast<int32_t>(oper6.env.currentLevel(env_mem6));
-                    const int32_t enved_sample = (sample * env_level) >> 10;
-                    const int32_t scaled_sample = (enved_sample * MASTER_SCALE) >> 10;
-
-                    left  += scaled_sample;
-                    right += scaled_sample;
-
-                    oper6.osc.update(osc_mem6, n);
-                    oper6.env.update(env_mem6);
-
-                    if (oper6.env.isFinished(env_mem6)) {
-                        ++r_finished_cnt;
-                    }
-                }
-            }
-
-            // 全てのオペレーターが処理完了
-            if(r_finished_cnt == carrier_cnt) {
+            // 全てのキャリアが終了していたらノートをリセット
+            if(!note_is_active) {
                 noteReset(n);
             }
+
         } // for active note
+
+        // マスターボリューム適用
+        left = (left * MASTER_SCALE) >> 10;
+        right = (right * MASTER_SCALE) >> 10;
 
         // サンプルをクリッピングする
         left  = AudioMath::fastClampInt16(left);
@@ -308,17 +242,11 @@ void Synth::generate() {
 
         // バランス接続用反転
         // left/rightは既にクリッピングされているため-32768～32767の範囲に収まっている
-        if(left == INT16_MIN) {
-            samples_LM[i] = INT16_MAX;
-        } else {
-            samples_LM[i] = static_cast<int16_t>(-left);
-        }
+        if(left == INT16_MIN) samples_LM[i] = INT16_MAX;
+        else samples_LM[i] = static_cast<int16_t>(-left);
 
-        if(right == INT16_MIN) {
-            samples_RM[i] = INT16_MAX;
-        } else {
-            samples_RM[i] = static_cast<int16_t>(-right);
-        }
+        if(right == INT16_MIN) samples_RM[i] = INT16_MAX;
+        else samples_RM[i] = static_cast<int16_t>(-right);
 
     } // for BUFFER_SIZE
 
@@ -326,7 +254,7 @@ void Synth::generate() {
 }
 
 /** @brief シンセ更新 */
-void Synth::update() {
+FASTRUN void Synth::update() {
     // 有効なノートが存在すれば生成
     // エフェクト系追加したら処理内容変更？
     if(order_max > 0) {
@@ -367,15 +295,10 @@ void Synth::updateOrder(uint8_t removed) {
 void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
     // 既に同じノートを演奏している場合
     if(midi_note_to_index[note] != -1) {
-        //for(uint8_t op = 0; op < MAX_OPERATORS; ++op) {
-            // リリース中でなければ何もしない。
-            // if(ope_states[op].env_mems[i].state != Envelope::EnvelopeState::Release) return;
-        //}
-        // リリース状態であれば強制リリース後発音 //TODO: 強制リリース
+        // 必要に応じてリトリガー処理
     }
     // MAX_NOTES個ノートを演奏中の場合
     if(order_max == MAX_NOTES) {
-        // 一番古いノートを強制停止する //TODO: 強制リリース
         noteReset(last_index);
     }
     // ノートを追加する
@@ -388,14 +311,14 @@ void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
             it.note = note;
             it.velocity = velocity;
             it.channel = channel;
+
             for(uint8_t op = 0; op < MAX_OPERATORS; ++op) {
                 auto& osc_mem = ope_states[op].osc_mems[i];
                 auto& env_mem = ope_states[op].env_mems[i];
                 operators[op].osc.setVelocity(osc_mem, velocity);
                 operators[op].osc.setFrequency(osc_mem, note);
                 operators[op].osc.setPhase(osc_mem, 0);
-                // 初期化IdleからAttackへ
-                operators[op].env.reset(env_mem);
+                operators[op].env.reset(env_mem); // 初期化IdleからAttackへ
             }
             break;
         }

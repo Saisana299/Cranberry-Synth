@@ -55,14 +55,16 @@ void setup() {
 
 void loop() {
     // 1ループ2900μs以内
-    // /*debug*/ uint32_t startTime = micros();
-
     auto mode_state = state.getModeState();
 
     // 優先度0: サウンド生成関連処理
     switch(mode_state) {
         case MODE_SYNTH:
+            // /*debug*/ uint32_t t0 = ARM_DWT_CYCCNT;
             synth.update();
+            // /*debug*/ uint32_t t1 = ARM_DWT_CYCCNT;
+            // /*debug*/ Serial.println((t1 - t0) / 600);
+            // sine波1音+LPFで62µs以内目標
             break;
     }
 
@@ -86,11 +88,6 @@ void loop() {
 
     // 優先度:7 LED制御
     leds.process();
-
-    // /*debug*/ uint32_t endTime = micros();
-    // /*debug*/ uint32_t duration = endTime - startTime;
-    // /*debug*/ Serial.println(String(duration) + "us");
-    // sine波1音+LPFで62µs以内目標
 
     asm volatile("yield");
 }
