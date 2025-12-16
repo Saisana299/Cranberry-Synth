@@ -28,9 +28,6 @@ void AudioHandler::process() {
         queue_RM.play(samples_RM, BUFFER_SIZE);
         samples_ready_flags.store(0);
     }
-    else {
-        state_.setLedAudio(false);
-    }
 }
 
 /** @brief 録音開始 */ // TODO
