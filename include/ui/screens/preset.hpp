@@ -19,9 +19,6 @@ public:
     bool isAnimated() const override { return false; }
 
     void handleInput(uint8_t button) override {
-        if (button == BTN_CXL) {
-            manager->popScreen();
-        }
     }
 
     void draw(GFXcanvas16& canvas) override {

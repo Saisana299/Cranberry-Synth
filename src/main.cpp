@@ -51,17 +51,12 @@ void setup() {
 
 // 1ループ2900μsまで
 void loop() {
-    static uint8_t last_mode = MODE_NONE;
+    static uint8_t last_mode = state.getModeState();
     auto mode_state = state.getModeState();
 
     if (mode_state != last_mode) {
-        // MODE_NONEになったらシンセとMIDI入力を停止
-        if (mode_state == MODE_NONE) {
-            synth.reset();
-            midi_hdl.stop();
-        }
         // SYNTHになったらMIDI入力を開始
-        else if (mode_state == MODE_SYNTH) {
+        if (mode_state == MODE_SYNTH) {
             midi_hdl.begin();
         }
         last_mode = mode_state;

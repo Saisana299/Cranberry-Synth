@@ -13,8 +13,6 @@ public:
 
     void onEnter(UIManager* manager) override {
         this->manager = manager;
-        State& state = manager->getState();
-        state.setModeState(MODE_NONE);
     }
 
     bool isAnimated() const override { return true; }
@@ -38,7 +36,7 @@ public:
         canvas.setTextSize(2);
         canvas.setTextWrap(false);
 
-        const char* mainTitle = "CRANBERRY";
+        const char* mainTitle = "Cranberry";
         TextBounds mainBounds = GFX_SSD1351::getTextBounds(mainTitle, 0, 0);
 
         int realW = mainBounds.w * 2;

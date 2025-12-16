@@ -61,7 +61,7 @@ void MIDIHandler::process() {
         midi_activity = true;
     }
 
-    if(midi_activity != last_midi_state && state_.getModeState() != MODE_NONE) {
+    if(midi_activity != last_midi_state && state_.getModeState() != MODE_TITLE) {
         last_midi_state = midi_activity;
         state_.setLedMidi(midi_activity);
     }
