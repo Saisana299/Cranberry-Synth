@@ -1,7 +1,5 @@
 #pragma once
 
-#include "display/gfx.hpp"
-
 class UIManager;
 
 class Screen {
@@ -13,6 +11,7 @@ public:
     virtual void onExit() {}
     virtual void handleInput(uint8_t button) = 0;
     virtual void draw(GFXcanvas16& canvas) = 0;
+    virtual bool isAnimated() const { return false; }
 
 protected:
     UIManager* manager = nullptr;

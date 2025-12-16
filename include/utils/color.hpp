@@ -11,6 +11,7 @@ public:
     static constexpr uint16_t CYAN        = 0x07FF;
     static constexpr uint16_t MAGENTA     = 0xF81F;
     static constexpr uint16_t GRAY        = 0x8410;
+    static constexpr uint16_t MD_GRAY     = 0x7BEF;
     static constexpr uint16_t SILVER      = 0xC618;
     static constexpr uint16_t ORANGE      = 0xFD20;
     static constexpr uint16_t BROWN       = 0xA145;
@@ -28,4 +29,5 @@ public:
     static constexpr uint16_t LIGHT_GREEN = 0x9772;
     static constexpr uint16_t LIGHT_GRAY  = 0xD69A;
     static constexpr uint16_t DARK_GRAY   = 0xAD55;
+    static constexpr uint16_t CRANBERRY   = 0xD800;
 };

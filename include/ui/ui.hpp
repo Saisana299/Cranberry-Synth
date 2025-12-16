@@ -2,10 +2,16 @@
 
 #include <stack>
 #include <memory>
-#include "screens/screen.hpp"
+#include <vector>
+#include <string>
+#include <functional>
+#include <cmath>
+
 #include "display/gfx.hpp"
 #include "utils/state.hpp"
-#include "tools/midi_player.hpp"
+#include "ui/screens/screen.hpp"
+
+// #include "tools/midi_player.hpp"
 
 class UIManager {
 private:
@@ -82,15 +88,23 @@ public:
             state_.setBtnState(BTN_NONE);
         }
 
-        // 再描画確認
-        if (!redraw) return;
-        if (screenStack.empty()) {
+        // 現在の画面を取得
+        Screen* currentScreen = screenStack.empty() ? nullptr : screenStack.top();
+
+        // 再描画判定
+        bool shouldDraw = redraw || (currentScreen && currentScreen->isAnimated());
+        if (!shouldDraw) return;
+
+        // 描画実行
+        if (!currentScreen) {
             canvas.fillScreen(Color::BLACK);
         }
         else {
-            screenStack.top()->draw(canvas);
+            currentScreen->draw(canvas);
         }
+
         GFX_SSD1351::flash(canvas);
+
         redraw = false;
     }
 
