@@ -9,9 +9,11 @@ void Synth::init() {
     }
     Oscillator::initTable();
 
+    setAlgorithm(0);
+    setFeedback(0);
+
     // --- ペア1: Op1(Mod) -> Op0(Car) ---
     // Carrier: Op0
-    operators[0].mode = OpMode::Carrier;
     operators[0].osc.setLevel(1024);
     operators[0].osc.enable();
     operators[0].osc.setDetune(3);
@@ -20,7 +22,6 @@ void Synth::init() {
     operators[0].env.setRelease(80);
 
     // Modulator: Op1
-    operators[1].mode = OpMode::Modulator;
     operators[1].osc.setLevelNonLinear(35);
     operators[1].osc.enable();
     operators[1].osc.setCoarse(14.0f);
@@ -29,7 +30,6 @@ void Synth::init() {
 
     // --- ペア2: Op3(Mod) -> Op2(Car) ---
     // Carrier: Op2
-    operators[2].mode = OpMode::Carrier;
     operators[2].osc.setLevel(1024);
     operators[2].osc.enable();
     operators[2].env.setDecay(94);
@@ -37,7 +37,6 @@ void Synth::init() {
     operators[2].env.setRelease(80);
 
     // Modulator: Op3
-    operators[3].mode = OpMode::Modulator;
     operators[3].osc.setLevelNonLinear(89);
     operators[3].osc.enable();
     operators[3].env.setDecay(94);
@@ -46,7 +45,6 @@ void Synth::init() {
 
     // --- ペア3: Op5(Mod) -> Op4(Car) ---
     // Carrier: Op4
-    operators[4].mode = OpMode::Carrier;
     operators[4].osc.setLevel(1024);
     operators[4].osc.enable();
     operators[4].osc.setDetune(-7);
@@ -55,7 +53,6 @@ void Synth::init() {
     operators[4].env.setRelease(80);
 
     // Modulator: Op5
-    operators[5].mode = OpMode::Modulator;
     operators[5].osc.setLevelNonLinear(79);
     operators[5].osc.enable();
     operators[5].osc.setDetune(+7);
@@ -74,181 +71,164 @@ void Synth::init() {
 /** @brief シンセ生成 */
 FASTRUN void Synth::generate() {
     if(samples_ready_flags != 0) return;
+    if(current_algo == nullptr) return;
 
     // 定数キャッシュ
-    const bool LPF_ENABLED = lpf_enabled;
-    const bool HPF_ENABLED = hpf_enabled;
-    const bool DELAY_ENABLED = delay_enabled;
-    const int16_t MASTER_SCALE = master_scale;
-    const int16_t MASTER_PAN = master_pan;
+    const uint8_t* exec_order = current_algo->exec_order;
+    const uint8_t* mod_mask = current_algo->mod_mask;
+    const uint8_t output_mask = current_algo->output_mask;
+    const int8_t feedback_op = current_algo->feedback_op;
 
-    // サンプル毎処理
+    static const uint8_t FB_SHIFTS[8] = { 31, 7, 6, 5, 4, 3, 2, 1 };
+    uint8_t current_fb_shift = (feedback_amount > 7) ? 31 : FB_SHIFTS[feedback_amount];
+
+    // 出力バッファをクリア
+    int32_t mix_buffer_L[BUFFER_SIZE] = {0};
+    int32_t mix_buffer_R[BUFFER_SIZE] = {0};
+
+    // ノート毎処理
+    for(uint8_t n = 0; n < MAX_NOTES; ++n) {
+        if(notes[n].order == 0) continue;
+
+        bool note_is_active = false;
+
+        // オペレータ出力の一時保存用バッファ [Op][Sample]
+        int32_t op_buffer[MAX_OPERATORS][BUFFER_SIZE];
+
+        // --- オペレータ毎処理 ---
+        // #pragma GCC unroll 6
+        for(uint8_t k = 0; k < MAX_OPERATORS; ++k) {
+            uint8_t op_idx = exec_order[k];
+            Operator& op_obj = operators[op_idx];
+
+            // ステートへの参照キャッシュ
+            auto& osc_mem = ope_states[op_idx].osc_mems[n];
+            auto& env_mem = ope_states[op_idx].env_mems[n];
+
+            uint8_t mask = mod_mask[op_idx];
+            bool is_feedback = (op_idx == feedback_op && feedback_amount > 0);
+
+            // フィードバック変数のローカルキャッシュ
+            int32_t fb_h0 = fb_history[n][0];
+            int32_t fb_h1 = fb_history[n][1];
+
+            // --- サンプル毎処理 ---
+            for(size_t i = 0; i < BUFFER_SIZE; ++i) {
+                int32_t mod_input = 0;
+
+                // 1. 変調入力
+                if (mask) {
+                    for(uint8_t src = 0; src < MAX_OPERATORS; ++src) {
+                         if (mask & (1 << src)) {
+                             mod_input += op_buffer[src][i]; // 計算済みのバッファから読む
+                         }
+                    }
+                }
+
+                // 2. フィードバック
+                if (is_feedback) {
+                    int32_t fb_val = (fb_h0 + fb_h1) >> 1;
+                    if (current_fb_shift < 30) {
+                        mod_input += (fb_val >> current_fb_shift);
+                    }
+                }
+
+                // 3. 発音
+                int16_t raw_wave = op_obj.osc.getSample(osc_mem, mod_input);
+                int32_t env_level = op_obj.env.currentLevel(env_mem);
+                int32_t output = (static_cast<int32_t>(raw_wave) * env_level) >> 10;
+
+                op_buffer[op_idx][i] = output; // バッファに書き込み
+
+                // 4. FB履歴更新
+                if (is_feedback) {
+                    fb_h1 = fb_h0;
+                    fb_h0 = output;
+                }
+
+                // 状態更新
+                op_obj.osc.update(osc_mem);
+                op_obj.env.update(env_mem);
+            }
+
+            // フィードバック書き戻し
+            if (is_feedback) {
+                fb_history[n][0] = fb_h0;
+                fb_history[n][1] = fb_h1;
+            }
+
+            if (!op_obj.env.isFinished(env_mem)) note_is_active = true;
+        }
+
+        // --- キャリアのミックス ---
+        for(size_t i = 0; i < BUFFER_SIZE; ++i) {
+            int32_t sum = 0;
+            for(uint8_t k = 0; k < MAX_OPERATORS; ++k) {
+                if (output_mask & (1 << k)) {
+                    sum += op_buffer[k][i];
+                }
+            }
+            mix_buffer_L[i] += sum;
+            mix_buffer_R[i] += sum;
+        }
+
+        if(!note_is_active) noteReset(n);
+    }
+
+    // 定数キャッシュ
+    const int32_t current_scale = master_scale;
+    const bool enable_lpf = lpf_enabled;
+    const bool enable_hpf = hpf_enabled;
+    const bool enable_delay = delay_enabled;
+    const int32_t pan_gain_l = AudioMath::PAN_COS_TABLE[master_pan];
+    const int32_t pan_gain_r = AudioMath::PAN_SIN_TABLE[master_pan];
+
+    // --- 最終出力段 (Filter, Delay, Pan) ---
     for(size_t i = 0; i < BUFFER_SIZE; ++i) {
-        // 出力バッファ
-        int32_t left = 0;
-        int32_t right = 0;
-
-        // ノート毎処理
-        for(uint8_t n = 0; n < MAX_NOTES; ++n) {
-            // 発音中でなければスキップ
-            if(notes[n].order == 0) continue;
-
-            // キャリアのエンベロープが全て終わっているか判定
-            bool note_is_active = false;
-
-            // --- Pair 1: Op1 (Mod) -> Op0 (Car) ---
-            {
-                // 1. Modulator (Op1)
-                Operator& mod = operators[1];
-                auto& mod_mem = ope_states[1].osc_mems[n];
-                auto& mod_env_mem = ope_states[1].env_mems[n];
-
-                // モジュレーターは変調なし(0)で波形取得
-                int16_t mod_raw = mod.osc.getSample(mod_mem, 0);
-                int32_t mod_env_lvl = mod.env.currentLevel(mod_env_mem);
-                // 変調量を計算 (波形 * エンベロープ)
-                int32_t mod_product = (static_cast<int32_t>(mod_raw) * mod_env_lvl) >> 10;
-
-                mod.osc.update(mod_mem);
-                mod.env.update(mod_env_mem);
-
-                // 2. Carrier (Op0)
-                Operator& car = operators[0];
-                auto& car_mem = ope_states[0].osc_mems[n];
-                auto& car_env_mem = ope_states[0].env_mems[n];
-
-                // モジュレーターの出力(mod_product)を渡す
-                int16_t car_raw = car.osc.getSample(car_mem, mod_product);
-                int32_t car_env_lvl = car.env.currentLevel(car_env_mem);
-                int32_t car_out = (static_cast<int32_t>(car_raw) * car_env_lvl) >> 10;
-
-                // 出力加算
-                left += car_out;
-                right += car_out;
-
-                car.osc.update(car_mem);
-                car.env.update(car_env_mem);
-
-                // キャリアが終わっていなければ生存フラグON
-                if (!car.env.isFinished(car_env_mem)) note_is_active = true;
-            }
-
-            // --- Pair 2: Op3 (Mod) -> Op2 (Car) ---
-            {
-                // Modulator (Op3)
-                Operator& mod = operators[3];
-                auto& mod_mem = ope_states[3].osc_mems[n];
-                auto& mod_env_mem = ope_states[3].env_mems[n];
-
-                int16_t mod_raw = mod.osc.getSample(mod_mem, 0);
-                int32_t mod_env_lvl = mod.env.currentLevel(mod_env_mem);
-                int32_t mod_product = (static_cast<int32_t>(mod_raw) * mod_env_lvl) >> 10;
-
-                mod.osc.update(mod_mem);
-                mod.env.update(mod_env_mem);
-
-                // Carrier (Op2)
-                Operator& car = operators[2];
-                auto& car_mem = ope_states[2].osc_mems[n];
-                auto& car_env_mem = ope_states[2].env_mems[n];
-
-                // 変調入力
-                int16_t car_raw = car.osc.getSample(car_mem, mod_product);
-                int32_t car_env_lvl = car.env.currentLevel(car_env_mem);
-                int32_t car_out = (static_cast<int32_t>(car_raw) * car_env_lvl) >> 10;
-
-                left += car_out;
-                right += car_out;
-
-                car.osc.update(car_mem);
-                car.env.update(car_env_mem);
-
-                if (!car.env.isFinished(car_env_mem)) note_is_active = true;
-            }
-
-            // --- Pair 3: Op5 (Mod) -> Op4 (Car) ---
-            {
-                // Modulator (Op5)
-                Operator& mod = operators[5];
-                auto& mod_mem = ope_states[5].osc_mems[n];
-                auto& mod_env_mem = ope_states[5].env_mems[n];
-
-                int16_t mod_raw = mod.osc.getSample(mod_mem, 0);
-                int32_t mod_env_lvl = mod.env.currentLevel(mod_env_mem);
-                int32_t mod_product = (static_cast<int32_t>(mod_raw) * mod_env_lvl) >> 10;
-
-                mod.osc.update(mod_mem);
-                mod.env.update(mod_env_mem);
-
-                // Carrier (Op4)
-                Operator& car = operators[4];
-                auto& car_mem = ope_states[4].osc_mems[n];
-                auto& car_env_mem = ope_states[4].env_mems[n];
-
-                // 変調入力
-                int16_t car_raw = car.osc.getSample(car_mem, mod_product);
-                int32_t car_env_lvl = car.env.currentLevel(car_env_mem);
-                int32_t car_out = (static_cast<int32_t>(car_raw) * car_env_lvl) >> 10;
-
-                left += car_out;
-                right += car_out;
-
-                car.osc.update(car_mem);
-                car.env.update(car_env_mem);
-
-                if (!car.env.isFinished(car_env_mem)) note_is_active = true;
-            }
-
-            // 全てのキャリアが終了していたらノートをリセット
-            if(!note_is_active) {
-                noteReset(n);
-            }
-
-        } // for active note
+        int32_t left = mix_buffer_L[i];
+        int32_t right = mix_buffer_R[i];
 
         // マスターボリューム適用
-        left = (left * MASTER_SCALE) >> 10;
-        right = (right * MASTER_SCALE) >> 10;
+        left = (left * current_scale) >> 10;
+        right = (right * current_scale) >> 10;
 
-        // サンプルをクリッピングする
-        left  = AudioMath::fastClampInt16(left);
+        // クリップ処理
+        left = AudioMath::fastClampInt16(left);
         right = AudioMath::fastClampInt16(right);
         // フィルタはそれぞれでクリッピングがあるためこれ以降は必要無し
 
-        // LPFを適用
-        if(LPF_ENABLED) {
+        // エフェクト処理
+        // Low-pass filter
+        if(enable_lpf) {
             left = filter.processLpfL(left);
             right = filter.processLpfR(right);
         }
-
-        // HPFを適用
-        if(HPF_ENABLED) {
+        // High-pass filter
+        if(enable_hpf) {
             left = filter.processHpfL(left);
             right = filter.processHpfR(right);
         }
-
-        // ディレイを適用
-        if(DELAY_ENABLED) {
+        // Delay
+        if(enable_delay) {
             left = delay.processL(left);
             right = delay.processR(right);
         }
 
-        // パンを適用
-        left  = (left  * AudioMath::PAN_COS_TABLE[MASTER_PAN]) / INT16_MAX;
-        right = (right * AudioMath::PAN_SIN_TABLE[MASTER_PAN]) / INT16_MAX;
+        // パンニング
+        left = (left * pan_gain_l) >> 15;
+        right = (right * pan_gain_r) >> 15;
 
+        // 出力バッファへ
         samples_L[i] = static_cast<int16_t>(left);
         samples_R[i] = static_cast<int16_t>(right);
 
         // バランス接続用反転
-        // left/rightは既にクリッピングされているため-32768～32767の範囲に収まっている
-        if(left == INT16_MIN) samples_LM[i] = INT16_MAX;
+        if (left == INT16_MIN) samples_LM[i] = INT16_MAX;
         else samples_LM[i] = static_cast<int16_t>(-left);
 
-        if(right == INT16_MIN) samples_RM[i] = INT16_MAX;
+        if (right == INT16_MIN) samples_RM[i] = INT16_MAX;
         else samples_RM[i] = static_cast<int16_t>(-right);
-
-    } // for BUFFER_SIZE
+    }
 
     samples_ready_flags = 1;
 }
@@ -362,6 +342,10 @@ void Synth::noteReset(uint8_t index) {
         oper.osc.reset(osc_mem);
         oper.env.reset(env_mem);
     }
+
+    fb_history[index][0] = 0;
+    fb_history[index][1] = 0;
+
     if(order_max > 0) --order_max;
     // 他ノートorder更新
     updateOrder(removed_order);
@@ -371,4 +355,13 @@ void Synth::reset() {
     for(uint8_t i = 0; i < MAX_NOTES; ++i) {
         noteReset(i);
     }
+}
+
+void Synth::setAlgorithm(uint8_t algo_id) {
+    current_algo = &Algorithms::get(algo_id);
+}
+
+void Synth::setFeedback(uint8_t amount) {
+    if (amount > 7) amount = 7;
+    feedback_amount = amount;
 }

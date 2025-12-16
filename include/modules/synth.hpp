@@ -8,12 +8,12 @@
 #include "modules/oscillator.hpp"
 #include "modules/delay.hpp"
 #include "modules/filter.hpp"
+#include "utils/algorithm.hpp"
 #include "utils/state.hpp"
 #include "utils/math.hpp"
 #include "utils/color.hpp"
 
 constexpr uint8_t MAX_NOTES = 16;
-constexpr uint8_t MAX_OPERATORS = 6;
 constexpr uint8_t MAX_CHANNELS = 16; //TODO チャンネル別で音色を選択できるようにする エフェクトの個別適用は処理速度を確認
 constexpr uint8_t MAX_VOICE = 8;
 
@@ -36,12 +36,7 @@ private:
     };
     OperatorState ope_states[MAX_OPERATORS] = {};
 
-    enum class OpMode {
-        Carrier, Modulator
-    };
-
     struct Operator { //TODO Operator ON/OFF機能
-        OpMode mode = OpMode::Modulator;
         Oscillator osc = Oscillator{};
         Envelope env = Envelope{};
     };
@@ -68,10 +63,13 @@ private:
     int32_t left[MAX_CHANNELS] = {};
     int32_t right[MAX_CHANNELS] = {};
 
+    const Algorithm* current_algo = nullptr;
+    int32_t fb_history[MAX_NOTES][2] = {};
+    uint8_t feedback_amount = 0; // 0=disable, 1~7
+
     FASTRUN void generate();
     void updateOrder(uint8_t removed);
     void noteReset(uint8_t index);
-    void process();//TODO
 
     Synth() {}
 
@@ -89,4 +87,7 @@ public:
     void noteOn(uint8_t note, uint8_t velocity, uint8_t channel);
     void noteOff(uint8_t note, uint8_t channel);
     void reset();
+
+    void setAlgorithm(uint8_t algo_id);
+    void setFeedback(uint8_t amount);
 };
