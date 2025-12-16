@@ -112,4 +112,8 @@ public:
     void setRedraw() {
         redraw = true;
     }
+
+    State& getState() {
+        return state_;
+    }
 };

@@ -1,12 +1,21 @@
 #include "handlers/midi.hpp"
 
-/** @brief MIDIハンドラ初期化 */
-void MIDIHandler::init() {
+/** @brief MIDIデータ受信の開始 */
+void MIDIHandler::begin() {
     usbMIDI.setHandleNoteOn(handleNoteOnStatic);
     usbMIDI.setHandleNoteOff(handleNoteOffStatic);
     MIDI.setHandleNoteOn(handleNoteOnStatic);
     MIDI.setHandleNoteOff(handleNoteOffStatic);
     MIDI.begin(MIDI_CHANNEL_OMNI);
+}
+
+/** @brief MIDIデータ受信の停止 */
+void MIDIHandler::stop() {
+    state_.setLedMidi(false);
+    usbMIDI.setHandleNoteOn(nullptr);
+    usbMIDI.setHandleNoteOff(nullptr);
+    MIDI.setHandleNoteOn(nullptr);
+    MIDI.setHandleNoteOff(nullptr);
 }
 
 /**
@@ -52,7 +61,7 @@ void MIDIHandler::process() {
         midi_activity = true;
     }
 
-    if(midi_activity != last_midi_state) {
+    if(midi_activity != last_midi_state && state_.getModeState() != MODE_NONE) {
         last_midi_state = midi_activity;
         state_.setLedMidi(midi_activity);
     }

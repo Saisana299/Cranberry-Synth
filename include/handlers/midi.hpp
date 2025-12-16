@@ -56,7 +56,8 @@ public:
         instance = this;
     }
 
-    void init();
+    void begin();
+    void stop();
 
     /** @brief MIDIデータ読み込み */
     void process();

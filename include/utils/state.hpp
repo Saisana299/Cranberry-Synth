@@ -1,7 +1,8 @@
 #pragma once
 
-/* Synth Mode */
-constexpr uint8_t MODE_SYNTH = 0x00;
+/* Mode State */
+constexpr uint8_t MODE_NONE  = 0x00;
+constexpr uint8_t MODE_SYNTH = 0x01;
 
 /* Button State */
 constexpr uint8_t BTN_NONE = 0x00;
@@ -45,6 +46,6 @@ public:
 private:
     bool led_midi = false;
     bool led_audio = false;
-    uint8_t mode_state = MODE_SYNTH;
+    uint8_t mode_state = MODE_NONE;
     uint8_t btn_state = BTN_NONE;
 };

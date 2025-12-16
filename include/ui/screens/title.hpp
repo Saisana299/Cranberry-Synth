@@ -11,6 +11,12 @@ public:
 
     TitleScreen() = default;
 
+    void onEnter(UIManager* manager) override {
+        this->manager = manager;
+        State& state = manager->getState();
+        state.setModeState(MODE_NONE);
+    }
+
     bool isAnimated() const override { return true; }
 
     void handleInput(uint8_t button) override {

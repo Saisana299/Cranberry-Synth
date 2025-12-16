@@ -37,25 +37,35 @@ UIManager ui(state);
 Synth& synth = Synth::getInstance();
 
 void setup() {
-    serial_hdl.begin();
-    serial_hdl.println("Cranberry Synth");
-    serial_hdl.println("Digital FM Synthesizer on Teensy 4.1");
+    randomSeed(Entropy.random());
 
+    serial_hdl.begin();
     gfx.begin();
     ui.pushScreen(new TitleScreen());
 
-    randomSeed(Entropy.random());
-
     synth.init();
     audio_hdl.init();
-    midi_hdl.init();
     physical.init();
     leds.init();
 }
 
+// 1ループ2900μsまで
 void loop() {
-    // 1ループ2900μs以内
+    static uint8_t last_mode = MODE_NONE;
     auto mode_state = state.getModeState();
+
+    if (mode_state != last_mode) {
+        // MODE_NONEになったらシンセとMIDI入力を停止
+        if (mode_state == MODE_NONE) {
+            synth.reset();
+            midi_hdl.stop();
+        }
+        // SYNTHになったらMIDI入力を開始
+        else if (mode_state == MODE_SYNTH) {
+            midi_hdl.begin();
+        }
+        last_mode = mode_state;
+    }
 
     // 優先度0: サウンド生成関連処理
     switch(mode_state) {
