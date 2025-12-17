@@ -4,6 +4,12 @@
 
 constexpr uint8_t MAX_OPERATORS = 6;
 
+// 描画用の座標構造体 (メモリ節約のため int8_t)
+struct OpCoord {
+    int8_t col; // 列番号 (グリッドX)
+    int8_t row; // 行番号 (グリッドY)
+};
+
 // アルゴリズムデータ構造
 struct Algorithm {
     // オペレーターの計算順序 (モジュレーター→キャリアの順)
@@ -19,6 +25,9 @@ struct Algorithm {
 
     // フィードバックを行うオペレーターの番号 (0-5)。 ない場合は -1
     int8_t feedback_op;
+
+    // UI用 各オペレーターのグリッド位置（列、行）
+    OpCoord positions[MAX_OPERATORS];
 };
 
 // 全アルゴリズムを管理
@@ -37,7 +46,10 @@ private:
         // --- No.0 ---
         // [1]->[0], [3]->[2], [5]->[4]
         {
+            // exec_order
             {1, 3, 5, 0, 2, 4}, // 計算順: Mod -> Car
+
+            // mod_mask
             {
                 (1<<1), // Op0 <- Op1
                 0,      // Op1
@@ -46,8 +58,22 @@ private:
                 (1<<5), // Op4 <- Op5
                 0       // Op5
             },
+
+            // output_mask
             (1<<0) | (1<<2) | (1<<4), // Out: 0, 2, 4
-            -1 // feedbackなし
+
+            // feedback_op
+            -1,
+
+            // positions
+            {
+                {0, 1}, // Op0
+                {0, 0}, // Op1
+                {1, 1}, // Op2
+                {1, 0}, // Op3
+                {2, 1}, // Op4
+                {2, 0}, // Op5
+            }
         },
     };
 };

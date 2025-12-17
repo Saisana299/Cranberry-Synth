@@ -88,14 +88,12 @@ public:
         GFX_SSD1351::drawString(canvas, subTitle, subX, subY, Color::MD_GRAY);
 
         // 4. スタートプロンプト
-        if ((frameCount / 30) % 2 == 0) {
-            const char* prompt = "-PRESS ENTER-";
-            // 描画処理
-             TextBounds pBounds = GFX_SSD1351::getTextBounds(prompt, 0, 0);
-             int pX = (w - pBounds.w) / 2;
-             int pY = h - 24;
-             GFX_SSD1351::drawString(canvas, prompt, pX, pY, Color::MD_GRAY);
-        }
+        const char* prompt = "-PRESS ENTER-";
+        // 描画処理
+        TextBounds pBounds = GFX_SSD1351::getTextBounds(prompt, 0, 0);
+        int pX = (w - pBounds.w) / 2;
+        int pY = h - 24;
+        GFX_SSD1351::drawString(canvas, prompt, pX, pY, Color::MD_GRAY);
 
         frameCount++;
     }
