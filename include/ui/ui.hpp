@@ -13,13 +13,27 @@
 
 // #include "tools/midi_player.hpp"
 
+// 転送モードの定義
+enum TransferMode : uint8_t {
+    TRANSFER_NONE = 0,
+    TRANSFER_PARTIAL, // 部分転送
+    TRANSFER_FULL     // 全画面転送
+};
+
 class UIManager {
 private:
     std::stack<Screen*> screenStack; // 画面をポインタで管理するスタック
     GFXcanvas16 canvas;              // 描画用のキャンバス
-    bool redraw = true;              // 再描画が必要かどうかのフラグ
-    int8_t playing = 0; //TODO TEST
     State& state_;
+
+    int8_t playing = 0; //TODO TEST
+
+    bool renderRequired = true;
+    TransferMode transferMode = TRANSFER_FULL;
+
+    struct Rect {
+        int16_t x, y, w, h;
+    } dirtyRect = {0, 0, 0, 0};
 
 public:
     UIManager(State& state)
@@ -40,7 +54,8 @@ public:
         }
         screenStack.push(newScreen);
         newScreen->onEnter(this);
-        redraw = true;
+        invalidate(); 
+        triggerFullTransfer();
     }
 
     // 表示されている画面を閉じて次の画面を表示
@@ -48,7 +63,8 @@ public:
         if (!screenStack.empty()) {
             delete screenStack.top();
             screenStack.pop();
-            redraw = true;
+            invalidate();
+            triggerFullTransfer();
         }
         if (!screenStack.empty()) {
             screenStack.top()->onEnter(this);
@@ -59,7 +75,7 @@ public:
     void handleInput(uint8_t button) {
         if (!screenStack.empty() && button != BTN_NONE) {
             screenStack.top()->handleInput(button);
-            redraw = true;
+            invalidate();
         }
         //TODO デモ用----------------------------------------
         // if(button == BTN_ET){
@@ -92,28 +108,74 @@ public:
         Screen* currentScreen = screenStack.empty() ? nullptr : screenStack.top();
 
         // 再描画判定
-        bool shouldDraw = redraw || (currentScreen && currentScreen->isAnimated());
-        if (!shouldDraw) return;
+        bool shouldProcess = renderRequired || (currentScreen && currentScreen->isAnimated());
 
-        // 描画実行
-        if (!currentScreen) {
-            canvas.fillScreen(Color::BLACK);
-        }
-        else {
+        if (shouldProcess && currentScreen) {
             currentScreen->draw(canvas);
+            renderRequired = false;
         }
 
-        GFX_SSD1351::flash(canvas);
-
-        redraw = false;
+        if (transferMode == TRANSFER_FULL) {
+            // 全画面転送
+            if (!currentScreen) canvas.fillScreen(Color::BLACK);
+            GFX_SSD1351::flash(canvas);
+            resetTransferState();
+        }
+        else if (transferMode == TRANSFER_PARTIAL) {
+            // 部分転送
+            GFX_SSD1351::flashWindow(canvas, dirtyRect.x, dirtyRect.y, dirtyRect.w, dirtyRect.h);
+            resetTransferState();
+        }
     }
 
-    // 画面側から再描画を要求するためのメソッド
-    void setRedraw() {
-        redraw = true;
+    /**
+     * @brief Canvasの再描画を要求 (draw()が呼ばれる)
+     * ディスプレイへの転送は予約しない。Screen::draw内で明示する必要がある。
+     */
+    void invalidate() {
+        renderRequired = true;
+    }
+
+    /**
+     * @brief 次のフレームで「全画面」をディスプレイに転送予約する
+     */
+    void triggerFullTransfer() {
+        transferMode = TRANSFER_FULL;
+    }
+
+    /**
+     * @brief 次のフレームで「指定した範囲」をディスプレイに転送予約する
+     * 1フレーム中に複数回呼ばれた場合は、それらを包含する最小矩形にマージされる
+     */
+    void markDirty(int16_t x, int16_t y, int16_t w, int16_t h) {
+        // 全画面転送が既に予約されていたら、部分更新計算は不要
+        if (transferMode == TRANSFER_FULL) return;
+
+        if (transferMode == TRANSFER_NONE) {
+            // まだ予約がない場合、そのまま設定
+            dirtyRect = {x, y, w, h};
+            transferMode = TRANSFER_PARTIAL;
+        } else {
+            // 既に部分予約がある場合、矩形を結合(Merge)する
+            int16_t newX = std::min(dirtyRect.x, x);
+            int16_t newY = std::min(dirtyRect.y, y);
+            int16_t newMaxX = std::max((int16_t)(dirtyRect.x + dirtyRect.w), (int16_t)(x + w));
+            int16_t newMaxY = std::max((int16_t)(dirtyRect.y + dirtyRect.h), (int16_t)(y + h));
+
+            dirtyRect.x = newX;
+            dirtyRect.y = newY;
+            dirtyRect.w = newMaxX - newX;
+            dirtyRect.h = newMaxY - newY;
+        }
     }
 
     State& getState() {
         return state_;
+    }
+
+private:
+    void resetTransferState() {
+        transferMode = TRANSFER_NONE;
+        dirtyRect = {0, 0, 0, 0};
     }
 };

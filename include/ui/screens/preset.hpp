@@ -8,6 +8,13 @@ private:
     const int16_t OP_SIZE = 14;
     const int16_t GRID_W  = 20;
     const int16_t GRID_H  = 20;
+    const int16_t FOOTER_Y = SCREEN_HEIGHT - 14;
+
+    bool firstDraw = true;
+    uint32_t lastUpdateMs = 0;
+    const uint32_t UPDATE_INTERVAL = 66;
+
+    uint8_t lastPolyCount = 0;
 
 public:
     PresetScreen() = default;
@@ -16,9 +23,12 @@ public:
         this->manager = manager;
         State& state = manager->getState();
         state.setModeState(MODE_SYNTH);
+        firstDraw = true;
+        lastPolyCount = 0;
+        manager->invalidate();
     }
 
-    bool isAnimated() const override { return false; }
+    bool isAnimated() const override { return true; }
 
     void handleInput(uint8_t button) override {
         if (button == BTN_L || button == BTN_L_LONG || button == BTN_EC_L) {
@@ -27,100 +37,124 @@ public:
         else if (button == BTN_R || button == BTN_R_LONG || button == BTN_EC_R) {
             //
         }
+        manager->invalidate();
     }
 
     void draw(GFXcanvas16& canvas) override {
-        canvas.fillScreen(Color::BLACK);
+        if (firstDraw) {
+            canvas.fillScreen(Color::BLACK);
 
-        canvas.setTextSize(1);
-        canvas.setTextColor(Color::WHITE);
-        canvas.setCursor(2, 4);
+            canvas.setTextSize(1);
+            canvas.setTextColor(Color::WHITE);
+            canvas.setCursor(2, 4);
 
-        char headerStr[32];
-        sprintf(headerStr, "001:Sine Wave");
-        canvas.print(headerStr);
+            char headerStr[32];
+            sprintf(headerStr, "001:Sine Wave");
+            canvas.print(headerStr);
 
-        // ヘッダー下の線
-        canvas.drawFastHLine(0, 14, SCREEN_WIDTH, Color::WHITE);
+            // ヘッダー下の線
+            canvas.drawFastHLine(0, 14, SCREEN_WIDTH, Color::WHITE);
 
-        canvas.fillRect(0, 15, SCREEN_WIDTH, 10, Color::WHITE);
+            canvas.fillRect(0, 15, SCREEN_WIDTH, 10, Color::WHITE);
 
-        // 2. 文字列の準備
-        int algoNum = 5;
-        char algoStr[20];
-        sprintf(algoStr, "Algorithm:%d", algoNum);
+            // 2. 文字列の準備
+            int algoNum = 5;
+            char algoStr[20];
+            sprintf(algoStr, "Algorithm:%d", algoNum);
 
-        // 3. 中央位置の計算 (標準フォントは横幅6pxと仮定)
-        // 文字数 * 6px = 文字列全体の幅
-        int16_t textWidth = strlen(algoStr) * 6;
-        int16_t x = (SCREEN_WIDTH - textWidth) / 2;
-        int16_t y = 16;
+            // 3. 中央位置の計算 (標準フォントは横幅6pxと仮定)
+            // 文字数 * 6px = 文字列全体の幅
+            int16_t textWidth = strlen(algoStr) * 6;
+            int16_t x = (SCREEN_WIDTH - textWidth) / 2;
+            int16_t y = 16;
 
-        // 4. 黒文字で描画
-        canvas.setTextColor(Color::BLACK);
-        canvas.setCursor(x, y);
-        canvas.print(algoStr);
+            // 4. 黒文字で描画
+            canvas.setTextColor(Color::BLACK);
+            canvas.setCursor(x, y);
+            canvas.print(algoStr);
 
-        // アルゴリズム番号表示
+            // アルゴリズム番号表示
 
-        canvas.drawFastHLine(0, 25, SCREEN_WIDTH, Color::WHITE);
+            canvas.drawFastHLine(0, 25, SCREEN_WIDTH, Color::WHITE);
 
-        drawAlgoDiagram(canvas);
+            drawAlgoDiagram(canvas);
 
-        // 区切り線 (Y = 114付近)
-        int16_t footerLineY = SCREEN_HEIGHT - 14;
-        canvas.drawFastHLine(0, footerLineY, SCREEN_WIDTH, Color::WHITE);
+            // 区切り線 (Y = 114付近)
+            int16_t footerLineY = SCREEN_HEIGHT - 14;
+            canvas.drawFastHLine(0, footerLineY, SCREEN_WIDTH, Color::WHITE);
 
-        // テキスト設定
-        canvas.setTextSize(1);
-        canvas.setTextColor(Color::WHITE);
+            // テキスト設定
+            canvas.setTextSize(1);
+            canvas.setTextColor(Color::WHITE);
 
-        // テキストのY座標 (高さ14pxの中央に配置: 14/2 - 4(文字高さの半分) = +3px)
-        int16_t textY = footerLineY + 5;
+            // テキストのY座標 (高さ14pxの中央に配置: 14/2 - 4(文字高さの半分) = +3px)
+            int16_t textY = footerLineY + 5;
 
-        // 1. 左側: FX
-        canvas.setCursor(10, textY); // 左端から少し隙間を空ける
-        canvas.print("FX");
+            // 1. 左側: FX
+            canvas.setCursor(10, textY); // 左端から少し隙間を空ける
+            canvas.print("FX");
 
-        // 2. 中央: ボイスモード / 発音数
-        // ※ 本来は state.getVoiceMode() などから取得
-        // ここでは仮の変数を使用しています
-        enum VoiceMode { V_POLY, V_MONO, V_UNISON };
-        VoiceMode vMode = V_POLY;
-        uint8_t polyCount = 0;
+            // 3. 右側: MENU
+            String menuStr = "MENU";
+            int16_t menuWidth = menuStr.length() * 6;
 
-        String centerStr;
-        switch(vMode) {
-            case V_POLY:
-                centerStr = "POLY:" + String(polyCount);
-                break;
-            case V_MONO:
-                centerStr = "MONO";
-                break;
-            case V_UNISON:
-                centerStr = "UNISON";
-                break;
+            // 右端から少し隙間を空ける
+            canvas.setCursor(SCREEN_WIDTH - menuWidth - 4, textY);
+            canvas.print(menuStr);
+
+            // FXとCenterの間
+            canvas.drawFastVLine(30, footerLineY + 1, 14, Color::MD_GRAY);
+            // CenterとMENUの間
+            canvas.drawFastVLine(SCREEN_WIDTH - 34, footerLineY + 1, 14, Color::MD_GRAY);
+
+            firstDraw = false;
+            manager->triggerFullTransfer();
+
+            lastPolyCount = 0;
         }
 
-        // 中央揃えの計算 (標準フォントは1文字6px幅と仮定)
-        int16_t strWidth = centerStr.length() * 6;
-        int16_t centerX = (SCREEN_WIDTH - strWidth) / 2;
+        uint32_t now = millis();
+        if (now - lastUpdateMs >= UPDATE_INTERVAL) {
+            lastUpdateMs = now;
 
-        canvas.setCursor(centerX, textY);
-        canvas.print(centerStr);
+            // Synthから現在の音数を取得
+            uint8_t currentPoly = Synth::getInstance().getActiveNoteCount();
 
-        // 3. 右側: MENU
-        String menuStr = "MENU";
-        int16_t menuWidth = menuStr.length() * 6;
+            // 2. 中央: ボイスモード / 発音数
+            // ※ 本来は state.getVoiceMode() などから取得
+            // ここでは仮の変数を使用しています
+            enum VoiceMode { V_POLY, V_MONO, V_UNISON };
+            VoiceMode vMode = V_POLY;
 
-        // 右端から少し隙間を空ける
-        canvas.setCursor(SCREEN_WIDTH - menuWidth - 4, textY);
-        canvas.print(menuStr);
+            String centerStr;
+            switch(vMode) {
+                case V_POLY:
+                    centerStr = "POLY:" + String(currentPoly);
+                    break;
+                case V_MONO:
+                    centerStr = "MONO";
+                    break;
+                case V_UNISON:
+                    centerStr = "UNISON";
+                    break;
+            }
 
-        // FXとCenterの間
-        canvas.drawFastVLine(30, footerLineY + 1, 14, Color::MD_GRAY);
-        // CenterとMENUの間
-        canvas.drawFastVLine(SCREEN_WIDTH - 34, footerLineY + 1, 14, Color::MD_GRAY);
+            // 中央揃えの計算 (標準フォントは1文字6px幅と仮定)
+            int16_t clearW = 50;
+            int16_t clearH = 8;
+            int16_t textY = FOOTER_Y + 5;
+            int16_t centerX = SCREEN_WIDTH / 2;
+            int16_t clearX = centerX - (clearW / 2);
+
+            canvas.fillRect(clearX, textY, clearW, clearH, Color::BLACK);
+
+            canvas.setTextColor(Color::WHITE);
+            int16_t strWidth = centerStr.length() * 6;
+            canvas.setCursor(centerX - (strWidth / 2), textY);
+            canvas.print(centerStr);
+
+            manager->markDirty(clearX, textY, clearW, clearH);
+        }
     }
 private:
     /**

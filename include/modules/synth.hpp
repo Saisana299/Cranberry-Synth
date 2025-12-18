@@ -90,4 +90,8 @@ public:
 
     void setAlgorithm(uint8_t algo_id);
     void setFeedback(uint8_t amount);
+
+    uint8_t getActiveNoteCount() const {
+        return order_max;
+    }
 };
