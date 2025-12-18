@@ -127,7 +127,7 @@ public:
 
             frameCount++;
 
-            manager->markDirty(0, updateY, w, updateH);
+            manager->transferPartial(0, updateY, w, updateH);
         }
     }
 };

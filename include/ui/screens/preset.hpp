@@ -4,17 +4,30 @@
 
 class PresetScreen : public Screen {
 private:
-    // オペレーター図形
+    // 定数
     const int16_t OP_SIZE = 14;
     const int16_t GRID_W  = 20;
     const int16_t GRID_H  = 20;
     const int16_t FOOTER_Y = SCREEN_HEIGHT - 14;
 
+    // 状態変数
     bool firstDraw = true;
-    uint32_t lastUpdateMs = 0;
-    const uint32_t UPDATE_INTERVAL = 66;
+    bool cursorMoved = false;
 
     uint8_t lastPolyCount = 0;
+
+    // --- カーソル管理 ---
+    enum CursorPos {
+        C_PRESET = 0,
+        C_ALGO,
+        C_OP1, C_OP2, C_OP3, C_OP4, C_OP5, C_OP6,
+        C_FX,
+        C_POLY,
+        C_MENU,
+        C_MAX
+    };
+    int8_t currentCursor = C_PRESET;
+    int8_t previousCursor = C_PRESET;
 
 public:
     PresetScreen() = default;
@@ -24,139 +37,279 @@ public:
         State& state = manager->getState();
         state.setModeState(MODE_SYNTH);
         firstDraw = true;
+        cursorMoved = false;
         lastPolyCount = 0;
+        currentCursor = C_PRESET;
+        previousCursor = C_PRESET;
         manager->invalidate();
     }
 
     bool isAnimated() const override { return true; }
 
     void handleInput(uint8_t button) override {
-        if (button == BTN_L || button == BTN_L_LONG || button == BTN_EC_L) {
-            //
+        bool moved = false;
+
+        // 移動前の位置を保存
+        int8_t oldCursor = currentCursor;
+
+        if (button == BTN_DN || button == BTN_DN_LONG) {
+            currentCursor++;
+            if (currentCursor >= C_MAX) currentCursor = 0;
+            moved = true;
         }
-        else if (button == BTN_R || button == BTN_R_LONG || button == BTN_EC_R) {
-            //
+        else if (button == BTN_UP || button == BTN_UP_LONG) {
+            currentCursor--;
+            if (currentCursor < 0) currentCursor = C_MAX - 1;
+            moved = true;
         }
-        manager->invalidate();
+        if (moved) {
+            previousCursor = oldCursor; // 移動元を記憶
+            cursorMoved = true;
+            manager->invalidate();
+        }
     }
 
     void draw(GFXcanvas16& canvas) override {
+        // --- 1. 初回描画 (全画面) ---
         if (firstDraw) {
             canvas.fillScreen(Color::BLACK);
 
-            canvas.setTextSize(1);
-            canvas.setTextColor(Color::WHITE);
-            canvas.setCursor(2, 4);
+            // 各パーツを描画
+            drawPresetHeader(canvas);
 
-            char headerStr[32];
-            sprintf(headerStr, "001:Sine Wave");
-            canvas.print(headerStr);
-
-            // ヘッダー下の線
+            // 装飾線と白帯
             canvas.drawFastHLine(0, 14, SCREEN_WIDTH, Color::WHITE);
-
             canvas.fillRect(0, 15, SCREEN_WIDTH, 10, Color::WHITE);
 
-            // 2. 文字列の準備
-            int algoNum = 5;
-            char algoStr[20];
-            sprintf(algoStr, "Algorithm:%d", algoNum);
-
-            // 3. 中央位置の計算 (標準フォントは横幅6pxと仮定)
-            // 文字数 * 6px = 文字列全体の幅
-            int16_t textWidth = strlen(algoStr) * 6;
-            int16_t x = (SCREEN_WIDTH - textWidth) / 2;
-            int16_t y = 16;
-
-            // 4. 黒文字で描画
-            canvas.setTextColor(Color::BLACK);
-            canvas.setCursor(x, y);
-            canvas.print(algoStr);
-
-            // アルゴリズム番号表示
-
+            drawAlgorithmLabel(canvas, (currentCursor == C_ALGO));
             canvas.drawFastHLine(0, 25, SCREEN_WIDTH, Color::WHITE);
 
-            drawAlgoDiagram(canvas);
+            // オペレーター図形
+            drawAlgoDiagram(canvas); // 内部で currentCursor を見てハイライト判定
 
-            // 区切り線 (Y = 114付近)
-            int16_t footerLineY = SCREEN_HEIGHT - 14;
-            canvas.drawFastHLine(0, footerLineY, SCREEN_WIDTH, Color::WHITE);
-
-            // テキスト設定
-            canvas.setTextSize(1);
-            canvas.setTextColor(Color::WHITE);
-
-            // テキストのY座標 (高さ14pxの中央に配置: 14/2 - 4(文字高さの半分) = +3px)
-            int16_t textY = footerLineY + 5;
-
-            // 1. 左側: FX
-            canvas.setCursor(10, textY); // 左端から少し隙間を空ける
-            canvas.print("FX");
-
-            // 3. 右側: MENU
-            String menuStr = "MENU";
-            int16_t menuWidth = menuStr.length() * 6;
-
-            // 右端から少し隙間を空ける
-            canvas.setCursor(SCREEN_WIDTH - menuWidth - 4, textY);
-            canvas.print(menuStr);
-
-            // FXとCenterの間
-            canvas.drawFastVLine(30, footerLineY + 1, 14, Color::MD_GRAY);
-            // CenterとMENUの間
-            canvas.drawFastVLine(SCREEN_WIDTH - 34, footerLineY + 1, 14, Color::MD_GRAY);
+            // フッター
+            canvas.drawFastHLine(0, FOOTER_Y, SCREEN_WIDTH, Color::WHITE);
+            drawFooterItems(canvas); // FX, MENU, POLY
 
             firstDraw = false;
+            cursorMoved = false;
             manager->triggerFullTransfer();
-
-            lastPolyCount = 0;
         }
 
-        uint32_t now = millis();
-        if (now - lastUpdateMs >= UPDATE_INTERVAL) {
-            lastUpdateMs = now;
+        // --- 2. カーソル移動時の部分更新 ---
+        if (cursorMoved) {
+            // 移動元(previous) を「非選択」で再描画
+            updateCursorElement(canvas, previousCursor);
 
-            // Synthから現在の音数を取得
-            uint8_t currentPoly = Synth::getInstance().getActiveNoteCount();
+            // 移動先(current) を「選択」で再描画
+            updateCursorElement(canvas, currentCursor);
 
-            // 2. 中央: ボイスモード / 発音数
-            // ※ 本来は state.getVoiceMode() などから取得
-            // ここでは仮の変数を使用しています
-            enum VoiceMode { V_POLY, V_MONO, V_UNISON };
-            VoiceMode vMode = V_POLY;
+            cursorMoved = false;
+        }
 
-            String centerStr;
-            switch(vMode) {
-                case V_POLY:
-                    centerStr = "POLY:" + String(currentPoly);
-                    break;
-                case V_MONO:
-                    centerStr = "MONO";
-                    break;
-                case V_UNISON:
-                    centerStr = "UNISON";
-                    break;
-            }
+        // --- 3. 定期更新 (POLY数) ---
+        uint8_t currentPoly = Synth::getInstance().getActiveNoteCount();
 
-            // 中央揃えの計算 (標準フォントは1文字6px幅と仮定)
-            int16_t clearW = 50;
-            int16_t clearH = 8;
-            int16_t textY = FOOTER_Y + 5;
-            int16_t centerX = SCREEN_WIDTH / 2;
-            int16_t clearX = centerX - (clearW / 2);
-
-            canvas.fillRect(clearX, textY, clearW, clearH, Color::BLACK);
-
-            canvas.setTextColor(Color::WHITE);
-            int16_t strWidth = centerStr.length() * 6;
-            canvas.setCursor(centerX - (strWidth / 2), textY);
-            canvas.print(centerStr);
-
-            manager->markDirty(clearX, textY, clearW, clearH);
+        if (currentPoly != lastPolyCount) {
+            lastPolyCount = currentPoly;
+            updatePolyDisplay(canvas, currentPoly);
         }
     }
+
 private:
+
+    /**
+     * @brief 指定されたカーソル位置のUIパーツだけを再描画するディスパッチャ
+     */
+    void updateCursorElement(GFXcanvas16& canvas, int8_t cursorPos) {
+        bool isSelected = (currentCursor == cursorPos);
+
+        if (cursorPos == C_PRESET) {
+            drawPresetHeader(canvas);
+        }
+        else if (cursorPos == C_ALGO) {
+            drawAlgorithmLabel(canvas, isSelected);
+        }
+        else if (cursorPos >= C_OP1 && cursorPos <= C_OP6) {
+            // オペレーター番号 (0-5)
+            drawOpBox(canvas, cursorPos - C_OP1, isSelected);
+        }
+        else if (cursorPos == C_FX) {
+            drawFooterItem(canvas, "FX", 10, FOOTER_Y + 5, isSelected);
+        }
+        else if (cursorPos == C_MENU) {
+            String menuStr = "MENU";
+            int16_t menuWidth = menuStr.length() * 6;
+            drawFooterItem(canvas, menuStr, SCREEN_WIDTH - menuWidth - 4, FOOTER_Y + 5, isSelected);
+        }
+        else if (cursorPos == C_POLY) {
+            updatePolyDisplay(canvas, lastPolyCount);
+        }
+    }
+
+    // --- 個別の描画関数群 (内部で markDirty を呼ぶ) ---
+
+    void drawPresetHeader(GFXcanvas16& canvas) {
+        canvas.fillRect(0, 0, SCREEN_WIDTH, 14, Color::BLACK);
+
+        canvas.setTextSize(1);
+        canvas.setTextColor(Color::WHITE);
+        canvas.setCursor(2, 4);
+        char headerStr[32];
+        sprintf(headerStr, "001:Sine Wave");
+        canvas.print(headerStr);
+
+        // 部分転送予約
+        manager->transferPartial(0, 0, SCREEN_WIDTH, 14);
+    }
+
+    void drawAlgorithmLabel(GFXcanvas16& canvas, bool selected) {
+        int algoNum = 5;
+        char algoStr[20];
+        sprintf(algoStr, "Algorithm:%d", algoNum);
+
+        int16_t textWidth = strlen(algoStr) * 6;
+        int16_t x = (SCREEN_WIDTH - textWidth) / 2;
+        int16_t y = 16;
+        int16_t h = 8;
+
+        if (selected) {
+            canvas.fillRect(x - 2, y - 1, textWidth + 4, h + 2, Color::BLACK);
+            canvas.setTextColor(Color::WHITE);
+        } else {
+            // 非選択時は白帯に戻す (白で塗りつぶす)
+            canvas.fillRect(x - 2, y - 1, textWidth + 4, h + 2, Color::WHITE);
+            canvas.setTextColor(Color::BLACK);
+        }
+
+        canvas.setCursor(x, y);
+        canvas.print(algoStr);
+
+        manager->transferPartial(x - 2, y - 1, textWidth + 4, h + 2);
+    }
+
+    void drawOpBox(GFXcanvas16& canvas, int opIndex, bool selected) {
+        // 座標計算（drawAlgoDiagramと同じロジック）
+        const Algorithm& algo = Algorithms::get(0);
+
+        // 全体サイズ計算
+        int16_t minCol = 32000, maxCol = -32000;
+        int16_t minRow = 32000, maxRow = -32000;
+        for (int i = 0; i < MAX_OPERATORS; ++i) {
+            if (algo.positions[i].col < minCol) minCol = algo.positions[i].col;
+            if (algo.positions[i].col > maxCol) maxCol = algo.positions[i].col;
+            if (algo.positions[i].row < minRow) minRow = algo.positions[i].row;
+            if (algo.positions[i].row > maxRow) maxRow = algo.positions[i].row;
+        }
+        int16_t totalWidth = (maxCol - minCol) * GRID_W + OP_SIZE;
+        int16_t totalHeight = (maxRow - minRow) * GRID_H + OP_SIZE;
+        int16_t displayAreaTop = 26;
+        int16_t displayAreaHeight = SCREEN_HEIGHT - displayAreaTop;
+        int16_t originX = (SCREEN_WIDTH - totalWidth) / 2 - (minCol * GRID_W);
+        int16_t originY = displayAreaTop + (displayAreaHeight - totalHeight) / 2 - (minRow * GRID_H) - 10;
+
+        // 個別位置
+        int16_t x = originX + algo.positions[opIndex].col * GRID_W;
+        int16_t y = originY + algo.positions[opIndex].row * GRID_H;
+
+        // 描画
+        if (selected) {
+            canvas.fillRect(x, y, OP_SIZE, OP_SIZE, Color::WHITE);
+            canvas.drawRect(x, y, OP_SIZE, OP_SIZE, Color::BLACK);
+            canvas.setTextColor(Color::BLACK);
+        } else {
+            canvas.fillRect(x, y, OP_SIZE, OP_SIZE, Color::BLACK);
+            canvas.drawRect(x, y, OP_SIZE, OP_SIZE, Color::WHITE);
+            canvas.setTextColor(Color::WHITE);
+        }
+        canvas.setCursor(x + 4, y + 3);
+        canvas.print(opIndex + 1);
+
+        manager->transferPartial(x, y, OP_SIZE, OP_SIZE);
+    }
+
+    void drawFooterItem(GFXcanvas16& canvas, const String& str, int16_t x, int16_t y, bool selected) {
+        int16_t w = str.length() * 6;
+        int16_t h = 8;
+        // 背景クリア範囲
+        int16_t bgX = x - 1;
+        int16_t bgY = y - 1;
+        int16_t bgW = w + 2;
+        int16_t bgH = h + 2;
+
+        if (selected) {
+            canvas.fillRect(bgX, bgY, bgW, bgH, Color::WHITE);
+            canvas.setTextColor(Color::BLACK);
+        } else {
+            canvas.fillRect(bgX, bgY, bgW, bgH, Color::BLACK);
+            canvas.setTextColor(Color::WHITE);
+        }
+        canvas.setCursor(x, y);
+        canvas.print(str);
+
+        manager->transferPartial(bgX, bgY, bgW, bgH);
+    }
+
+    void drawFooterItems(GFXcanvas16& canvas) {
+        // FX
+        drawFooterItem(canvas, "FX", 10, FOOTER_Y + 5, (currentCursor == C_FX));
+
+        // MENU
+        String menuStr = "MENU";
+        int16_t menuWidth = menuStr.length() * 6;
+        drawFooterItem(canvas, menuStr, SCREEN_WIDTH - menuWidth - 4, FOOTER_Y + 5, (currentCursor == C_MENU));
+
+        // 区切り線
+        canvas.drawFastVLine(30, FOOTER_Y + 1, 14, Color::MD_GRAY);
+        canvas.drawFastVLine(SCREEN_WIDTH - 34, FOOTER_Y + 1, 14, Color::MD_GRAY);
+
+        // POLY
+        updatePolyDisplay(canvas, lastPolyCount);
+    }
+
+    /**
+     * @brief POLY部分の描画・更新
+     */
+    void updatePolyDisplay(GFXcanvas16& canvas, uint8_t count) {
+        // POLY表示内容の作成
+        enum VoiceMode { V_POLY, V_MONO, V_UNISON };
+        VoiceMode vMode = V_POLY; // 仮
+        String centerStr;
+        switch(vMode) {
+            case V_POLY:   centerStr = "POLY:" + String(count); break;
+            case V_MONO:   centerStr = "MONO"; break;
+            case V_UNISON: centerStr = "UNISON"; break;
+        }
+
+        int16_t strWidth = centerStr.length() * 6;
+        int16_t centerX = SCREEN_WIDTH / 2;
+        int16_t textY = FOOTER_Y + 5;
+        int16_t x = centerX - (strWidth / 2);
+
+        // drawItemを使って描画（カーソル状態を反映）
+        bool isSelected = (currentCursor == C_POLY);
+
+        // 背景クリアサイズ
+        int16_t clearW = 50;
+        int16_t clearH = 10;
+        int16_t clearX = centerX - 25;
+
+        // カーソル選択中なら白背景、そうでなければ黒背景で塗りつぶし
+        if (isSelected) {
+            canvas.fillRect(clearX, textY - 1, clearW, clearH, Color::WHITE);
+            canvas.setTextColor(Color::BLACK);
+        } else {
+            canvas.fillRect(clearX, textY - 1, clearW, clearH, Color::BLACK);
+            canvas.setTextColor(Color::WHITE);
+        }
+
+        canvas.setCursor(x, textY);
+        canvas.print(centerStr);
+
+        // 部分転送要求
+        manager->transferPartial(clearX, textY - 1, clearW, clearH);
+    }
+
     /**
      * @brief アルゴリズム図を描画するヘルパー関数
      * @param canvas 描画対象のキャンバス
@@ -165,7 +318,6 @@ private:
         const Algorithm& algo = Algorithms::get(0);
 
         // 色設定
-        uint16_t opColor = Color::WHITE;
         uint16_t lineColor = Color::MD_GRAY;
 
         // 1. 図全体のサイズ計算
@@ -257,23 +409,10 @@ private:
             canvas.drawLine(minBusX, busY, maxBusX, busY, lineColor);
         }
 
-        // --- D. オペレーター本体 ---
-        canvas.setTextSize(1);
-        canvas.setTextColor(opColor);
-
+        // ボックスを描画 (drawOpBoxを利用)
         for (int i = 0; i < MAX_OPERATORS; i++) {
-            int16_t x = originX + algo.positions[i].col * GRID_W;
-            int16_t y = originY + algo.positions[i].row * GRID_H;
-
-            // 線を隠すために中を黒塗り
-            canvas.fillRect(x, y, OP_SIZE, OP_SIZE, Color::BLACK);
-
-            // 枠線
-            canvas.drawRect(x, y, OP_SIZE, OP_SIZE, opColor);
-
-            // 番号 (0始まりのindexを+1して表示)
-            canvas.setCursor(x + 4, y + 3);
-            canvas.print(i + 1);
+            bool isSel = (currentCursor == (C_OP1 + i));
+            drawOpBox(canvas, i, isSel);
         }
     }
 };

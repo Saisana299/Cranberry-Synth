@@ -13,13 +13,6 @@
 
 // #include "tools/midi_player.hpp"
 
-// 転送モードの定義
-enum TransferMode : uint8_t {
-    TRANSFER_NONE = 0,
-    TRANSFER_PARTIAL, // 部分転送
-    TRANSFER_FULL     // 全画面転送
-};
-
 class UIManager {
 private:
     std::stack<Screen*> screenStack; // 画面をポインタで管理するスタック
@@ -29,11 +22,10 @@ private:
     int8_t playing = 0; //TODO TEST
 
     bool renderRequired = true;
-    TransferMode transferMode = TRANSFER_FULL;
+    bool fullTransferRequired = false;
 
-    struct Rect {
-        int16_t x, y, w, h;
-    } dirtyRect = {0, 0, 0, 0};
+    uint32_t lastFrameTime = 0;
+    static constexpr uint32_t MIN_FRAME_TIME = 66; // 15FPS制限
 
 public:
     UIManager(State& state)
@@ -54,8 +46,9 @@ public:
         }
         screenStack.push(newScreen);
         newScreen->onEnter(this);
-        invalidate(); 
+        invalidate();
         triggerFullTransfer();
+        lastFrameTime = 0;
     }
 
     // 表示されている画面を閉じて次の画面を表示
@@ -65,6 +58,7 @@ public:
             screenStack.pop();
             invalidate();
             triggerFullTransfer();
+            lastFrameTime = 0;
         }
         if (!screenStack.empty()) {
             screenStack.top()->onEnter(this);
@@ -104,27 +98,29 @@ public:
             state_.setBtnState(BTN_NONE);
         }
 
+        // FPS制限
+        uint32_t now = millis();
+        if (now - lastFrameTime < MIN_FRAME_TIME) {
+            return;
+        }
+        lastFrameTime = now;
+
         // 現在の画面を取得
         Screen* currentScreen = screenStack.empty() ? nullptr : screenStack.top();
 
         // 再描画判定
-        bool shouldProcess = renderRequired || (currentScreen && currentScreen->isAnimated());
+        bool shouldDraw = renderRequired || (currentScreen && currentScreen->isAnimated());
 
-        if (shouldProcess && currentScreen) {
+        if (shouldDraw && currentScreen) {
             currentScreen->draw(canvas);
             renderRequired = false;
         }
 
-        if (transferMode == TRANSFER_FULL) {
+        if (fullTransferRequired) {
             // 全画面転送
             if (!currentScreen) canvas.fillScreen(Color::BLACK);
             GFX_SSD1351::flash(canvas);
-            resetTransferState();
-        }
-        else if (transferMode == TRANSFER_PARTIAL) {
-            // 部分転送
-            GFX_SSD1351::flashWindow(canvas, dirtyRect.x, dirtyRect.y, dirtyRect.w, dirtyRect.h);
-            resetTransferState();
+            fullTransferRequired = false;
         }
     }
 
@@ -140,42 +136,16 @@ public:
      * @brief 次のフレームで「全画面」をディスプレイに転送予約する
      */
     void triggerFullTransfer() {
-        transferMode = TRANSFER_FULL;
+        fullTransferRequired = true;
     }
 
-    /**
-     * @brief 次のフレームで「指定した範囲」をディスプレイに転送予約する
-     * 1フレーム中に複数回呼ばれた場合は、それらを包含する最小矩形にマージされる
-     */
-    void markDirty(int16_t x, int16_t y, int16_t w, int16_t h) {
-        // 全画面転送が既に予約されていたら、部分更新計算は不要
-        if (transferMode == TRANSFER_FULL) return;
-
-        if (transferMode == TRANSFER_NONE) {
-            // まだ予約がない場合、そのまま設定
-            dirtyRect = {x, y, w, h};
-            transferMode = TRANSFER_PARTIAL;
-        } else {
-            // 既に部分予約がある場合、矩形を結合(Merge)する
-            int16_t newX = std::min(dirtyRect.x, x);
-            int16_t newY = std::min(dirtyRect.y, y);
-            int16_t newMaxX = std::max((int16_t)(dirtyRect.x + dirtyRect.w), (int16_t)(x + w));
-            int16_t newMaxY = std::max((int16_t)(dirtyRect.y + dirtyRect.h), (int16_t)(y + h));
-
-            dirtyRect.x = newX;
-            dirtyRect.y = newY;
-            dirtyRect.w = newMaxX - newX;
-            dirtyRect.h = newMaxY - newY;
+    void transferPartial(int16_t x, int16_t y, int16_t w, int16_t h) {
+        if (!fullTransferRequired) {
+            GFX_SSD1351::flashWindow(canvas, x, y, w, h);
         }
     }
 
     State& getState() {
         return state_;
-    }
-
-private:
-    void resetTransferState() {
-        transferMode = TRANSFER_NONE;
-        dirtyRect = {0, 0, 0, 0};
     }
 };
