@@ -12,6 +12,7 @@
 #include "utils/state.hpp"
 #include "utils/math.hpp"
 #include "utils/color.hpp"
+#include "utils/preset.hpp"
 
 constexpr uint8_t MAX_NOTES = 16;
 constexpr uint8_t MAX_CHANNELS = 16; //TODO チャンネル別で音色を選択できるようにする エフェクトの個別適用は処理速度を確認
@@ -66,6 +67,7 @@ private:
     const Algorithm* current_algo = nullptr;
     int32_t fb_history[MAX_NOTES][2] = {};
     uint8_t feedback_amount = 0; // 0=disable, 1~7
+    uint8_t current_preset_id = 0; // 現在ロードされているプリセットID
 
     FASTRUN void generate();
     void updateOrder(uint8_t removed);
@@ -90,8 +92,48 @@ public:
 
     void setAlgorithm(uint8_t algo_id);
     void setFeedback(uint8_t amount);
+    void loadPreset(uint8_t preset_id);
 
+    // --- 状態取得関数 ---
     uint8_t getActiveNoteCount() const {
         return order_max;
     }
+
+    // プリセット情報
+    uint8_t getCurrentPresetId() const {
+        return current_preset_id;
+    }
+
+    const char* getCurrentPresetName() const;
+
+    // アルゴリズム・フィードバック情報
+    uint8_t getCurrentAlgorithmId() const;
+    uint8_t getFeedbackAmount() const {
+        return feedback_amount;
+    }
+
+    // オペレーター情報（読み取り専用アクセス）
+    const Oscillator& getOperatorOsc(uint8_t op_index) const {
+        return operators[op_index].osc;
+    }
+
+    const Envelope& getOperatorEnv(uint8_t op_index) const {
+        return operators[op_index].env;
+    }
+
+    // エフェクト状態
+    bool isDelayEnabled() const { return delay_enabled; }
+    bool isLpfEnabled() const { return lpf_enabled; }
+    bool isHpfEnabled() const { return hpf_enabled; }
+
+    // エフェクトパラメータ取得
+    int32_t getDelayTime() const { return delay.getTime(); }
+    int32_t getDelayLevel() const { return delay.getLevel(); }
+    int32_t getDelayFeedback() const { return delay.getFeedback(); }
+    float getLpfCutoff() const { return filter.getLpfCutoff(); }
+    float getLpfResonance() const { return filter.getLpfResonance(); }
+    int16_t getLpfMix() const { return filter.getLpfMix(); }
+    float getHpfCutoff() const { return filter.getHpfCutoff(); }
+    float getHpfResonance() const { return filter.getHpfResonance(); }
+    int16_t getHpfMix() const { return filter.getHpfMix(); }
 };

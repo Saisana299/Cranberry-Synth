@@ -40,4 +40,9 @@ public:
     int16_t processL(int16_t in);
     int16_t processR(int16_t in);
     uint32_t getDelayLength() const;
+
+    // パラメータ取得
+    int32_t getTime() const { return time; }
+    int32_t getLevel() const { return level; }
+    int32_t getFeedback() const { return feedback; }
 };

@@ -115,12 +115,12 @@ private:
         return std::clamp<int16_t>(value, 0, 1024);
     }
 
-    static inline float clamp_coarse(float value) {
-        return std::clamp<float>(value, 0.5f, 31.0f);
+    static inline float clamp_coarse(float value) { // TODO 小数点以下無効
+        return std::clamp<float>(value, 0.0f, 31.0f);
     }
 
-    static inline float clamp_fine(float value) {
-        return std::clamp<float>(value, 1.0f, 1.99f);
+    static inline float clamp_fine(float value) { // TODO 小数点以下無効
+        return std::clamp<float>(value, 0.0f, 99.0f);
     }
 
     static inline int8_t clamp_detune(int8_t value) {

@@ -19,6 +19,12 @@ private:
     int16_t lpf_mix = 1024;
     int16_t hpf_mix = 1024;
 
+    // パラメータ保存用
+    float lpf_cutoff = 20000.0f;
+    float lpf_resonance = RESONANCE_DEFAULT;
+    float hpf_cutoff = 20.0f;
+    float hpf_resonance = RESONANCE_DEFAULT;
+
     // 係数構造体
     struct Coefs {
         int32_t b0 = 0, b1 = 0, b2 = 0; // Feedforward
@@ -146,4 +152,12 @@ public:
     FASTRUN int16_t processHpfR(int16_t in) { return process_with_mix(hpf_coefs, hpf_state_R, in, hpf_mix); }
 
     FASTRUN void processBlock(int16_t* bufL, int16_t* bufR, size_t size);
+
+    // パラメータ取得
+    float getLpfCutoff() const { return lpf_cutoff; }
+    float getLpfResonance() const { return lpf_resonance; }
+    int16_t getLpfMix() const { return lpf_mix; }
+    float getHpfCutoff() const { return hpf_cutoff; }
+    float getHpfResonance() const { return hpf_resonance; }
+    int16_t getHpfMix() const { return hpf_mix; }
 };

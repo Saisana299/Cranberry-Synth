@@ -8,64 +8,7 @@ void Synth::init() {
         midi_note_to_index[i] = -1;
     }
     Oscillator::initTable();
-
-    setAlgorithm(0);
-    setFeedback(0);
-
-    // --- ペア1: Op1(Mod) -> Op0(Car) ---
-    // Carrier: Op0
-    operators[0].osc.setLevel(1024);
-    operators[0].osc.enable();
-    operators[0].osc.setDetune(3);
-    operators[0].env.setDecay(60);
-    operators[0].env.setSustain(0);
-    operators[0].env.setRelease(80);
-
-    // Modulator: Op1
-    operators[1].osc.setLevelNonLinear(35);
-    operators[1].osc.enable();
-    operators[1].osc.setCoarse(14.0f);
-    operators[1].env.setDecay(60);
-    operators[1].env.setSustain(0);
-
-    // --- ペア2: Op3(Mod) -> Op2(Car) ---
-    // Carrier: Op2
-    operators[2].osc.setLevel(1024);
-    operators[2].osc.enable();
-    operators[2].env.setDecay(94);
-    operators[2].env.setSustain(0);
-    operators[2].env.setRelease(80);
-
-    // Modulator: Op3
-    operators[3].osc.setLevelNonLinear(89);
-    operators[3].osc.enable();
-    operators[3].env.setDecay(94);
-    operators[3].env.setSustain(0);
-    operators[3].env.setRelease(80);
-
-    // --- ペア3: Op5(Mod) -> Op4(Car) ---
-    // Carrier: Op4
-    operators[4].osc.setLevel(1024);
-    operators[4].osc.enable();
-    operators[4].osc.setDetune(-7);
-    operators[4].env.setDecay(94);
-    operators[4].env.setSustain(0);
-    operators[4].env.setRelease(80);
-
-    // Modulator: Op5
-    operators[5].osc.setLevelNonLinear(79);
-    operators[5].osc.enable();
-    operators[5].osc.setDetune(+7);
-    operators[5].env.setDecay(94);
-    operators[5].env.setSustain(0);
-    operators[5].env.setRelease(80);
-
-    // ローパスフィルタ
-    filter.setLowPass(6000.0f, 1.0f/sqrt(2.0f));
-    lpf_enabled = true;
-
-    // キャリア数が3
-    master_scale = (static_cast<uint32_t>(amp_level / 3) * adjust_level) >> 10;
+    loadPreset(0);
 }
 
 /** @brief シンセ生成 */
@@ -364,4 +307,89 @@ void Synth::setAlgorithm(uint8_t algo_id) {
 void Synth::setFeedback(uint8_t amount) {
     if (amount > 7) amount = 7;
     feedback_amount = amount;
+}
+
+void Synth::loadPreset(uint8_t preset_id) {
+    // プリセットを取得
+    const SynthPreset& preset = DefaultPresets::get(preset_id);
+
+    // 現在のプリセットIDを保存
+    current_preset_id = preset_id;
+
+    // アルゴリズムとフィードバックを設定
+    setAlgorithm(preset.algorithm_id);
+    setFeedback(preset.feedback);
+
+    // 各オペレーターの設定を適用
+    uint8_t active_carriers = 0;
+    for (uint8_t i = 0; i < MAX_OPERATORS; ++i) {
+        const OperatorPreset& op_preset = preset.operators[i];
+
+        if (op_preset.enabled) {
+            // オシレーター設定
+            operators[i].osc.setWavetable(op_preset.wavetable_id);
+            operators[i].osc.setLevelNonLinear(op_preset.level);
+            operators[i].osc.setCoarse(op_preset.coarse);
+            operators[i].osc.setFine(op_preset.fine);
+            operators[i].osc.setDetune(op_preset.detune);
+            operators[i].osc.enable();
+
+            // エンベロープ設定
+            operators[i].env.setAttack(op_preset.attack);
+            operators[i].env.setDecay(op_preset.decay);
+            operators[i].env.setSustain(op_preset.sustain);
+            operators[i].env.setRelease(op_preset.release);
+
+            // キャリアの数をカウント
+            if (current_algo && (current_algo->output_mask & (1 << i))) {
+                active_carriers++;
+            }
+        } else {
+            // オペレーター無効化
+            operators[i].osc.disable();
+        }
+    }
+
+    // エフェクト設定を適用
+    const EffectPreset& fx = preset.effects;
+
+    // ディレイ設定
+    delay_enabled = fx.delay_enabled;
+    if (fx.delay_enabled) {
+        delay.setDelay(fx.delay_time, fx.delay_level, fx.delay_feedback);
+    }
+
+    // ローパスフィルタ設定
+    lpf_enabled = fx.lpf_enabled;
+    if (fx.lpf_enabled) {
+        filter.setLowPass(fx.lpf_cutoff, fx.lpf_resonance);
+        filter.setLpfMix(fx.lpf_mix);
+    }
+
+    // ハイパスフィルタ設定
+    hpf_enabled = fx.hpf_enabled;
+    if (fx.hpf_enabled) {
+        filter.setHighPass(fx.hpf_cutoff, fx.hpf_resonance);
+        filter.setHpfMix(fx.hpf_mix);
+    }
+
+    // マスタースケールを調整
+    if (active_carriers > 0) {
+        master_scale = (static_cast<uint32_t>(amp_level / active_carriers) * adjust_level) >> 10;
+    }
+}
+
+const char* Synth::getCurrentPresetName() const {
+    return DefaultPresets::get(current_preset_id).name;
+}
+
+uint8_t Synth::getCurrentAlgorithmId() const {
+    // current_algoからアルゴリズムIDを逆引き
+    // 簡易的な実装: Algorithms::get()と比較
+    for (uint8_t i = 0; i < 32; ++i) {
+        if (&Algorithms::get(i) == current_algo) {
+            return i;
+        }
+    }
+    return 0; // デフォルト
 }

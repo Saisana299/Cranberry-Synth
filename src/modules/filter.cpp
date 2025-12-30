@@ -61,6 +61,8 @@ Filter::Coefs Filter::calculate_biquad(float cutoff, float resonance, bool is_hi
  * @param resonance Q値
  */
 void Filter::setLowPass(float cutoff, float resonance) {
+    lpf_cutoff = cutoff;
+    lpf_resonance = resonance;
     lpf_coefs = calculate_biquad(cutoff, resonance, false);
 }
 
@@ -71,6 +73,8 @@ void Filter::setLowPass(float cutoff, float resonance) {
  * @param resonance Q値
  */
 void Filter::setHighPass(float cutoff, float resonance) {
+    hpf_cutoff = cutoff;
+    hpf_resonance = resonance;
     hpf_coefs = calculate_biquad(cutoff, resonance, true);
 }
 

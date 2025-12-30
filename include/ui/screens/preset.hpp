@@ -215,7 +215,7 @@ private:
         // 描画
         if (selected) {
             canvas.fillRect(x, y, OP_SIZE, OP_SIZE, Color::WHITE);
-            canvas.drawRect(x, y, OP_SIZE, OP_SIZE, Color::BLACK);
+            canvas.drawRect(x, y, OP_SIZE, OP_SIZE, Color::WHITE);
             canvas.setTextColor(Color::BLACK);
         } else {
             canvas.fillRect(x, y, OP_SIZE, OP_SIZE, Color::BLACK);
