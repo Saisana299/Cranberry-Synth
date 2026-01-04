@@ -1,6 +1,6 @@
 #include "modules/synth.hpp"
 
-//TODO: リセットしたあとに１６音を越えようとするとノートがバグる、描画方法野最適化
+//TODO: リセットしたあとに１６音を越えようとするとノートがバグる、UI続きを実装
 
 /** @brief シンセ初期化 */
 void Synth::init() {
@@ -30,6 +30,10 @@ FASTRUN void Synth::generate() {
     // 出力バッファをクリア
     int32_t mix_buffer_L[BUFFER_SIZE] = {0};
     int32_t mix_buffer_R[BUFFER_SIZE] = {0};
+
+    // リセット待ちのノートを記録
+    uint8_t notes_to_reset[MAX_NOTES];
+    uint8_t reset_count = 0;
 
     // ノート毎処理
     for(uint8_t n = 0; n < MAX_NOTES; ++n) {
@@ -117,7 +121,14 @@ FASTRUN void Synth::generate() {
             mix_buffer_R[i] += sum;
         }
 
-        if(!note_is_active) noteReset(n);
+        if(!note_is_active) {
+            notes_to_reset[reset_count++] = n;
+        }
+    }
+
+    // ループ終了後にまとめてリセット
+    for(uint8_t r = 0; r < reset_count; ++r) {
+        noteReset(notes_to_reset[r]);
     }
 
     // 定数キャッシュ
@@ -200,14 +211,16 @@ FASTRUN void Synth::update() {
  * @param removed 削除したノートの整理番号
  */
 void Synth::updateOrder(uint8_t removed) {
+    uint8_t active_count = 0;
     for (uint8_t i = 0; i < MAX_NOTES; ++i) {
         if (notes[i].order > removed) {
             --notes[i].order;
-            if(notes[i].order == 1) {
-                last_index = i;
-            }
+        }
+        if (notes[i].order > 0) {
+            ++active_count;
         }
     }
+    order_max = active_count;
 }
 
 /**
@@ -218,22 +231,45 @@ void Synth::updateOrder(uint8_t removed) {
  * @param channel MIDIチャンネル
  */
 void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
-    // 既に同じノートを演奏している場合
+    // 既に同じノートを演奏している場合は弾き直し（リトリガー）
     if(midi_note_to_index[note] != -1) {
-        // リセットしない方が良く聞こえる
-        // noteReset(midi_note_to_index[note]);
+        uint8_t i = midi_note_to_index[note];
+        uint8_t old_order = notes[i].order;
+        notes[i].velocity = velocity;
+        // orderを最新に更新（他のノートのorderを詰める）
+        for (uint8_t j = 0; j < MAX_NOTES; ++j) {
+            if (notes[j].order > old_order) {
+                --notes[j].order;
+            }
+        }
+        notes[i].order = order_max;  // 最新のorderを割り当て
+        for(uint8_t op = 0; op < MAX_OPERATORS; ++op) {
+            auto& osc_mem = ope_states[op].osc_mems[i];
+            auto& env_mem = ope_states[op].env_mems[i];
+            operators[op].osc.setVelocity(osc_mem, velocity);
+            operators[op].env.reset(env_mem); // エンベロープをAttackから再開
+        }
+        return;
     }
-    // MAX_NOTES個ノートを演奏中の場合
-    if(order_max == MAX_NOTES) {
-        noteReset(last_index);
+
+    // MAX_NOTES個ノートを演奏中の場合、最も古いノートを探してリセット
+    if(order_max >= MAX_NOTES) {
+        // order == 1（最も古い）のノートを探す
+        for (uint8_t i = 0; i < MAX_NOTES; ++i) {
+            if (notes[i].order == 1) {
+                noteReset(i);
+                break;
+            }
+        }
     }
+
     // ノートを追加する
     for (uint8_t i = 0; i < MAX_NOTES; ++i) {
         if (notes[i].order == 0) {
             midi_note_to_index[note] = i;
             auto& it = notes[i];
-            if(order_max < MAX_NOTES) ++order_max;
-            it.order = order_max;
+            ++order_max;
+            it.order = order_max;  // updateOrderで詰められるので、order_maxと一致
             it.note = note;
             it.velocity = velocity;
             it.channel = channel;
@@ -246,7 +282,7 @@ void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
                 operators[op].osc.setPhase(osc_mem, 0);
                 operators[op].env.reset(env_mem); // 初期化IdleからAttackへ
             }
-            break;
+            return;
         }
     }
 }
@@ -275,8 +311,14 @@ void Synth::noteOff(uint8_t note, uint8_t channel) {
  */
 void Synth::noteReset(uint8_t index) {
     auto& it = notes[index];
+    // 既にリセット済みの場合は何もしない
+    if(it.order == 0) return;
+
     uint8_t removed_order = it.order;
-    midi_note_to_index[it.note] = -1;
+    // 有効なノート番号の場合のみマッピングをクリア（配列外アクセス防止）
+    if(it.note < 128) {
+        midi_note_to_index[it.note] = -1;
+    }
     it.order = 0;
     it.note = 255;
     it.velocity = 0;
@@ -292,8 +334,7 @@ void Synth::noteReset(uint8_t index) {
     fb_history[index][0] = 0;
     fb_history[index][1] = 0;
 
-    if(order_max > 0) --order_max;
-    // 他ノートorder更新
+    // 他ノートorder更新（order_maxも一緒に更新される）
     updateOrder(removed_order);
 }
 
