@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ui/ui.hpp"
+#include "ui/screens/fx.hpp"
 
 class PresetScreen : public Screen {
 private:
@@ -11,10 +12,8 @@ private:
     const int16_t FOOTER_Y = SCREEN_HEIGHT - 14;
 
     // 状態変数
-    bool firstDraw = true;
-    bool cursorMoved = false;
-
     uint8_t lastPolyCount = 0;
+    bool needsFullRedraw = false;
 
     // --- カーソル管理 ---
     enum CursorPos {
@@ -26,81 +25,7 @@ private:
         C_MENU,
         C_MAX
     };
-    int8_t currentCursor = C_PRESET;
-    int8_t previousCursor = C_PRESET;
-
-    // --- Synth状態のキャッシュ ---
-    struct SynthState {
-        uint8_t preset_id = 0;
-        const char* preset_name = "";
-        uint8_t algorithm_id = 0;
-        uint8_t feedback = 0;
-
-        // オペレーター状態 (有効/無効のみ)
-        bool op_enabled[6] = {false};
-
-        // エフェクト状態
-        bool delay_enabled = false;
-        bool lpf_enabled = false;
-        bool hpf_enabled = false;
-    } currentState, previousState;
-
-    /**
-     * @brief Synthクラスから現在の状態を読み込む
-     */
-    void updateStateFromSynth() {
-        Synth& synth = Synth::getInstance();
-
-        // 前回の状態を保存
-        previousState = currentState;
-
-        // 現在の状態を取得
-        currentState.preset_id = synth.getCurrentPresetId();
-        currentState.preset_name = synth.getCurrentPresetName();
-        currentState.algorithm_id = synth.getCurrentAlgorithmId();
-        currentState.feedback = synth.getFeedbackAmount();
-
-        // オペレーター状態
-        for (int i = 0; i < 6; i++) {
-            currentState.op_enabled[i] = synth.getOperatorOsc(i).isEnabled();
-        }
-
-        // エフェクト状態
-        currentState.delay_enabled = synth.isDelayEnabled();
-        currentState.lpf_enabled = synth.isLpfEnabled();
-        currentState.hpf_enabled = synth.isHpfEnabled();
-    }
-
-    /**
-     * @brief 状態が変化した部分を検出して再描画
-     */
-    void updateChangedElements(GFXcanvas16& canvas) {
-        // プリセット名/ID変更
-        if (currentState.preset_id != previousState.preset_id) {
-            drawPresetHeader(canvas);
-        }
-
-        // アルゴリズム変更
-        if (currentState.algorithm_id != previousState.algorithm_id) {
-            drawAlgorithmLabel(canvas, currentCursor == C_ALGO);
-            // アルゴリズムが変わるとオペレーター配置も変わるので全体再描画
-            drawAlgoDiagram(canvas);
-        }
-
-        // オペレーター有効/無効の変化
-        for (int i = 0; i < 6; i++) {
-            if (currentState.op_enabled[i] != previousState.op_enabled[i]) {
-                drawOpBox(canvas, i, currentCursor == (C_OP1 + i));
-            }
-        }
-
-        // エフェクト状態変化
-        if (currentState.delay_enabled != previousState.delay_enabled ||
-            currentState.lpf_enabled != previousState.lpf_enabled ||
-            currentState.hpf_enabled != previousState.hpf_enabled) {
-            drawFooterItem(canvas, "FX", 10, FOOTER_Y + 5, currentCursor == C_FX);
-        }
-    }
+    int8_t cursor = C_PRESET;
 
 public:
     PresetScreen() = default;
@@ -109,47 +34,132 @@ public:
         this->manager = manager;
         State& state = manager->getState();
         state.setModeState(MODE_SYNTH);
-        firstDraw = true;
-        cursorMoved = false;
         lastPolyCount = 0;
-        currentCursor = C_PRESET;
-        previousCursor = C_PRESET;
+        cursor = C_PRESET;
+        needsFullRedraw = true;
 
-        // Synthから状態を読み込む
-        updateStateFromSynth();
-        previousState = currentState; // 初回は差分なし
-
+        // draw()内のstatic変数をリセットするため、次の描画で全体再描画させる
         manager->invalidate();
+        manager->triggerFullTransfer();
     }
 
     bool isAnimated() const override { return true; }
 
     void handleInput(uint8_t button) override {
         bool moved = false;
+        Synth& synth = Synth::getInstance();
 
-        // 移動前の位置を保存
-        int8_t oldCursor = currentCursor;
-
+        // カーソル移動（上下）
         if (button == BTN_DN || button == BTN_DN_LONG) {
-            currentCursor++;
-            if (currentCursor >= C_MAX) currentCursor = 0;
+            cursor++;
+            if (cursor >= C_MAX) cursor = 0;
             moved = true;
         }
         else if (button == BTN_UP || button == BTN_UP_LONG) {
-            currentCursor--;
-            if (currentCursor < 0) currentCursor = C_MAX - 1;
+            cursor--;
+            if (cursor < 0) cursor = C_MAX - 1;
             moved = true;
         }
+
+        // 左右ボタン：値の変更
+        else if (button == BTN_L || button == BTN_L_LONG) {
+            if (cursor == C_PRESET) {
+                // プリセット変更（前へ）
+                uint8_t preset_id = synth.getCurrentPresetId();
+                if (preset_id > 0) {
+                    preset_id--;
+                } else {
+                    preset_id = 31; // 最後のプリセットへ
+                }
+                synth.reset(); // ノートをリセット
+                synth.loadPreset(preset_id);
+                needsFullRedraw = true;
+                manager->invalidate();
+            }
+            else if (cursor == C_ALGO) {
+                // アルゴリズム変更（前へ）
+                uint8_t algo_id = synth.getCurrentAlgorithmId();
+                if (algo_id > 0) {
+                    algo_id--;
+                } else {
+                    algo_id = 31; // 最後のアルゴリズムへ
+                }
+                synth.reset(); // ノートをリセット
+                synth.setAlgorithm(algo_id);
+                needsFullRedraw = true;
+                manager->invalidate();
+            }
+        }
+        else if (button == BTN_R || button == BTN_R_LONG) {
+            if (cursor == C_PRESET) {
+                // プリセット変更（次へ）
+                uint8_t preset_id = synth.getCurrentPresetId();
+                if (preset_id < 31) {
+                    preset_id++;
+                } else {
+                    preset_id = 0; // 最初のプリセットへ
+                }
+                synth.reset(); // ノートをリセット
+                synth.loadPreset(preset_id);
+                needsFullRedraw = true;
+                manager->invalidate();
+            }
+            else if (cursor == C_ALGO) {
+                // アルゴリズム変更（次へ）
+                uint8_t algo_id = synth.getCurrentAlgorithmId();
+                if (algo_id < 31) {
+                    algo_id++;
+                } else {
+                    algo_id = 0; // 最初のアルゴリズムへ
+                }
+                synth.reset(); // ノートをリセット
+                synth.setAlgorithm(algo_id);
+                needsFullRedraw = true;
+                manager->invalidate();
+            }
+        }
+
+        // ENTERボタン：決定/実行
+        else if (button == BTN_ET) {
+            if (cursor == C_POLY) {
+                // 緊急リセット
+                synth.reset();
+                manager->invalidate();
+            }
+            else if (cursor == C_FX) {
+                // エフェクト設定画面へ
+                manager->pushScreen(new FXScreen());
+                return;
+            }
+            // TODO: 以下は後で実装
+            // else if (cursor >= C_OP1 && cursor <= C_OP6) {
+            //     // オペレーター設定画面へ
+            // }
+            // else if (cursor == C_MENU) {
+            //     // メニュー画面へ
+            // }
+        }
+
+        // CANCELボタン
+        else if (button == BTN_CXL) {
+            cursor = C_PRESET;
+        }
+
         if (moved) {
-            previousCursor = oldCursor; // 移動元を記憶
-            cursorMoved = true;
             manager->invalidate();
         }
     }
 
     void draw(GFXcanvas16& canvas) override {
-        // --- 0. Synthの状態を更新 ---
-        updateStateFromSynth();
+        static bool firstDraw = true;
+        static int8_t lastCursor = -1;
+
+        // onEnter後の初回描画フラグをリセット
+        if (needsFullRedraw) {
+            firstDraw = true;
+            lastCursor = -1;
+            needsFullRedraw = false;
+        }
 
         // --- 1. 初回描画 (全画面) ---
         if (firstDraw) {
@@ -162,36 +172,33 @@ public:
             canvas.drawFastHLine(0, 14, SCREEN_WIDTH, Color::WHITE);
             canvas.fillRect(0, 15, SCREEN_WIDTH, 10, Color::WHITE);
 
-            drawAlgorithmLabel(canvas, (currentCursor == C_ALGO));
+            drawAlgorithmLabel(canvas, (cursor == C_ALGO));
             canvas.drawFastHLine(0, 25, SCREEN_WIDTH, Color::WHITE);
 
             // オペレーター図形
-            drawAlgoDiagram(canvas); // 内部で currentCursor を見てハイライト判定
+            drawAlgoDiagram(canvas); // 内部で cursor を見てハイライト判定
 
             // フッター
             canvas.drawFastHLine(0, FOOTER_Y, SCREEN_WIDTH, Color::WHITE);
             drawFooterItems(canvas); // FX, MENU, POLY
 
             firstDraw = false;
-            cursorMoved = false;
+            lastCursor = cursor;
             manager->triggerFullTransfer();
         }
 
         // --- 2. カーソル移動時の部分更新 ---
-        if (cursorMoved) {
+        if (cursor != lastCursor) {
             // 移動元(previous) を「非選択」で再描画
-            updateCursorElement(canvas, previousCursor);
+            updateCursorElement(canvas, lastCursor);
 
             // 移動先(current) を「選択」で再描画
-            updateCursorElement(canvas, currentCursor);
+            updateCursorElement(canvas, cursor);
 
-            cursorMoved = false;
+            lastCursor = cursor;
         }
 
-        // --- 3. Synth状態変化の検出と更新 ---
-        updateChangedElements(canvas);
-
-        // --- 4. 定期更新 (POLY数) ---
+        // --- 3. 定期更新 (POLY数) ---
         uint8_t currentPoly = Synth::getInstance().getActiveNoteCount();
 
         if (currentPoly != lastPolyCount) {
@@ -206,7 +213,7 @@ private:
      * @brief 指定されたカーソル位置のUIパーツだけを再描画するディスパッチャ
      */
     void updateCursorElement(GFXcanvas16& canvas, int8_t cursorPos) {
-        bool isSelected = (currentCursor == cursorPos);
+        bool isSelected = (cursor == cursorPos);
 
         if (cursorPos == C_PRESET) {
             drawPresetHeader(canvas);
@@ -234,6 +241,7 @@ private:
     // --- 個別の描画関数群 (内部で markDirty を呼ぶ) ---
 
     void drawPresetHeader(GFXcanvas16& canvas) {
+        Synth& synth = Synth::getInstance();
         canvas.fillRect(0, 0, SCREEN_WIDTH, 14, Color::BLACK);
 
         canvas.setTextSize(1);
@@ -243,8 +251,8 @@ private:
         // 実際のSynth状態から表示
         char headerStr[32];
         sprintf(headerStr, "%03d:%s",
-                currentState.preset_id + 1,  // 1-indexed表示
-                currentState.preset_name);
+                synth.getCurrentPresetId() + 1,  // 1-indexed表示
+                synth.getCurrentPresetName());
         canvas.print(headerStr);
 
         // 部分転送予約
@@ -252,8 +260,9 @@ private:
     }
 
     void drawAlgorithmLabel(GFXcanvas16& canvas, bool selected) {
+        Synth& synth = Synth::getInstance();
         char algoStr[20];
-        sprintf(algoStr, "Algorithm:%d", currentState.algorithm_id + 1); // 1-indexed
+        sprintf(algoStr, "Algorithm:%d", synth.getCurrentAlgorithmId() + 1); // 1-indexed
 
         int16_t textWidth = strlen(algoStr) * 6;
         int16_t x = (SCREEN_WIDTH - textWidth) / 2;
@@ -276,9 +285,10 @@ private:
     }
 
     void drawOpBox(GFXcanvas16& canvas, int opIndex, bool selected) {
+        Synth& synth = Synth::getInstance();
         // 座標計算（drawAlgoDiagramと同じロジック）
         // 実際のアルゴリズムIDを使用
-        const Algorithm& algo = Algorithms::get(currentState.algorithm_id);
+        const Algorithm& algo = Algorithms::get(synth.getCurrentAlgorithmId());
 
         // 全体サイズ計算
         int16_t minCol = 32000, maxCol = -32000;
@@ -301,7 +311,7 @@ private:
         int16_t y = originY + algo.positions[opIndex].row * GRID_H;
 
         // オペレーターの有効/無効を反映
-        bool isEnabled = currentState.op_enabled[opIndex];
+        bool isEnabled = synth.getOperatorOsc(opIndex).isEnabled();
 
         // 描画
         if (selected) {
@@ -327,6 +337,7 @@ private:
     }
 
     void drawFooterItem(GFXcanvas16& canvas, const String& str, int16_t x, int16_t y, bool selected) {
+        Synth& synth = Synth::getInstance();
         int16_t w = str.length() * 6;
         int16_t h = 8;
         // 背景クリア範囲
@@ -337,9 +348,9 @@ private:
 
         // FXの場合、有効なエフェクトがあるかチェック
         bool hasFx = (str == "FX") &&
-                     (currentState.delay_enabled ||
-                      currentState.lpf_enabled ||
-                      currentState.hpf_enabled);
+                     (synth.isDelayEnabled() ||
+                      synth.isLpfEnabled() ||
+                      synth.isHpfEnabled());
 
         if (selected) {
             canvas.fillRect(bgX, bgY, bgW, bgH, Color::WHITE);
@@ -357,12 +368,12 @@ private:
 
     void drawFooterItems(GFXcanvas16& canvas) {
         // FX
-        drawFooterItem(canvas, "FX", 10, FOOTER_Y + 5, (currentCursor == C_FX));
+        drawFooterItem(canvas, "FX", 10, FOOTER_Y + 5, (cursor == C_FX));
 
         // MENU
         String menuStr = "MENU";
         int16_t menuWidth = menuStr.length() * 6;
-        drawFooterItem(canvas, menuStr, SCREEN_WIDTH - menuWidth - 4, FOOTER_Y + 5, (currentCursor == C_MENU));
+        drawFooterItem(canvas, menuStr, SCREEN_WIDTH - menuWidth - 4, FOOTER_Y + 5, (cursor == C_MENU));
 
         // 区切り線
         canvas.drawFastVLine(30, FOOTER_Y + 1, 14, Color::MD_GRAY);
@@ -392,7 +403,7 @@ private:
         int16_t x = centerX - (strWidth / 2);
 
         // drawItemを使って描画（カーソル状態を反映）
-        bool isSelected = (currentCursor == C_POLY);
+        bool isSelected = (cursor == C_POLY);
 
         // 背景クリアサイズ
         int16_t clearW = 50;
@@ -420,8 +431,9 @@ private:
      * @param canvas 描画対象のキャンバス
      */
     void drawAlgoDiagram(GFXcanvas16& canvas) {
+        Synth& synth = Synth::getInstance();
         // 実際のアルゴリズムIDを使用
-        const Algorithm& algo = Algorithms::get(currentState.algorithm_id);
+        const Algorithm& algo = Algorithms::get(synth.getCurrentAlgorithmId());
 
         // 色設定
         uint16_t lineColor = Color::MD_GRAY;
@@ -517,8 +529,9 @@ private:
 
         // ボックスを描画 (drawOpBoxを利用)
         for (int i = 0; i < MAX_OPERATORS; i++) {
-            bool isSel = (currentCursor == (C_OP1 + i));
+            bool isSel = (cursor == (C_OP1 + i));
             drawOpBox(canvas, i, isSel);
         }
     }
 };
+

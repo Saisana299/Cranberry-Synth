@@ -13,11 +13,11 @@
 /* Display */
 #include "display/gfx.hpp"
 #include "display/leds.hpp"
-/* UI */
-#include "ui/screens/title.hpp"
-#include "ui/ui.hpp"
 /* Modules */
 #include "modules/synth.hpp"
+/* UI */
+#include "ui/ui.hpp"
+#include "ui/screens/title.hpp"
 /* Utils */
 #include "utils/state.hpp"
 #include "utils/color.hpp"

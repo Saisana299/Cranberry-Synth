@@ -6,23 +6,13 @@
 class TitleScreen : public Screen {
 private:
     uint32_t frameCount = 0;
-
-    bool firstDraw = true;
     uint32_t lastUpdateMs = 0;
     const uint32_t UPDATE_INTERVAL = 33;
 
-    int16_t mainY = 0;
-    int16_t waveCenterY = 0;
-    int16_t animAreaH = 0;
-
 public:
-
-    TitleScreen() = default;
-
     void onEnter(UIManager* manager) override {
         this->manager = manager;
         frameCount = 0;
-        firstDraw = true;
         manager->invalidate();
     }
 
@@ -57,6 +47,7 @@ public:
         int lineY = mainY + realH + 8;
         int waveCenterY = mainY + realH - 2; // 中心Y座標
 
+        static bool firstDraw = true;
         if (firstDraw) {
             canvas.fillScreen(Color::BLACK);
 

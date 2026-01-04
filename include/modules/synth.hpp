@@ -136,4 +136,13 @@ public:
     float getHpfCutoff() const { return filter.getHpfCutoff(); }
     float getHpfResonance() const { return filter.getHpfResonance(); }
     int16_t getHpfMix() const { return filter.getHpfMix(); }
+
+    // エフェクト設定
+    void setDelayEnabled(bool enabled) { delay_enabled = enabled; }
+    void setLpfEnabled(bool enabled) { lpf_enabled = enabled; }
+    void setHpfEnabled(bool enabled) { hpf_enabled = enabled; }
+
+    // Delay/Filter オブジェクトへの直接アクセス（設定用）
+    Delay& getDelay() { return delay; }
+    Filter& getFilter() { return filter; }
 };
