@@ -5,8 +5,13 @@ static_assert((Envelope::EXP_TABLE_SIZE & (Envelope::EXP_TABLE_SIZE - 1)) == 0, 
 /** @brief エンベロープを初期位置に戻す */
 void Envelope::reset(Memory& mem) {
     mem.state = EnvelopeState::Attack;
-    mem.log_level = MAX_ATTENUATION;
-    mem.current_level = 0;
+
+    // 完全に無音の場合のみ、初期値を設定
+    if (mem.log_level >= MAX_ATTENUATION) {
+        mem.log_level = MAX_ATTENUATION;
+        mem.current_level = 0;
+    }
+    // それ以外は現在のlog_levelを維持し、そこからAttackを再開
 }
 
 /** @brief エンベロープをリリースに移行 */
@@ -31,13 +36,17 @@ FASTRUN void Envelope::update(Memory& mem) {
                 mem.log_level = 0;
                 mem.state = EnvelopeState::Decay;
             } else {
-                // 最大音量に達していないので上昇させる
-                if (mem.log_level > attack_rate) {
-                    mem.log_level -= attack_rate;
-                }
-                // 上昇しきったら減衰量を0にしてDecayへ
-                else {
-                    mem.log_level = 0;
+                // 現在のlog_levelから0に向かって減少
+                // 高速リトリガー対応: log_levelがattack_rateより小さい場合も適切に処理
+                if (mem.log_level > 0) {
+                    // 現在のlog_levelとattack_rateの小さい方を引く
+                    uint32_t step = (mem.log_level < attack_rate) ? mem.log_level : attack_rate;
+                    mem.log_level -= step;
+                    // 0に到達したらDecayへ
+                    if (mem.log_level == 0) {
+                        mem.state = EnvelopeState::Decay;
+                    }
+                } else {
                     mem.state = EnvelopeState::Decay;
                 }
             }

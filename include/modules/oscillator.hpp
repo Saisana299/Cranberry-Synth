@@ -51,6 +51,11 @@ public:
         return enabled;
     }
 
+    /** @brief オシレーターが有効かどうか */
+    inline bool isEnabled() const {
+        return enabled;
+    }
+
     /**
      * @brief オシレーターの状態を更新
      *

@@ -218,7 +218,8 @@ void Synth::updateOrder(uint8_t removed) {
 void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
     // 既に同じノートを演奏している場合
     if(midi_note_to_index[note] != -1) {
-        noteReset(midi_note_to_index[note]);
+        // リセットしない方が良く聞こえる
+        // noteReset(midi_note_to_index[note]);
     }
     // MAX_NOTES個ノートを演奏中の場合
     if(order_max == MAX_NOTES) {
