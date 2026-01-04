@@ -36,6 +36,16 @@ UIManager ui(state);
 
 Synth& synth = Synth::getInstance();
 
+// SPI転送中のオーディオ処理コールバック
+AudioCallback gfxAudioCallback = nullptr;
+
+void audioProcessCallback() {
+    // 優先度の高い処理をSPI転送中も実行
+    synth.update();        // サウンド生成
+    audio_hdl.process();   // 音声信号処理
+    midi_hdl.process();    // MIDI入力検知
+}
+
 void setup() {
     pinMode(LED_BUILTIN, OUTPUT);
 
@@ -58,6 +68,12 @@ void setup() {
     audio_hdl.init();
     physical.init();
     leds.init();
+
+    // SPI転送中のオーディオコールバックを設定
+    gfxAudioCallback = audioProcessCallback;
+
+    // オーディオ割り込み優先度を最高に
+    NVIC_SET_PRIORITY(IRQ_SAI1, 0); // Teensy 4.1
 
     digitalWrite(LED_BUILTIN, LOW);
 }

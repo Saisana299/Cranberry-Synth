@@ -1,5 +1,7 @@
 #include "modules/synth.hpp"
 
+//TODO: リセットしたあとに１６音を越えようとするとノートがバグる、描画方法野最適化
+
 /** @brief シンセ初期化 */
 void Synth::init() {
 

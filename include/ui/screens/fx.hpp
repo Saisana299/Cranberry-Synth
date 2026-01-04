@@ -1,107 +1,224 @@
 #pragma once
 
 #include "ui/ui.hpp"
-#include "ui/screens/delay.hpp"
-#include "ui/screens/lpf.hpp"
-#include "ui/screens/hpf.hpp"
 
 class FXScreen : public Screen {
 private:
-    const int16_t LINE_HEIGHT = 12;
-    const int16_t CONTENT_Y = 16;
-    int8_t cursor = 0;
+    // 定数
+    const int16_t HEADER_H = 12;
+    const int16_t ITEM_H = 18;
+    const int16_t FOOTER_Y = SCREEN_HEIGHT - 12;
+
+    // 状態変数
+    bool needsFullRedraw = false;
+
+    // --- カーソル管理 ---
+    enum CursorPos {
+        C_DELAY = 0,
+        C_HPF,
+        C_LPF,
+        C_BACK,
+        C_MAX
+    };
+    int8_t cursor = C_DELAY;
 
 public:
-    void onEnter(UIManager* mgr) override {
-        manager = mgr;
-        cursor = 0;
-        State& state = manager->getState();
-        state.setModeState(MODE_SYNTH);
+    FXScreen() = default;
+
+    void onEnter(UIManager* manager) override {
+        this->manager = manager;
+        cursor = C_DELAY;
+        needsFullRedraw = true;
         manager->invalidate();
+        manager->triggerFullTransfer();
     }
 
     bool isAnimated() const override { return false; }
 
-    void handleInput(uint8_t btn) override {
-        // カーソル移動
-        if (btn == BTN_DN || btn == BTN_DN_LONG) {
-            cursor = (cursor + 1) % 4;
-            manager->invalidate();
+    void handleInput(uint8_t button) override {
+        bool moved = false;
+
+        // カーソル移動（上下）
+        if (button == BTN_DN || button == BTN_DN_LONG) {
+            cursor++;
+            if (cursor >= C_MAX) cursor = 0;
+            moved = true;
         }
-        else if (btn == BTN_UP || btn == BTN_UP_LONG) {
-            cursor = (cursor - 1 + 4) % 4;
-            manager->invalidate();
+        else if (button == BTN_UP || button == BTN_UP_LONG) {
+            cursor--;
+            if (cursor < 0) cursor = C_MAX - 1;
+            moved = true;
         }
-        // 決定・画面遷移
-        else if (btn == BTN_ET) {
-            if (cursor == 0) {
-                manager->pushScreen(new DelayScreen());
+
+        // ENTERボタン：選択して詳細画面へ (将来実装)
+        else if (button == BTN_ET) {
+            if (cursor == C_DELAY) {
+                // TODO: Delay設定画面へ遷移
+                // manager->pushScreen(new DelayScreen());
             }
-            else if (cursor == 1) {
-                manager->pushScreen(new LPFScreen());
+            else if (cursor == C_HPF) {
+                // TODO: HPF設定画面へ遷移
+                // manager->pushScreen(new HPFScreen());
             }
-            else if (cursor == 2) {
-                manager->pushScreen(new HPFScreen());
+            else if (cursor == C_LPF) {
+                // TODO: LPF設定画面へ遷移
+                // manager->pushScreen(new LPFScreen());
             }
-            else if (cursor == 3) {
+            else if (cursor == C_BACK) {
+                // 前の画面に戻る
                 manager->popScreen();
+                return;
             }
+        }
+
+        // CANCELボタン：戻る
+        else if (button == BTN_CXL) {
+            manager->popScreen();
+            return;
+        }
+
+        if (moved) {
+            manager->invalidate();
         }
     }
 
     void draw(GFXcanvas16& canvas) override {
         static bool firstDraw = true;
+        static int8_t lastCursor = -1;
 
-        // ヘッダーは初回のみ描画
+        if (needsFullRedraw) {
+            firstDraw = true;
+            lastCursor = -1;
+            needsFullRedraw = false;
+        }
+
+        // --- 初回描画 ---
         if (firstDraw) {
             canvas.fillScreen(Color::BLACK);
-            canvas.setTextSize(1);
-            canvas.setTextColor(Color::WHITE);
-            canvas.setCursor(2, 4);
-            canvas.print("FX Settings");
-            canvas.drawFastHLine(0, 14, SCREEN_WIDTH, Color::WHITE);
-            manager->triggerFullTransfer();
+            drawHeader(canvas);
+            drawAllFXItems(canvas);
+            drawFooter(canvas);
+
             firstDraw = false;
+            lastCursor = cursor;
+            manager->triggerFullTransfer();
         }
 
-        // メニュー項目の描画
+        // --- カーソル移動時の部分更新 ---
+        if (cursor != lastCursor) {
+            updateCursorElement(canvas, lastCursor);
+            updateCursorElement(canvas, cursor);
+            lastCursor = cursor;
+        }
+    }
+
+private:
+    /**
+     * @brief ヘッダー描画
+     */
+    void drawHeader(GFXcanvas16& canvas) {
+        canvas.fillRect(0, 0, SCREEN_WIDTH, HEADER_H, Color::BLACK);
+        canvas.setTextSize(1);
+        canvas.setTextColor(Color::WHITE);
+        canvas.setCursor(2, 2);
+        canvas.print("FX");
+        canvas.drawFastHLine(0, HEADER_H, SCREEN_WIDTH, Color::WHITE);
+        manager->transferPartial(0, 0, SCREEN_WIDTH, HEADER_H + 1);
+    }
+
+    /**
+     * @brief すべてのFXアイテムを描画
+     */
+    void drawAllFXItems(GFXcanvas16& canvas) {
+        drawFXItem(canvas, "DELAY", 0, cursor == C_DELAY);
+        drawFXItem(canvas, "HPF", 1, cursor == C_HPF);
+        drawFXItem(canvas, "LPF", 2, cursor == C_LPF);
+    }
+
+    /**
+     * @brief フッター（BACKボタン）を描画
+     */
+    void drawFooter(GFXcanvas16& canvas) {
+        canvas.drawFastHLine(0, FOOTER_Y, SCREEN_WIDTH, Color::WHITE);
+        drawBackButton(canvas, cursor == C_BACK);
+    }
+
+    /**
+     * @brief カーソル位置の要素を更新
+     */
+    void updateCursorElement(GFXcanvas16& canvas, int8_t cursorPos) {
+        bool isSelected = (cursor == cursorPos);
+
+        if (cursorPos == C_DELAY) {
+            drawFXItem(canvas, "DELAY", 0, isSelected);
+        }
+        else if (cursorPos == C_HPF) {
+            drawFXItem(canvas, "HPF", 1, isSelected);
+        }
+        else if (cursorPos == C_LPF) {
+            drawFXItem(canvas, "LPF", 2, isSelected);
+        }
+        else if (cursorPos == C_BACK) {
+            drawBackButton(canvas, isSelected);
+        }
+    }
+
+    /**
+     * @brief FXアイテム（選択メニュー）を描画
+     */
+    void drawFXItem(GFXcanvas16& canvas, const char* name, int index, bool selected) {
         Synth& synth = Synth::getInstance();
-        canvas.fillRect(0, CONTENT_Y, SCREEN_WIDTH, SCREEN_HEIGHT - CONTENT_Y, Color::BLACK);
+        int16_t y = HEADER_H + 2 + (index * ITEM_H);
 
-        int16_t y = CONTENT_Y + 2;
-        const char* labels[] = {"Delay", "Low-Pass Filter", "High-Pass Filter", "< Back"};
+        // 有効状態を取得
+        bool isEnabled = false;
+        if (index == 0) isEnabled = synth.isDelayEnabled();
+        else if (index == 1) isEnabled = synth.isHpfEnabled();
+        else if (index == 2) isEnabled = synth.isLpfEnabled();
 
-        for (int8_t i = 0; i < 4; i++) {
-            // 各エフェクトの状態を取得
-            char value[16] = "";
-            if (i == 0) {
-                strcpy(value, synth.isDelayEnabled() ? "ON" : "OFF");
-            } else if (i == 1) {
-                strcpy(value, synth.isLpfEnabled() ? "ON" : "OFF");
-            } else if (i == 2) {
-                strcpy(value, synth.isHpfEnabled() ? "ON" : "OFF");
-            }
+        // 背景クリア（行全体）
+        canvas.fillRect(0, y, SCREEN_WIDTH, ITEM_H, Color::BLACK);
 
-            // カーソル位置の描画
-            if (i == cursor) {
-                canvas.fillRect(0, y - 1, SCREEN_WIDTH, LINE_HEIGHT, Color::WHITE);
-                canvas.setTextColor(Color::BLACK);
-            } else {
-                canvas.setTextColor(Color::WHITE);
-            }
+        // テキスト
+        canvas.setTextSize(1);
+        int16_t x = 20;
 
-            // ラベルと値を描画
-            canvas.setCursor(4, y + 2);
-            canvas.print(labels[i]);
-
-            if (strlen(value)) {
-                canvas.setCursor(SCREEN_WIDTH - strlen(value) * 6 - 4, y + 2);
-                canvas.print(value);
-            }
-
-            y += LINE_HEIGHT;
+        // 選択時は小さいインジケータのみ
+        if (selected) {
+            canvas.fillRect(2, y + 2, 3, 8, Color::WHITE);
         }
 
-        manager->transferPartial(0, CONTENT_Y, SCREEN_WIDTH, SCREEN_HEIGHT - CONTENT_Y);
+        // 有効状態インジケータ（小さい点）
+        if (isEnabled) {
+            canvas.fillCircle(10, y + 6, 2, Color::CYAN);
+        }
+
+        canvas.setTextColor(selected ? Color::WHITE : Color::MD_GRAY);
+        canvas.setCursor(x, y + 2);
+        canvas.print(name);
+
+        manager->transferPartial(0, y, SCREEN_WIDTH, ITEM_H);
+    }
+
+    /**
+     * @brief BACKボタンを描画
+     */
+    void drawBackButton(GFXcanvas16& canvas, bool selected) {
+        int16_t x = 2;
+        int16_t y = FOOTER_Y + 2;
+        int16_t w = 24;
+        int16_t h = 10;
+
+        canvas.fillRect(x, y, w, h, Color::BLACK);
+
+        if (selected) {
+            canvas.drawRect(x, y, w, h, Color::WHITE);
+        }
+
+        canvas.setTextColor(selected ? Color::WHITE : Color::MD_GRAY);
+        canvas.setCursor(x + 2, y + 1);
+        canvas.print("<");
+
+        manager->transferPartial(x, y, w, h);
     }
 };

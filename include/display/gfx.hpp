@@ -15,10 +15,14 @@ constexpr int8_t CS_PIN = 38;
 constexpr int8_t DC_PIN = 40;
 constexpr int8_t RST_PIN = 41;
 
-constexpr uint32_t OLED_SPI_SPEED = 30000000;
+constexpr uint32_t OLED_SPI_SPEED = 25000000;
 
 // フォントの高さ
 constexpr int16_t DEFAULT_FONT_HEIGHT = 8;
+
+// SPI転送中にオーディオ処理を行うコールバック
+using AudioCallback = void(*)();
+extern AudioCallback gfxAudioCallback;
 
 struct TextBounds{
     int16_t x, y;
@@ -37,25 +41,32 @@ public:
     }
 
     /**
-     * @brief キャンバスの内容をディスプレイに転送
+     * @brief キャンバスの内容をディスプレイに転送（分割転送）
      */
-    static inline void flash(GFXcanvas16& canvas, int16_t x = 0, int16_t y = 0) {
+    static void flash(GFXcanvas16& canvas, int16_t x = 0, int16_t y = 0) {
         const int16_t w = canvas.width();
         const int16_t h = canvas.height();
+        constexpr int16_t CHUNK_H = 4;  // 4行ごとにオーディオ処理
+
         display.startWrite();
-        display.drawRGBBitmap(x, y, canvas.getBuffer(), w, h);
+        for (int16_t row = 0; row < h; ++row) {
+            uint16_t* ptr = canvas.getBuffer() + (row * w);
+            display.drawRGBBitmap(x, y + row, ptr, w, 1);
+
+            // 定期的にオーディオ処理を呼び出す
+            if ((row & (CHUNK_H - 1)) == (CHUNK_H - 1)) {
+                display.endWrite();
+                if (gfxAudioCallback) gfxAudioCallback();
+                display.startWrite();
+            }
+        }
         display.endWrite();
     }
 
     /**
      * @brief キャンバスの指定した矩形範囲だけをディスプレイに転送（部分更新）
-     * @param canvas 転送元のキャンバス
-     * @param x 転送開始X座標
-     * @param y 転送開始Y座標
-     * @param w 転送幅
-     * @param h 転送高さ
      */
-    static inline void flashWindow(GFXcanvas16& canvas, int16_t x, int16_t y, int16_t w, int16_t h) {
+    static void flashWindow(GFXcanvas16& canvas, int16_t x, int16_t y, int16_t w, int16_t h) {
         // 範囲チェック
         if (x < 0) x = 0;
         if (y < 0) y = 0;
@@ -63,19 +74,20 @@ public:
         if (y + h > canvas.height()) h = canvas.height() - y;
         if (w <= 0 || h <= 0) return;
 
+        constexpr int16_t CHUNK_H = 4;  // 4行ごとにオーディオ処理
+
         display.startWrite();
-
-        // メモリ配置が不連続なため、1行ずつ転送する
-        // (drawRGBBitmapはポインタ位置から連続したデータをw*h個描画するため)
-        for(int16_t row = 0; row < h; ++row) {
-            // キャンバス内の該当行の先頭ポインタを計算
-            // buffer + (Y座標 * 全体幅) + X座標
+        for (int16_t row = 0; row < h; ++row) {
             uint16_t* ptr = canvas.getBuffer() + ((y + row) * canvas.width()) + x;
-
-            // 1行分だけ描画 (高さ1)
             display.drawRGBBitmap(x, y + row, ptr, w, 1);
-        }
 
+            // 大きい転送の場合のみオーディオ処理
+            if (h > CHUNK_H && (row & (CHUNK_H - 1)) == (CHUNK_H - 1)) {
+                display.endWrite();
+                if (gfxAudioCallback) gfxAudioCallback();
+                display.startWrite();
+            }
+        }
         display.endWrite();
     }
 
