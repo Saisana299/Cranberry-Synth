@@ -29,6 +29,79 @@ private:
     int8_t currentCursor = C_PRESET;
     int8_t previousCursor = C_PRESET;
 
+    // --- Synth状態のキャッシュ ---
+    struct SynthState {
+        uint8_t preset_id = 0;
+        const char* preset_name = "";
+        uint8_t algorithm_id = 0;
+        uint8_t feedback = 0;
+
+        // オペレーター状態 (有効/無効のみ)
+        bool op_enabled[6] = {false};
+
+        // エフェクト状態
+        bool delay_enabled = false;
+        bool lpf_enabled = false;
+        bool hpf_enabled = false;
+    } currentState, previousState;
+
+    /**
+     * @brief Synthクラスから現在の状態を読み込む
+     */
+    void updateStateFromSynth() {
+        Synth& synth = Synth::getInstance();
+
+        // 前回の状態を保存
+        previousState = currentState;
+
+        // 現在の状態を取得
+        currentState.preset_id = synth.getCurrentPresetId();
+        currentState.preset_name = synth.getCurrentPresetName();
+        currentState.algorithm_id = synth.getCurrentAlgorithmId();
+        currentState.feedback = synth.getFeedbackAmount();
+
+        // オペレーター状態
+        for (int i = 0; i < 6; i++) {
+            currentState.op_enabled[i] = synth.getOperatorOsc(i).isEnabled();
+        }
+
+        // エフェクト状態
+        currentState.delay_enabled = synth.isDelayEnabled();
+        currentState.lpf_enabled = synth.isLpfEnabled();
+        currentState.hpf_enabled = synth.isHpfEnabled();
+    }
+
+    /**
+     * @brief 状態が変化した部分を検出して再描画
+     */
+    void updateChangedElements(GFXcanvas16& canvas) {
+        // プリセット名/ID変更
+        if (currentState.preset_id != previousState.preset_id) {
+            drawPresetHeader(canvas);
+        }
+
+        // アルゴリズム変更
+        if (currentState.algorithm_id != previousState.algorithm_id) {
+            drawAlgorithmLabel(canvas, currentCursor == C_ALGO);
+            // アルゴリズムが変わるとオペレーター配置も変わるので全体再描画
+            drawAlgoDiagram(canvas);
+        }
+
+        // オペレーター有効/無効の変化
+        for (int i = 0; i < 6; i++) {
+            if (currentState.op_enabled[i] != previousState.op_enabled[i]) {
+                drawOpBox(canvas, i, currentCursor == (C_OP1 + i));
+            }
+        }
+
+        // エフェクト状態変化
+        if (currentState.delay_enabled != previousState.delay_enabled ||
+            currentState.lpf_enabled != previousState.lpf_enabled ||
+            currentState.hpf_enabled != previousState.hpf_enabled) {
+            drawFooterItem(canvas, "FX", 10, FOOTER_Y + 5, currentCursor == C_FX);
+        }
+    }
+
 public:
     PresetScreen() = default;
 
@@ -41,6 +114,11 @@ public:
         lastPolyCount = 0;
         currentCursor = C_PRESET;
         previousCursor = C_PRESET;
+
+        // Synthから状態を読み込む
+        updateStateFromSynth();
+        previousState = currentState; // 初回は差分なし
+
         manager->invalidate();
     }
 
@@ -70,6 +148,9 @@ public:
     }
 
     void draw(GFXcanvas16& canvas) override {
+        // --- 0. Synthの状態を更新 ---
+        updateStateFromSynth();
+
         // --- 1. 初回描画 (全画面) ---
         if (firstDraw) {
             canvas.fillScreen(Color::BLACK);
@@ -107,7 +188,10 @@ public:
             cursorMoved = false;
         }
 
-        // --- 3. 定期更新 (POLY数) ---
+        // --- 3. Synth状態変化の検出と更新 ---
+        updateChangedElements(canvas);
+
+        // --- 4. 定期更新 (POLY数) ---
         uint8_t currentPoly = Synth::getInstance().getActiveNoteCount();
 
         if (currentPoly != lastPolyCount) {
@@ -155,8 +239,12 @@ private:
         canvas.setTextSize(1);
         canvas.setTextColor(Color::WHITE);
         canvas.setCursor(2, 4);
+
+        // 実際のSynth状態から表示
         char headerStr[32];
-        sprintf(headerStr, "001:Sine Wave");
+        sprintf(headerStr, "%03d:%s",
+                currentState.preset_id + 1,  // 1-indexed表示
+                currentState.preset_name);
         canvas.print(headerStr);
 
         // 部分転送予約
@@ -164,9 +252,8 @@ private:
     }
 
     void drawAlgorithmLabel(GFXcanvas16& canvas, bool selected) {
-        int algoNum = 5;
         char algoStr[20];
-        sprintf(algoStr, "Algorithm:%d", algoNum);
+        sprintf(algoStr, "Algorithm:%d", currentState.algorithm_id + 1); // 1-indexed
 
         int16_t textWidth = strlen(algoStr) * 6;
         int16_t x = (SCREEN_WIDTH - textWidth) / 2;
@@ -190,7 +277,8 @@ private:
 
     void drawOpBox(GFXcanvas16& canvas, int opIndex, bool selected) {
         // 座標計算（drawAlgoDiagramと同じロジック）
-        const Algorithm& algo = Algorithms::get(0);
+        // 実際のアルゴリズムIDを使用
+        const Algorithm& algo = Algorithms::get(currentState.algorithm_id);
 
         // 全体サイズ計算
         int16_t minCol = 32000, maxCol = -32000;
@@ -212,15 +300,25 @@ private:
         int16_t x = originX + algo.positions[opIndex].col * GRID_W;
         int16_t y = originY + algo.positions[opIndex].row * GRID_H;
 
+        // オペレーターの有効/無効を反映
+        bool isEnabled = currentState.op_enabled[opIndex];
+
         // 描画
         if (selected) {
             canvas.fillRect(x, y, OP_SIZE, OP_SIZE, Color::WHITE);
             canvas.drawRect(x, y, OP_SIZE, OP_SIZE, Color::WHITE);
             canvas.setTextColor(Color::BLACK);
         } else {
-            canvas.fillRect(x, y, OP_SIZE, OP_SIZE, Color::BLACK);
-            canvas.drawRect(x, y, OP_SIZE, OP_SIZE, Color::WHITE);
-            canvas.setTextColor(Color::WHITE);
+            // 無効なオペレーターはグレーアウト
+            if (isEnabled) {
+                canvas.fillRect(x, y, OP_SIZE, OP_SIZE, Color::BLACK);
+                canvas.drawRect(x, y, OP_SIZE, OP_SIZE, Color::WHITE);
+                canvas.setTextColor(Color::WHITE);
+            } else {
+                canvas.fillRect(x, y, OP_SIZE, OP_SIZE, Color::BLACK);
+                canvas.drawRect(x, y, OP_SIZE, OP_SIZE, Color::MD_GRAY);
+                canvas.setTextColor(Color::MD_GRAY);
+            }
         }
         canvas.setCursor(x + 4, y + 3);
         canvas.print(opIndex + 1);
@@ -237,12 +335,19 @@ private:
         int16_t bgW = w + 2;
         int16_t bgH = h + 2;
 
+        // FXの場合、有効なエフェクトがあるかチェック
+        bool hasFx = (str == "FX") &&
+                     (currentState.delay_enabled ||
+                      currentState.lpf_enabled ||
+                      currentState.hpf_enabled);
+
         if (selected) {
             canvas.fillRect(bgX, bgY, bgW, bgH, Color::WHITE);
             canvas.setTextColor(Color::BLACK);
         } else {
             canvas.fillRect(bgX, bgY, bgW, bgH, Color::BLACK);
-            canvas.setTextColor(Color::WHITE);
+            // エフェクトが有効な場合は明るく表示
+            canvas.setTextColor(hasFx ? Color::CYAN : Color::WHITE);
         }
         canvas.setCursor(x, y);
         canvas.print(str);
@@ -315,7 +420,8 @@ private:
      * @param canvas 描画対象のキャンバス
      */
     void drawAlgoDiagram(GFXcanvas16& canvas) {
-        const Algorithm& algo = Algorithms::get(0);
+        // 実際のアルゴリズムIDを使用
+        const Algorithm& algo = Algorithms::get(currentState.algorithm_id);
 
         // 色設定
         uint16_t lineColor = Color::MD_GRAY;
