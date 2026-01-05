@@ -1,7 +1,5 @@
 #include "modules/synth.hpp"
 
-//TODO: リセットしたあとに１６音を越えようとするとノートがバグる、UI続きを実装
-
 /** @brief シンセ初期化 */
 void Synth::init() {
 
@@ -252,13 +250,45 @@ void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
         return;
     }
 
-    // MAX_NOTES個ノートを演奏中の場合、最も古いノートを探してリセット
+    // MAX_NOTES個ノートを演奏中の場合、スティール対象を探す
+    // 優先順位: 1. リリース中で最古のノート  2. 全体で最古のノート
     if(order_max >= MAX_NOTES) {
-        // order == 1（最も古い）のノートを探す
+        int8_t releasing_oldest_index = -1;
+        uint8_t releasing_oldest_order = 255;
+
+        // リリース中のノートで最古のものを探す
         for (uint8_t i = 0; i < MAX_NOTES; ++i) {
-            if (notes[i].order == 1) {
-                noteReset(i);
-                break;
+            if (notes[i].order == 0) continue;
+
+            // 全オペレーターがRelease or Idleかチェック（noteOff済み）
+            bool is_releasing = true;
+            for(uint8_t op = 0; op < MAX_OPERATORS; ++op) {
+                auto& env_mem = ope_states[op].env_mems[i];
+                auto state = env_mem.state;
+                if (state != Envelope::EnvelopeState::Release &&
+                    state != Envelope::EnvelopeState::Idle) {
+                    is_releasing = false;
+                    break;
+                }
+            }
+
+            // リリース中で、より古いノートなら記録
+            if (is_releasing && notes[i].order < releasing_oldest_order) {
+                releasing_oldest_order = notes[i].order;
+                releasing_oldest_index = i;
+            }
+        }
+
+        // リリース中のノートがあればそれを、なければ最古(order==1)をリセット
+        if (releasing_oldest_index >= 0) {
+            noteReset(releasing_oldest_index);
+        } else {
+            // order == 1（最古）のノートを探す
+            for (uint8_t i = 0; i < MAX_NOTES; ++i) {
+                if (notes[i].order == 1) {
+                    noteReset(i);
+                    break;
+                }
             }
         }
     }
