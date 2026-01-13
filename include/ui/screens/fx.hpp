@@ -1,13 +1,16 @@
 #pragma once
 
 #include "ui/ui.hpp"
+#include "ui/screens/delay.hpp"
+#include "ui/screens/hpf.hpp"
+#include "ui/screens/lpf.hpp"
 
 class FXScreen : public Screen {
 private:
     // 定数
-    const int16_t HEADER_H = 12;
-    const int16_t ITEM_H = 18;
-    const int16_t FOOTER_Y = SCREEN_HEIGHT - 12;
+    const int16_t HEADER_H = 14;
+    const int16_t ITEM_H = 16;
+    const int16_t FOOTER_Y = SCREEN_HEIGHT - 14;
 
     // 状態変数
     bool needsFullRedraw = false;
@@ -50,19 +53,19 @@ public:
             moved = true;
         }
 
-        // ENTERボタン：選択して詳細画面へ (将来実装)
+        // ENTERボタン：選択して詳細画面へ
         else if (button == BTN_ET) {
             if (cursor == C_DELAY) {
-                // TODO: Delay設定画面へ遷移
-                // manager->pushScreen(new DelayScreen());
+                manager->pushScreen(new DelayScreen());
+                return;
             }
             else if (cursor == C_HPF) {
-                // TODO: HPF設定画面へ遷移
-                // manager->pushScreen(new HPFScreen());
+                manager->pushScreen(new HPFScreen());
+                return;
             }
             else if (cursor == C_LPF) {
-                // TODO: LPF設定画面へ遷移
-                // manager->pushScreen(new LPFScreen());
+                manager->pushScreen(new LPFScreen());
+                return;
             }
             else if (cursor == C_BACK) {
                 // 前の画面に戻る
@@ -181,7 +184,7 @@ private:
 
         // テキスト
         canvas.setTextSize(1);
-        int16_t x = 20;
+        int16_t x = 18;
 
         // 選択時は小さいインジケータのみ
         if (selected) {
@@ -194,7 +197,7 @@ private:
         }
 
         canvas.setTextColor(selected ? Color::WHITE : Color::MD_GRAY);
-        canvas.setCursor(x, y + 2);
+        canvas.setCursor(x, y + 4);
         canvas.print(name);
 
         manager->transferPartial(0, y, SCREEN_WIDTH, ITEM_H);
