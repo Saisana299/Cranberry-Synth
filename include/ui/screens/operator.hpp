@@ -1,0 +1,607 @@
+#pragma once
+
+#include "ui/ui.hpp"
+
+// ===== ADSR編集画面 =====
+class OperatorADSRScreen : public Screen {
+private:
+    const int16_t HEADER_H = 12;
+    const int16_t ITEM_H = 16;
+    const int16_t FOOTER_Y = SCREEN_HEIGHT - 12;
+
+    bool needsFullRedraw = false;
+    uint8_t operatorIndex = 0;
+
+    enum CursorPos {
+        C_ATTACK = 0,
+        C_DECAY,
+        C_SUSTAIN,
+        C_RELEASE,
+        C_BACK,
+        C_MAX
+    };
+    int8_t cursor = C_ATTACK;
+
+public:
+    OperatorADSRScreen(uint8_t opIndex = 0) : operatorIndex(opIndex) {
+        if (operatorIndex >= 6) operatorIndex = 0;
+    }
+
+    void onEnter(UIManager* manager) override {
+        this->manager = manager;
+        needsFullRedraw = true;
+        manager->invalidate();
+        manager->triggerFullTransfer();
+    }
+
+    bool isAnimated() const override { return false; }
+
+    void handleInput(uint8_t button) override {
+        bool moved = false;
+        bool changed = false;
+
+        // カーソル移動（上下）
+        if (button == BTN_DN || button == BTN_DN_LONG) {
+            cursor++;
+            if (cursor >= C_MAX) cursor = 0;
+            moved = true;
+        }
+        else if (button == BTN_UP || button == BTN_UP_LONG) {
+            cursor--;
+            if (cursor < 0) cursor = C_MAX - 1;
+            moved = true;
+        }
+
+        // 左右ボタン：値の変更
+        else if (button == BTN_L || button == BTN_L_LONG) {
+            int8_t dir = -1;
+            if (button == BTN_L_LONG) dir = -5;
+            adjustParameter(dir);
+            changed = true;
+        }
+        else if (button == BTN_R || button == BTN_R_LONG) {
+            int8_t dir = 1;
+            if (button == BTN_R_LONG) dir = 5;
+            adjustParameter(dir);
+            changed = true;
+        }
+
+        // ENTERボタン or CANCELボタン：戻る
+        else if (button == BTN_ET || button == BTN_CXL) {
+            if (cursor == C_BACK || button == BTN_CXL) {
+                manager->popScreen();
+                return;
+            }
+        }
+
+        if (moved || changed) {
+            if (changed) needsFullRedraw = true;
+            manager->invalidate();
+        }
+    }
+
+    void draw(GFXcanvas16& canvas) override {
+        static bool firstDraw = true;
+        static int8_t lastCursor = -1;
+
+        if (needsFullRedraw) {
+            firstDraw = true;
+            lastCursor = -1;
+            needsFullRedraw = false;
+        }
+
+        if (firstDraw) {
+            canvas.fillScreen(Color::BLACK);
+            drawHeader(canvas);
+            drawAllItems(canvas);
+            drawFooter(canvas);
+
+            firstDraw = false;
+            lastCursor = cursor;
+            manager->triggerFullTransfer();
+        }
+
+        if (cursor != lastCursor) {
+            updateCursorElement(canvas, lastCursor);
+            updateCursorElement(canvas, cursor);
+            lastCursor = cursor;
+        }
+    }
+
+private:
+    void drawHeader(GFXcanvas16& canvas) {
+        canvas.fillRect(0, 0, SCREEN_WIDTH, HEADER_H, Color::BLACK);
+        canvas.setTextSize(1);
+        canvas.setTextColor(Color::WHITE);
+        canvas.setCursor(2, 2);
+        char headerStr[16];
+        sprintf(headerStr, "OP%d ADSR", operatorIndex + 1);
+        canvas.print(headerStr);
+        canvas.drawFastHLine(0, HEADER_H, SCREEN_WIDTH, Color::WHITE);
+        manager->transferPartial(0, 0, SCREEN_WIDTH, HEADER_H + 1);
+    }
+
+    void drawAllItems(GFXcanvas16& canvas) {
+        Synth& synth = Synth::getInstance();
+        const Envelope& env = synth.getOperatorEnv(operatorIndex);
+
+        char valueStr[8];
+        
+        sprintf(valueStr, "%d", env.getAttack());
+        drawParamItem(canvas, "ATTACK", valueStr, 0, cursor == C_ATTACK);
+        
+        sprintf(valueStr, "%d", env.getDecay());
+        drawParamItem(canvas, "DECAY", valueStr, 1, cursor == C_DECAY);
+        
+        sprintf(valueStr, "%d", env.getSustain());
+        drawParamItem(canvas, "SUSTAIN", valueStr, 2, cursor == C_SUSTAIN);
+        
+        sprintf(valueStr, "%d", env.getRelease());
+        drawParamItem(canvas, "RELEASE", valueStr, 3, cursor == C_RELEASE);
+    }
+
+    void drawFooter(GFXcanvas16& canvas) {
+        canvas.drawFastHLine(0, FOOTER_Y, SCREEN_WIDTH, Color::WHITE);
+        drawBackButton(canvas, cursor == C_BACK);
+    }
+
+    void updateCursorElement(GFXcanvas16& canvas, int8_t cursorPos) {
+        Synth& synth = Synth::getInstance();
+        const Envelope& env = synth.getOperatorEnv(operatorIndex);
+        bool isSelected = (cursor == cursorPos);
+        char valueStr[8];
+
+        if (cursorPos == C_ATTACK) {
+            sprintf(valueStr, "%d", env.getAttack());
+            drawParamItem(canvas, "ATTACK", valueStr, 0, isSelected);
+        }
+        else if (cursorPos == C_DECAY) {
+            sprintf(valueStr, "%d", env.getDecay());
+            drawParamItem(canvas, "DECAY", valueStr, 1, isSelected);
+        }
+        else if (cursorPos == C_SUSTAIN) {
+            sprintf(valueStr, "%d", env.getSustain());
+            drawParamItem(canvas, "SUSTAIN", valueStr, 2, isSelected);
+        }
+        else if (cursorPos == C_RELEASE) {
+            sprintf(valueStr, "%d", env.getRelease());
+            drawParamItem(canvas, "RELEASE", valueStr, 3, isSelected);
+        }
+        else if (cursorPos == C_BACK) {
+            drawBackButton(canvas, isSelected);
+        }
+    }
+
+    void drawParamItem(GFXcanvas16& canvas, const char* name, const char* value, int index, bool selected) {
+        int16_t y = HEADER_H + 2 + (index * ITEM_H);
+
+        canvas.fillRect(0, y, SCREEN_WIDTH, ITEM_H, Color::BLACK);
+        canvas.setTextSize(1);
+
+        if (selected) {
+            canvas.fillRect(2, y + 2, 3, 8, Color::WHITE);
+        }
+
+        canvas.setTextColor(selected ? Color::WHITE : Color::MD_GRAY);
+        canvas.setCursor(10, y + 4);
+        canvas.print(name);
+
+        canvas.setCursor(80, y + 4);
+        canvas.setTextColor(Color::WHITE);
+        canvas.print(value);
+
+        manager->transferPartial(0, y, SCREEN_WIDTH, ITEM_H);
+    }
+
+    void drawBackButton(GFXcanvas16& canvas, bool selected) {
+        int16_t x = 2;
+        int16_t y = FOOTER_Y + 2;
+        int16_t w = 24;
+        int16_t h = 10;
+
+        canvas.fillRect(x, y, w, h, Color::BLACK);
+
+        if (selected) {
+            canvas.drawRect(x, y, w, h, Color::WHITE);
+        }
+
+        canvas.setTextColor(selected ? Color::WHITE : Color::MD_GRAY);
+        canvas.setCursor(x + 2, y + 1);
+        canvas.print("<");
+
+        manager->transferPartial(x, y, w, h);
+    }
+
+    void adjustParameter(int8_t direction) {
+        Synth& synth = Synth::getInstance();
+        Envelope& env = const_cast<Envelope&>(synth.getOperatorEnv(operatorIndex));
+
+        switch (cursor) {
+            case C_ATTACK: {
+                uint8_t current = env.getAttack();
+                int16_t newVal = current + direction;
+                if (newVal < 0) newVal = 0;
+                if (newVal > 99) newVal = 99;
+                env.setAttack(newVal);
+                break;
+            }
+            case C_DECAY: {
+                uint8_t current = env.getDecay();
+                int16_t newVal = current + direction;
+                if (newVal < 0) newVal = 0;
+                if (newVal > 99) newVal = 99;
+                env.setDecay(newVal);
+                break;
+            }
+            case C_SUSTAIN: {
+                uint8_t current = env.getSustain();
+                int16_t newVal = current + direction;
+                if (newVal < 0) newVal = 0;
+                if (newVal > 99) newVal = 99;
+                env.setSustain(newVal);
+                break;
+            }
+            case C_RELEASE: {
+                uint8_t current = env.getRelease();
+                int16_t newVal = current + direction;
+                if (newVal < 0) newVal = 0;
+                if (newVal > 99) newVal = 99;
+                env.setRelease(newVal);
+                break;
+            }
+        }
+    }
+};
+
+class OperatorScreen : public Screen {
+private:
+    // 定数
+    const int16_t HEADER_H = 12;
+    const int16_t ITEM_H = 16;
+    const int16_t FOOTER_Y = SCREEN_HEIGHT - 12;
+
+    // 状態変数
+    bool needsFullRedraw = false;
+    uint8_t operatorIndex = 0; // 0-5 (OP1-6)
+
+    // --- カーソル管理 ---
+    enum CursorPos {
+        C_ENABLED = 0,
+        C_WAVE,
+        C_LEVEL,
+        C_PITCH,
+        C_ADSR,
+        C_BACK,
+        C_MAX
+    };
+    int8_t cursor = C_ENABLED;
+
+public:
+    OperatorScreen(uint8_t opIndex = 0) : operatorIndex(opIndex) {
+        if (operatorIndex >= 6) operatorIndex = 0;
+    }
+
+    void onEnter(UIManager* manager) override {
+        this->manager = manager;
+        needsFullRedraw = true;
+        manager->invalidate();
+        manager->triggerFullTransfer();
+    }
+
+    bool isAnimated() const override { return false; }
+
+    void handleInput(uint8_t button) override {
+        bool moved = false;
+        bool changed = false;
+
+        // カーソル移動（上下）
+        if (button == BTN_DN || button == BTN_DN_LONG) {
+            cursor++;
+            if (cursor >= C_MAX) cursor = 0;
+            moved = true;
+        }
+        else if (button == BTN_UP || button == BTN_UP_LONG) {
+            cursor--;
+            if (cursor < 0) cursor = C_MAX - 1;
+            moved = true;
+        }
+
+        // 左右ボタン：値の変更
+        else if (button == BTN_L || button == BTN_L_LONG) {
+            int8_t dir = -1;
+            if (button == BTN_L_LONG) dir = -5;
+            adjustParameter(dir);
+            changed = true;
+        }
+        else if (button == BTN_R || button == BTN_R_LONG) {
+            int8_t dir = 1;
+            if (button == BTN_R_LONG) dir = 5;
+            adjustParameter(dir);
+            changed = true;
+        }
+
+        // ENTERボタン：トグル or 遷移 or 戻る
+        else if (button == BTN_ET) {
+            if (cursor == C_ENABLED) {
+                Synth& synth = Synth::getInstance();
+                Oscillator& osc = const_cast<Oscillator&>(synth.getOperatorOsc(operatorIndex));
+                if (osc.isEnabled()) {
+                    osc.disable();
+                } else {
+                    osc.enable();
+                }
+                changed = true;
+            }
+            else if (cursor == C_ADSR) {
+                manager->pushScreen(new OperatorADSRScreen(operatorIndex));
+                return;
+            }
+            else if (cursor == C_BACK) {
+                manager->popScreen();
+                return;
+            }
+        }
+
+        // CANCELボタン：戻る
+        else if (button == BTN_CXL) {
+            manager->popScreen();
+            return;
+        }
+
+        if (moved || changed) {
+            if (changed) needsFullRedraw = true;
+            manager->invalidate();
+        }
+    }
+
+    void draw(GFXcanvas16& canvas) override {
+        static bool firstDraw = true;
+        static int8_t lastCursor = -1;
+
+        if (needsFullRedraw) {
+            firstDraw = true;
+            lastCursor = -1;
+            needsFullRedraw = false;
+        }
+
+        // --- 初回描画 ---
+        if (firstDraw) {
+            canvas.fillScreen(Color::BLACK);
+            drawHeader(canvas);
+            drawAllItems(canvas);
+            drawFooter(canvas);
+
+            firstDraw = false;
+            lastCursor = cursor;
+            manager->triggerFullTransfer();
+        }
+
+        // --- カーソル移動時の部分更新 ---
+        if (cursor != lastCursor) {
+            updateCursorElement(canvas, lastCursor);
+            updateCursorElement(canvas, cursor);
+            lastCursor = cursor;
+        }
+    }
+
+private:
+    /**
+     * @brief ヘッダー描画
+     */
+    void drawHeader(GFXcanvas16& canvas) {
+        canvas.fillRect(0, 0, SCREEN_WIDTH, HEADER_H, Color::BLACK);
+        canvas.setTextSize(1);
+        canvas.setTextColor(Color::WHITE);
+        canvas.setCursor(2, 2);
+        char headerStr[16];
+        sprintf(headerStr, "OPERATOR %d", operatorIndex + 1);
+        canvas.print(headerStr);
+        canvas.drawFastHLine(0, HEADER_H, SCREEN_WIDTH, Color::WHITE);
+        manager->transferPartial(0, 0, SCREEN_WIDTH, HEADER_H + 1);
+    }
+
+    /**
+     * @brief すべてのアイテムを描画
+     */
+    void drawAllItems(GFXcanvas16& canvas) {
+        Synth& synth = Synth::getInstance();
+        const Oscillator& osc = synth.getOperatorOsc(operatorIndex);
+
+        drawToggleItem(canvas, "ENABLED", osc.isEnabled(), 0, cursor == C_ENABLED);
+
+        const char* waveNames[] = {"SINE", "TRI", "SAW", "SQR"};
+        uint8_t waveId = osc.getWavetableId();
+        drawTextItem(canvas, "WAVE", waveNames[waveId], 1, cursor == C_WAVE);
+
+        // LEVEL表示 (0-1024)
+        char levelStr[8];
+        sprintf(levelStr, "%d", osc.getLevel());
+        drawTextItem(canvas, "LEVEL", levelStr, 2, cursor == C_LEVEL);
+
+        // PITCH表示 (Coarse)
+        char pitchStr[8];
+        sprintf(pitchStr, "%.1f", osc.getCoarse());
+        drawTextItem(canvas, "PITCH", pitchStr, 3, cursor == C_PITCH);
+
+        // ADSR表示 (サブメニュー)
+        drawMenuItemWithArrow(canvas, "ADSR", 4, cursor == C_ADSR);
+    }
+
+    /**
+     * @brief フッター（BACKボタン）を描画
+     */
+    void drawFooter(GFXcanvas16& canvas) {
+        canvas.drawFastHLine(0, FOOTER_Y, SCREEN_WIDTH, Color::WHITE);
+        drawBackButton(canvas, cursor == C_BACK);
+    }
+
+    /**
+     * @brief カーソル位置の要素を更新
+     */
+    void updateCursorElement(GFXcanvas16& canvas, int8_t cursorPos) {
+        Synth& synth = Synth::getInstance();
+        const Oscillator& osc = synth.getOperatorOsc(operatorIndex);
+        bool isSelected = (cursor == cursorPos);
+
+        if (cursorPos == C_ENABLED) {
+            drawToggleItem(canvas, "ENABLED", osc.isEnabled(), 0, isSelected);
+        }
+        else if (cursorPos == C_WAVE) {
+            const char* waveNames[] = {"SINE", "TRI", "SAW", "SQR"};
+            uint8_t waveId = osc.getWavetableId();
+            drawTextItem(canvas, "WAVE", waveNames[waveId], 1, isSelected);
+        }
+        else if (cursorPos == C_LEVEL) {
+            char levelStr[8];
+            sprintf(levelStr, "%d", osc.getLevel());
+            drawTextItem(canvas, "LEVEL", levelStr, 2, isSelected);
+        }
+        else if (cursorPos == C_PITCH) {
+            char pitchStr[8];
+            sprintf(pitchStr, "%.1f", osc.getCoarse());
+            drawTextItem(canvas, "PITCH", pitchStr, 3, isSelected);
+        }
+        else if (cursorPos == C_ADSR) {
+            drawMenuItemWithArrow(canvas, "ADSR", 4, isSelected);
+        }
+        else if (cursorPos == C_BACK) {
+            drawBackButton(canvas, isSelected);
+        }
+    }
+
+    /**
+     * @brief トグルアイテムを描画
+     */
+    void drawToggleItem(GFXcanvas16& canvas, const char* name, bool value, int index, bool selected) {
+        int16_t y = HEADER_H + 2 + (index * ITEM_H);
+
+        canvas.fillRect(0, y, SCREEN_WIDTH, ITEM_H, Color::BLACK);
+        canvas.setTextSize(1);
+
+        if (selected) {
+            canvas.fillRect(2, y + 2, 3, 8, Color::WHITE);
+        }
+
+        canvas.setTextColor(selected ? Color::WHITE : Color::MD_GRAY);
+        canvas.setCursor(10, y + 4);
+        canvas.print(name);
+
+        canvas.setCursor(80, y + 4);
+        canvas.setTextColor(value ? Color::CYAN : Color::MD_GRAY);
+        canvas.print(value ? "ON" : "OFF");
+
+        manager->transferPartial(0, y, SCREEN_WIDTH, ITEM_H);
+    }
+
+    /**
+     * @brief テキストアイテムを描画
+     */
+    void drawTextItem(GFXcanvas16& canvas, const char* name, const char* value, int index, bool selected) {
+        int16_t y = HEADER_H + 2 + (index * ITEM_H);
+
+        canvas.fillRect(0, y, SCREEN_WIDTH, ITEM_H, Color::BLACK);
+        canvas.setTextSize(1);
+
+        if (selected) {
+            canvas.fillRect(2, y + 2, 3, 8, Color::WHITE);
+        }
+
+        canvas.setTextColor(selected ? Color::WHITE : Color::MD_GRAY);
+        canvas.setCursor(10, y + 4);
+        canvas.print(name);
+
+        canvas.setCursor(80, y + 4);
+        canvas.setTextColor(Color::WHITE);
+        canvas.print(value);
+
+        manager->transferPartial(0, y, SCREEN_WIDTH, ITEM_H);
+    }
+
+    /**
+     * @brief BACKボタンを描画
+     */
+    void drawBackButton(GFXcanvas16& canvas, bool selected) {
+        int16_t x = 2;
+        int16_t y = FOOTER_Y + 2;
+        int16_t w = 24;
+        int16_t h = 10;
+
+        canvas.fillRect(x, y, w, h, Color::BLACK);
+
+        if (selected) {
+            canvas.drawRect(x, y, w, h, Color::WHITE);
+        }
+
+        canvas.setTextColor(selected ? Color::WHITE : Color::MD_GRAY);
+        canvas.setCursor(x + 2, y + 1);
+        canvas.print("<");
+
+        manager->transferPartial(x, y, w, h);
+    }
+
+    /**
+     * @brief パラメータを調整
+     * @param direction 増減方向と量
+     */
+    void adjustParameter(int8_t direction) {
+        Synth& synth = Synth::getInstance();
+        Oscillator& osc = const_cast<Oscillator&>(synth.getOperatorOsc(operatorIndex));
+
+        switch (cursor) {
+            case C_WAVE: {
+                // 波形タイプを変更 (0-3)
+                uint8_t currentWave = osc.getWavetableId();
+                int8_t newWave = currentWave + direction;
+                if (newWave < 0) newWave = 3;
+                if (newWave > 3) newWave = 0;
+                osc.setWavetable(newWave);
+                break;
+            }
+            case C_LEVEL: {
+                // レベルを変更 (0-1024)
+                int16_t currentLevel = osc.getLevel();
+                int16_t newLevel = currentLevel + direction * 10;
+                if (newLevel < 0) newLevel = 0;
+                if (newLevel > 1024) newLevel = 1024;
+                osc.setLevel(newLevel);
+                break;
+            }
+            case C_PITCH: {
+                // Coarseを変更 (0.0-31.0)
+                float currentCoarse = osc.getCoarse();
+                float newCoarse = currentCoarse + direction * 0.1f;
+                if (newCoarse < 0.0f) newCoarse = 0.0f;
+                if (newCoarse > 31.0f) newCoarse = 31.0f;
+                osc.setCoarse(newCoarse);
+                break;
+            }
+            case C_ADSR:
+                // ADSRはサブメニューで調整するため、ここでは何もしない
+                break;
+        }
+    }
+
+    /**
+     * @brief メニュー遷移アイテム（矢印付き）を描画
+     */
+    void drawMenuItemWithArrow(GFXcanvas16& canvas, const char* name, int index, bool selected) {
+        int16_t y = HEADER_H + 2 + (index * ITEM_H);
+
+        canvas.fillRect(0, y, SCREEN_WIDTH, ITEM_H, Color::BLACK);
+        canvas.setTextSize(1);
+
+        if (selected) {
+            canvas.fillRect(2, y + 2, 3, 8, Color::WHITE);
+        }
+
+        canvas.setTextColor(selected ? Color::WHITE : Color::MD_GRAY);
+        canvas.setCursor(10, y + 4);
+        canvas.print(name);
+
+        canvas.setCursor(110, y + 4);
+        canvas.setTextColor(selected ? Color::WHITE : Color::MD_GRAY);
+        canvas.print(">");
+
+        manager->transferPartial(0, y, SCREEN_WIDTH, ITEM_H);
+    }
+};

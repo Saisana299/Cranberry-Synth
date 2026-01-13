@@ -56,6 +56,37 @@ public:
         return enabled;
     }
 
+    /** @brief 波形テーブルIDを取得 */
+    inline uint8_t getWavetableId() const {
+        // 現在の波形テーブルポインタからIDを逆引き
+        for (uint8_t i = 0; i < 4; i++) {
+            if (wavetable == WAVETABLES[i].data) {
+                return i;
+            }
+        }
+        return 0;
+    }
+
+    /** @brief レベルを取得 */
+    inline int16_t getLevel() const {
+        return level;
+    }
+
+    /** @brief コースを取得 */
+    inline float getCoarse() const {
+        return coarse;
+    }
+
+    /** @brief ファインを取得 */
+    inline float getFine() const {
+        return fine_level;
+    }
+
+    /** @brief デチューンを取得 */
+    inline int8_t getDetune() const {
+        return detune_cents;
+    }
+
     /**
      * @brief オシレーターの状態を更新
      *

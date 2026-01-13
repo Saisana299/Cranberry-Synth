@@ -33,7 +33,11 @@ private:
     uint32_t decay_rate = MAX_ATTENUATION;
     uint32_t release_rate = MAX_ATTENUATION;
     uint32_t sustain_log_level = 0;
-
+    // 元の0-99の値を保持（ゲッター用）
+    uint8_t attack_param = 0;
+    uint8_t decay_param = 0;
+    uint8_t sustain_param = 0;
+    uint8_t release_param = 0;
     // rate_tableを再設計
     // 音楽的な時間(ms)からレート値を計算するヘルパー
     static constexpr uint32_t ms_to_rate(double ms) {
@@ -127,5 +131,25 @@ public:
      */
     inline bool isFinished(const Memory& mem) const {
         return mem.state == EnvelopeState::Idle;
+    }
+
+    /** @brief アタックパラメータを取得 (0-99) */
+    inline uint8_t getAttack() const {
+        return attack_param;
+    }
+
+    /** @brief ディケイパラメータを取得 (0-99) */
+    inline uint8_t getDecay() const {
+        return decay_param;
+    }
+
+    /** @brief サステインパラメータを取得 (0-99) */
+    inline uint8_t getSustain() const {
+        return sustain_param;
+    }
+
+    /** @brief リリースパラメータを取得 (0-99) */
+    inline uint8_t getRelease() const {
+        return release_param;
     }
 };

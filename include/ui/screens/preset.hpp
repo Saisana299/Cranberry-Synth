@@ -2,6 +2,7 @@
 
 #include "ui/ui.hpp"
 #include "ui/screens/fx.hpp"
+#include "ui/screens/operator.hpp"
 
 class PresetScreen : public Screen {
 private:
@@ -35,7 +36,6 @@ public:
         State& state = manager->getState();
         state.setModeState(MODE_SYNTH);
         lastPolyCount = 0;
-        cursor = C_PRESET;
         needsFullRedraw = true;
 
         // draw()内のstatic変数をリセットするため、次の描画で全体再描画させる
@@ -131,10 +131,13 @@ public:
                 manager->pushScreen(new FXScreen());
                 return;
             }
+            else if (cursor >= C_OP1 && cursor <= C_OP6) {
+                // オペレーター設定画面へ
+                uint8_t opIndex = cursor - C_OP1;
+                manager->pushScreen(new OperatorScreen(opIndex));
+                return;
+            }
             // TODO: 以下は後で実装
-            // else if (cursor >= C_OP1 && cursor <= C_OP6) {
-            //     // オペレーター設定画面へ
-            // }
             // else if (cursor == C_MENU) {
             //     // メニュー画面へ
             // }
