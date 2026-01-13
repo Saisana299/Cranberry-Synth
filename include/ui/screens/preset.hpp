@@ -482,20 +482,44 @@ private:
 
         // --- B. フィードバックループの描画 (修正版) ---
         if (algo.feedback_op >= 0 && algo.feedback_op < MAX_OPERATORS) {
-            int opIdx = algo.feedback_op;
-            int16_t x = originX + algo.positions[opIdx].col * GRID_W;
-            int16_t y = originY + algo.positions[opIdx].row * GRID_H;
+            int dstOp = algo.feedback_op;  // フィードバック先のオペレーター
 
-            // コの字型のループ線 (右から出て上に戻る)
-            // 右方向と上方向のはみ出し量を個別に調整可能
-            int16_t loopOffsetRight = 2;  // 右へのはみ出し量
-            int16_t loopOffsetTop = 3;    // 上へのはみ出し量
-            int16_t startX = x + OP_SIZE;
-            int16_t startY = y + OP_SIZE / 2;
-            int16_t endX = x + OP_SIZE / 2;
-            int16_t endY = y;
-            int16_t rightX = x + OP_SIZE + loopOffsetRight;
-            int16_t topY = y - loopOffsetTop;
+            // mod_maskからフィードバック元のオペレーターを特定
+            int srcOp = -1;
+            uint8_t mask = algo.mod_mask[dstOp];
+            for (int i = 0; i < MAX_OPERATORS; i++) {
+                if (mask & (1 << i)) {
+                    srcOp = i;
+                    break;  // 最初に見つかったものを使用
+                }
+            }
+
+            // srcOpが見つからない場合は自己フィードバック
+            if (srcOp < 0) {
+                srcOp = dstOp;
+            }
+
+            // 送信元と送信先の座標を取得
+            int16_t srcX = originX + algo.positions[srcOp].col * GRID_W;
+            int16_t srcY = originY + algo.positions[srcOp].row * GRID_H;
+            int16_t dstX = originX + algo.positions[dstOp].col * GRID_W;
+            int16_t dstY = originY + algo.positions[dstOp].row * GRID_H;
+
+            // コの字型のループ線の調整パラメータ
+            int16_t loopOffsetRight = 3;  // 右へのはみ出し量
+            int16_t loopOffsetTop = 4;    // 上へのはみ出し量
+
+            // 送信元オペレーターの右側中央から線を開始
+            int16_t startX = srcX + OP_SIZE;
+            int16_t startY = srcY + OP_SIZE / 2;
+
+            // 送信先オペレーターの上側中央に線を接続
+            int16_t endX = dstX + OP_SIZE / 2;
+            int16_t endY = dstY;
+
+            // 右側と上側の折り返しポイント
+            int16_t rightX = srcX + OP_SIZE + loopOffsetRight;
+            int16_t topY = dstY - loopOffsetTop;
 
             canvas.drawLine(startX, startY, rightX, startY, lineColor); // 右へ
             canvas.drawLine(rightX, startY, rightX, topY, lineColor);   // 上へ
