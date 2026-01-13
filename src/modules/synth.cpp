@@ -25,6 +25,19 @@ FASTRUN void Synth::generate() {
     static const uint8_t FB_SHIFTS[8] = { 31, 7, 6, 5, 4, 3, 2, 1 };
     uint8_t current_fb_shift = (feedback_amount > 7) ? 31 : FB_SHIFTS[feedback_amount];
 
+    // フィードバックソースを特定
+    // mod_mask[feedback_op] が 0 なら自己フィードバック、そうでなければクロスフィードバック
+    int8_t fb_source = feedback_op; // デフォルトは自己フィードバック
+    if (feedback_op >= 0 && mod_mask[feedback_op] != 0) {
+        // クロスフィードバック：mod_maskからソースオペレーターを特定
+        for (uint8_t src = 0; src < MAX_OPERATORS; ++src) {
+            if (mod_mask[feedback_op] & (1 << src)) {
+                fb_source = src;
+                break;
+            }
+        }
+    }
+
     // 出力バッファをクリア
     int32_t mix_buffer_L[BUFFER_SIZE] = {0};
     int32_t mix_buffer_R[BUFFER_SIZE] = {0};
@@ -42,6 +55,10 @@ FASTRUN void Synth::generate() {
         // オペレータ出力の一時保存用バッファ [Op][Sample]
         int32_t op_buffer[MAX_OPERATORS][BUFFER_SIZE];
 
+        // フィードバック変数のローカルキャッシュ（ノートループの外でキャッシュ）
+        int32_t fb_h0 = fb_history[n][0];
+        int32_t fb_h1 = fb_history[n][1];
+
         // --- オペレータ毎処理 ---
         // #pragma GCC unroll 6
         for(uint8_t k = 0; k < MAX_OPERATORS; ++k) {
@@ -53,27 +70,29 @@ FASTRUN void Synth::generate() {
             auto& env_mem = ope_states[op_idx].env_mems[n];
 
             uint8_t mask = mod_mask[op_idx];
-            bool is_feedback = (op_idx == feedback_op && feedback_amount > 0);
 
-            // フィードバック変数のローカルキャッシュ
-            int32_t fb_h0 = fb_history[n][0];
-            int32_t fb_h1 = fb_history[n][1];
+            // フィードバック入力を受け取るオペレーター（feedback_op）
+            bool is_fb_target = (op_idx == feedback_op && feedback_amount > 0);
+            // フィードバック履歴を更新するオペレーター（fb_source）
+            bool is_fb_source = (op_idx == fb_source && feedback_amount > 0);
 
             // --- サンプル毎処理 ---
             for(size_t i = 0; i < BUFFER_SIZE; ++i) {
                 int32_t mod_input = 0;
 
-                // 1. 変調入力
+                // 1. 変調入力（クロスフィードバック時はmod_maskからの通常入力をスキップ）
                 if (mask) {
                     for(uint8_t src = 0; src < MAX_OPERATORS; ++src) {
                          if (mask & (1 << src)) {
+                             // クロスフィードバックの場合、ソースからの入力はフィードバック経由で処理
+                             if (is_fb_target && src == fb_source) continue;
                              mod_input += op_buffer[src][i]; // 計算済みのバッファから読む
                          }
                     }
                 }
 
-                // 2. フィードバック
-                if (is_feedback) {
+                // 2. フィードバック入力（ターゲットオペレーターのみ）
+                if (is_fb_target) {
                     int32_t fb_val = (fb_h0 + fb_h1) >> 1;
                     if (current_fb_shift < 30) {
                         mod_input += (fb_val >> current_fb_shift);
@@ -87,8 +106,8 @@ FASTRUN void Synth::generate() {
 
                 op_buffer[op_idx][i] = output; // バッファに書き込み
 
-                // 4. FB履歴更新
-                if (is_feedback) {
+                // 4. FB履歴更新（ソースオペレーターの出力を記録）
+                if (is_fb_source) {
                     fb_h1 = fb_h0;
                     fb_h0 = output;
                 }
@@ -98,14 +117,12 @@ FASTRUN void Synth::generate() {
                 op_obj.env.update(env_mem);
             }
 
-            // フィードバック書き戻し
-            if (is_feedback) {
-                fb_history[n][0] = fb_h0;
-                fb_history[n][1] = fb_h1;
-            }
-
             if (!op_obj.env.isFinished(env_mem)) note_is_active = true;
         }
+
+        // フィードバック書き戻し
+        fb_history[n][0] = fb_h0;
+        fb_history[n][1] = fb_h1;
 
         // --- キャリアのミックス ---
         for(size_t i = 0; i < BUFFER_SIZE; ++i) {
