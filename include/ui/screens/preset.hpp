@@ -471,11 +471,63 @@ private:
             for (int src = 0; src < MAX_OPERATORS; src++) {
                 // mod_maskのビットが立っていたら接続されている
                 if (algo.mod_mask[dst] & (1 << src)) {
-                    int16_t x1 = originX + algo.positions[src].col * GRID_W + OP_SIZE / 2;
-                    int16_t y1 = originY + algo.positions[src].row * GRID_H + OP_SIZE / 2;
-                    int16_t x2 = originX + algo.positions[dst].col * GRID_W + OP_SIZE / 2;
-                    int16_t y2 = originY + algo.positions[dst].row * GRID_H + OP_SIZE / 2;
-                    canvas.drawLine(x1, y1, x2, y2, lineColor);
+                    int16_t srcCol = algo.positions[src].col;
+                    int16_t srcRow = algo.positions[src].row;
+                    int16_t dstCol = algo.positions[dst].col;
+                    int16_t dstRow = algo.positions[dst].row;
+
+                    // オペレーターの中心座標
+                    int16_t x1 = originX + srcCol * GRID_W + OP_SIZE / 2;
+                    int16_t y1 = originY + srcRow * GRID_H + OP_SIZE / 2;
+                    int16_t x2 = originX + dstCol * GRID_W + OP_SIZE / 2;
+                    int16_t y2 = originY + dstRow * GRID_H + OP_SIZE / 2;
+
+                    // 同じ列または同じ行なら直線で接続
+                    if (srcCol == dstCol || srcRow == dstRow) {
+                        canvas.drawLine(x1, y1, x2, y2, lineColor);
+                    } else {
+                        // 異なる行・列の場合、L字型を試みる
+                        // 折れ曲がりポイントで他のオペレーターと重なるかチェック
+
+                        // 方式: srcの下端から縦に降りて、dstの高さで横に曲がる
+                        // 折れ曲がりY座標 = dstの上端より少し上
+                        int16_t bendY = originY + dstRow * GRID_H - (GRID_H - OP_SIZE) / 2;
+
+                        // 折れ曲がりの水平線上（bendYの行）に他のオペレーターがあるかチェック
+                        bool hasCollision = false;
+                        int16_t minCol = (srcCol < dstCol) ? srcCol : dstCol;
+                        int16_t maxCol = (srcCol > dstCol) ? srcCol : dstCol;
+
+                        for (int i = 0; i < MAX_OPERATORS; i++) {
+                            if (i == src || i == dst) continue;
+
+                            int16_t opCol = algo.positions[i].col;
+                            int16_t opRow = algo.positions[i].row;
+
+                            // 水平線が通る範囲内にオペレーターがあるかチェック
+                            // オペレーターのY範囲と折れ曲がりY座標が重なるか
+                            int16_t opTop = originY + opRow * GRID_H;
+                            int16_t opBottom = opTop + OP_SIZE;
+
+                            // X方向が範囲内かつY方向で重なる場合
+                            if (opCol > minCol && opCol < maxCol) {
+                                if (bendY >= opTop && bendY <= opBottom) {
+                                    hasCollision = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (!hasCollision) {
+                            // L字型で描画（縦→横）
+                            canvas.drawLine(x1, y1, x1, bendY, lineColor);  // 縦線
+                            canvas.drawLine(x1, bendY, x2, bendY, lineColor); // 横線
+                            canvas.drawLine(x2, bendY, x2, y2, lineColor);  // 縦線
+                        } else {
+                            // 衝突がある場合は斜め線
+                            canvas.drawLine(x1, y1, x2, y2, lineColor);
+                        }
+                    }
                 }
             }
         }

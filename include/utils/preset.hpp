@@ -85,7 +85,7 @@ private:
         // --- Preset 0: Electric Piano ---
         {
             "E.Piano",      // name
-            0,              // algorithm_id
+            4,              // algorithm_id
             0,              // feedback
             {{              // operators
                 // Operator 0 (Carrier 1)
