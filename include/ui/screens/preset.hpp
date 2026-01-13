@@ -487,13 +487,15 @@ private:
             int16_t y = originY + algo.positions[opIdx].row * GRID_H;
 
             // コの字型のループ線 (右から出て上に戻る)
-            int16_t loopOffset = 5;
+            // 右方向と上方向のはみ出し量を個別に調整可能
+            int16_t loopOffsetRight = 2;  // 右へのはみ出し量
+            int16_t loopOffsetTop = 3;    // 上へのはみ出し量
             int16_t startX = x + OP_SIZE;
             int16_t startY = y + OP_SIZE / 2;
             int16_t endX = x + OP_SIZE / 2;
             int16_t endY = y;
-            int16_t rightX = x + OP_SIZE + loopOffset;
-            int16_t topY = y - loopOffset;
+            int16_t rightX = x + OP_SIZE + loopOffsetRight;
+            int16_t topY = y - loopOffsetTop;
 
             canvas.drawLine(startX, startY, rightX, startY, lineColor); // 右へ
             canvas.drawLine(rightX, startY, rightX, topY, lineColor);   // 上へ
