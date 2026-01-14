@@ -90,10 +90,21 @@ void PhysicalHandler::process() {
 
     // エンコーダーのデバウンス処理（メインループで実行）
     if(now - last_encoder_debounce_time > TIME_ENCODER_DEBOUNCE) {
-        int32_t delta = encoder_raw_value.exchange(0, std::memory_order_acq_rel);
+        int32_t raw_delta = encoder_raw_value.exchange(0, std::memory_order_acq_rel);
+
+        // 1デテント = 4パルスなので4で割る（累積値を保持）
+        static int32_t accumulated_delta = 0;
+        accumulated_delta += raw_delta;
+        int32_t delta = accumulated_delta / 4;
+        accumulated_delta %= 4;  // 余りを保持
 
         if(delta != 0) {
-            //state_.setEncoderDelta(delta);
+            // エンコーダー回転を左右ボタンとして処理
+            if(delta > 0) {
+                state_.setBtnState(BTN_R);  // 右回転 = 右ボタン
+            } else {
+                state_.setBtnState(BTN_L);  // 左回転 = 左ボタン
+            }
         }
 
         last_encoder_debounce_time = now;

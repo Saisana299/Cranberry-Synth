@@ -66,7 +66,7 @@ private:
         {SW_R_PIN,   BTN_R,   BTN_R_LONG,   false, 1UL << 4},
         {SW_ENT_PIN, BTN_ET,  BTN_ET_LONG,  false, 1UL << 16},
         {SW_CXL_PIN, BTN_CXL, BTN_CXL_LONG, false, 1UL << 17},
-        {SW_ENC_PIN, BTN_EC,  BTN_EC_LONG,  true,  1UL << 23}
+        {SW_ENC_PIN, BTN_ET,  BTN_ET_LONG,  true,  1UL << 23}  // エンコーダークリック = 決定ボタン
     };
 
     ButtonState button_states[7] = {};
