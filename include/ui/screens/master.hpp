@@ -13,7 +13,8 @@ private:
 
     enum CursorPos {
         C_LEVEL = 0,
-        C_PAN,
+        C_TRANSPOSE,
+        C_FEEDBACK,
         C_BACK,
         C_MAX
     };
@@ -129,18 +130,21 @@ private:
         sprintf(levelStr, "%d%%", (level * 100) / 1024);
         drawTextItem(canvas, "LEVEL", levelStr, 0, cursor == C_LEVEL);
 
-        // PAN
-        int16_t pan = synth.getMasterPan();
-        char panStr[8];
-        int16_t displayPan = pan - 100;
-        if (displayPan == 0) {
-            sprintf(panStr, "C");
-        } else if (displayPan < 0) {
-            sprintf(panStr, "L%d", -displayPan);
+        // TRANSPOSE (-24 ～ +24)
+        int8_t tr = synth.getTranspose();
+        char trStr[8];
+        if (tr >= 0) {
+            sprintf(trStr, "+%d", tr);
         } else {
-            sprintf(panStr, "R%d", displayPan);
+            sprintf(trStr, "%d", tr);
         }
-        drawTextItem(canvas, "PAN", panStr, 1, cursor == C_PAN);
+        drawTextItem(canvas, "TRANSPOSE", trStr, 1, cursor == C_TRANSPOSE);
+
+        // FEEDBACK (0-7)
+        uint8_t fb = synth.getFeedbackAmount();
+        char fbStr[8];
+        sprintf(fbStr, "%d", fb);
+        drawTextItem(canvas, "FEEDBACK", fbStr, 2, cursor == C_FEEDBACK);
     }
 
     void drawFooter(GFXcanvas16& canvas) {
@@ -158,18 +162,21 @@ private:
             sprintf(levelStr, "%d%%", (level * 100) / 1024);
             drawTextItem(canvas, "LEVEL", levelStr, 0, isSelected);
         }
-        else if (cursorPos == C_PAN) {
-            int16_t pan = synth.getMasterPan();
-            char panStr[8];
-            int16_t displayPan = pan - 100;
-            if (displayPan == 0) {
-                sprintf(panStr, "C");
-            } else if (displayPan < 0) {
-                sprintf(panStr, "L%d", -displayPan);
+        else if (cursorPos == C_TRANSPOSE) {
+            int8_t tr = synth.getTranspose();
+            char trStr[8];
+            if (tr >= 0) {
+                sprintf(trStr, "+%d", tr);
             } else {
-                sprintf(panStr, "R%d", displayPan);
+                sprintf(trStr, "%d", tr);
             }
-            drawTextItem(canvas, "PAN", panStr, 1, isSelected);
+            drawTextItem(canvas, "TRANSPOSE", trStr, 1, isSelected);
+        }
+        else if (cursorPos == C_FEEDBACK) {
+            uint8_t fb = synth.getFeedbackAmount();
+            char fbStr[8];
+            sprintf(fbStr, "%d", fb);
+            drawTextItem(canvas, "FEEDBACK", fbStr, 2, isSelected);
         }
         else if (cursorPos == C_BACK) {
             drawBackButton(canvas, isSelected);
@@ -227,11 +234,20 @@ private:
                 synth.setMasterLevel(newLevel);
                 break;
             }
-            case C_PAN: {
-                int16_t pan = synth.getMasterPan();
-                int16_t step = (direction == 1 || direction == -1) ? 5 : 20;
-                int16_t newPan = pan + (direction > 0 ? step : -step);
-                synth.setMasterPan(newPan);
+            case C_TRANSPOSE: {
+                int8_t tr = synth.getTranspose();
+                int8_t step = (direction == 1 || direction == -1) ? 1 : 12;
+                int8_t newTr = tr + (direction > 0 ? step : -step);
+                synth.setTranspose(newTr);
+                break;
+            }
+            case C_FEEDBACK: {
+                int8_t fb = synth.getFeedbackAmount();
+                int8_t step = (direction > 0) ? 1 : -1;
+                int8_t newFb = fb + step;
+                if (newFb < 0) newFb = 0;
+                if (newFb > 7) newFb = 7;
+                synth.setFeedback(newFb);
                 break;
             }
         }

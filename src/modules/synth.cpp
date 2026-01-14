@@ -169,10 +169,10 @@ FASTRUN void Synth::generate() {
     const bool enable_lpf = lpf_enabled;
     const bool enable_hpf = hpf_enabled;
     const bool enable_delay = delay_enabled;
-    const int32_t pan_gain_l = AudioMath::PAN_COS_TABLE[master_pan];
-    const int32_t pan_gain_r = AudioMath::PAN_SIN_TABLE[master_pan];
+    // const int32_t pan_gain_l = AudioMath::PAN_COS_TABLE[master_pan];
+    // const int32_t pan_gain_r = AudioMath::PAN_SIN_TABLE[master_pan];
 
-    // --- 最終出力段 (Filter, Delay, Pan) ---
+    // --- 最終出力段 (Filter, Delay) ---
     for(size_t i = 0; i < BUFFER_SIZE; ++i) {
         int32_t left = mix_buffer_L[i];
         int32_t right = mix_buffer_R[i];
@@ -204,8 +204,8 @@ FASTRUN void Synth::generate() {
         }
 
         // パンニング
-        left = (left * pan_gain_l) >> 15;
-        right = (right * pan_gain_r) >> 15;
+        // left = (left * pan_gain_l) >> 15;
+        // right = (right * pan_gain_r) >> 15;
 
         // 出力バッファへ
         samples_L[i] = static_cast<int16_t>(left);
@@ -264,6 +264,12 @@ void Synth::updateOrder(uint8_t removed) {
  * @param channel MIDIチャンネル
  */
 void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
+    // トランスポーズを適用
+    int16_t transposed_note = note + transpose;
+    if (transposed_note < 0) transposed_note = 0;
+    if (transposed_note > 127) transposed_note = 127;
+    uint8_t actual_note = static_cast<uint8_t>(transposed_note);
+
     // 既に同じノートを演奏している場合は弾き直し（リトリガー）
     if(midi_note_to_index[note] != -1) {
         uint8_t i = midi_note_to_index[note];
@@ -280,6 +286,7 @@ void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
             auto& osc_mem = ope_states[op].osc_mems[i];
             auto& env_mem = ope_states[op].env_mems[i];
             operators[op].osc.setVelocity(osc_mem, velocity);
+            operators[op].osc.setFrequency(osc_mem, actual_note);
             operators[op].env.reset(env_mem); // エンベロープをAttackから再開
         }
         return;
@@ -343,7 +350,7 @@ void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
                 auto& osc_mem = ope_states[op].osc_mems[i];
                 auto& env_mem = ope_states[op].env_mems[i];
                 operators[op].osc.setVelocity(osc_mem, velocity);
-                operators[op].osc.setFrequency(osc_mem, note);
+                operators[op].osc.setFrequency(osc_mem, actual_note);
                 operators[op].osc.setPhase(osc_mem, 0);
                 operators[op].env.reset(env_mem); // 初期化IdleからAttackへ
             }
@@ -430,7 +437,7 @@ void Synth::loadPreset(uint8_t preset_id) {
     setFeedback(preset.feedback);
 
     // 各オペレーターの設定を適用
-    uint8_t active_carriers = 0;
+    active_carriers = 0; // メンバ変数をリセット
     for (uint8_t i = 0; i < MAX_OPERATORS; ++i) {
         const OperatorPreset& op_preset = preset.operators[i];
 
@@ -488,9 +495,8 @@ void Synth::loadPreset(uint8_t preset_id) {
     }
 
     // マスタースケールを調整
-    if (active_carriers > 0) {
-        master_scale = (static_cast<uint32_t>(amp_level / active_carriers) * adjust_level) >> 10;
-    }
+    if (active_carriers == 0) active_carriers = 1; // 0除算防止
+    master_scale = (static_cast<uint32_t>(amp_level / active_carriers) * adjust_level) >> 10;
 }
 
 const char* Synth::getCurrentPresetName() const {

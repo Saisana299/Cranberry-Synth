@@ -37,7 +37,7 @@ private:
     };
     OperatorState ope_states[MAX_OPERATORS] = {};
 
-    struct Operator { //TODO Operator ON/OFF機能
+    struct Operator {
         Oscillator osc = Oscillator{};
         Envelope env = Envelope{};
     };
@@ -55,7 +55,7 @@ private:
     uint8_t last_index = 0;
     int16_t amp_level = 1 << 10;
     int16_t adjust_level = (1 << 10) / MAX_NOTES;
-    int16_t master_pan = 100;
+    // int16_t master_pan = 100;
 
     // 本来はamp_level * キャリアの数 * adjust_levelで調整する。
     int16_t master_scale = (static_cast<uint32_t>(amp_level) * adjust_level) >> 10;
@@ -68,6 +68,8 @@ private:
     int32_t fb_history[MAX_NOTES][2] = {};
     uint8_t feedback_amount = 0; // 0=disable, 1~7
     uint8_t current_preset_id = 0; // 現在ロードされているプリセットID
+    int8_t transpose = 0; // トランスポーズ (-24 ～ +24)
+    uint8_t active_carriers = 1; // アクティブなキャリア数（最低1）
 
     FASTRUN void generate();
     void updateOrder(uint8_t removed);
@@ -148,10 +150,16 @@ public:
 
     // マスター設定
     int16_t getMasterLevel() const { return amp_level; }
-    void setMasterLevel(int16_t level) { 
+    void setMasterLevel(int16_t level) {
         amp_level = std::clamp<int16_t>(level, 0, 1024);
-        master_scale = (static_cast<uint32_t>(amp_level) * adjust_level) >> 10;
+        // キャリア数で割って正規化（loadPresetと同じ計算）
+        master_scale = (static_cast<uint32_t>(amp_level / active_carriers) * adjust_level) >> 10;
     }
-    int16_t getMasterPan() const { return master_pan; }
-    void setMasterPan(int16_t pan) { master_pan = std::clamp<int16_t>(pan, 0, 200); }
+
+    // トランスポーズ
+    int8_t getTranspose() const { return transpose; }
+    void setTranspose(int8_t t) { transpose = std::clamp<int8_t>(t, -24, 24); }
+
+    // int16_t getMasterPan() const { return master_pan; }
+    // void setMasterPan(int16_t pan) { master_pan = std::clamp<int16_t>(pan, 0, 200); }
 };
