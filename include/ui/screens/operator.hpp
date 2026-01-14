@@ -2,28 +2,32 @@
 
 #include "ui/ui.hpp"
 
-// ===== ADSR編集画面 =====
-class OperatorADSRScreen : public Screen {
+// ===== エンベロープ編集画面 (Rate/Level) =====
+class OperatorEnvelopeScreen : public Screen {
 private:
     const int16_t HEADER_H = 12;
-    const int16_t ITEM_H = 16;
+    const int16_t ITEM_H = 12;  // より多くのパラメータを表示するため小さめに
     const int16_t FOOTER_Y = SCREEN_HEIGHT - 12;
 
     bool needsFullRedraw = false;
     uint8_t operatorIndex = 0;
 
     enum CursorPos {
-        C_ATTACK = 0,
-        C_DECAY,
-        C_SUSTAIN,
-        C_RELEASE,
+        C_RATE1 = 0,
+        C_RATE2,
+        C_RATE3,
+        C_RATE4,
+        C_LEVEL1,
+        C_LEVEL2,
+        C_LEVEL3,
+        C_LEVEL4,
         C_BACK,
         C_MAX
     };
-    int8_t cursor = C_ATTACK;
+    int8_t cursor = C_RATE1;
 
 public:
-    OperatorADSRScreen(uint8_t opIndex = 0) : operatorIndex(opIndex) {
+    OperatorEnvelopeScreen(uint8_t opIndex = 0) : operatorIndex(opIndex) {
         if (operatorIndex >= 6) operatorIndex = 0;
     }
 
@@ -114,8 +118,8 @@ private:
         canvas.setTextSize(1);
         canvas.setTextColor(Color::WHITE);
         canvas.setCursor(2, 2);
-        char headerStr[16];
-        sprintf(headerStr, "OP%d ADSR", operatorIndex + 1);
+        char headerStr[20];
+        sprintf(headerStr, "OP%d ENVELOPE", operatorIndex + 1);
         canvas.print(headerStr);
         canvas.drawFastHLine(0, HEADER_H, SCREEN_WIDTH, Color::WHITE);
         manager->transferPartial(0, 0, SCREEN_WIDTH, HEADER_H + 1);
@@ -126,18 +130,32 @@ private:
         const Envelope& env = synth.getOperatorEnv(operatorIndex);
 
         char valueStr[8];
-        
-        sprintf(valueStr, "%d", env.getAttack());
-        drawParamItem(canvas, "ATTACK", valueStr, 0, cursor == C_ATTACK);
-        
-        sprintf(valueStr, "%d", env.getDecay());
-        drawParamItem(canvas, "DECAY", valueStr, 1, cursor == C_DECAY);
-        
-        sprintf(valueStr, "%d", env.getSustain());
-        drawParamItem(canvas, "SUSTAIN", valueStr, 2, cursor == C_SUSTAIN);
-        
-        sprintf(valueStr, "%d", env.getRelease());
-        drawParamItem(canvas, "RELEASE", valueStr, 3, cursor == C_RELEASE);
+
+        // Rateパラメータ (左列)
+        sprintf(valueStr, "%d", env.getRate1());
+        drawParamItem(canvas, "R1", valueStr, 0, cursor == C_RATE1, false);
+
+        sprintf(valueStr, "%d", env.getRate2());
+        drawParamItem(canvas, "R2", valueStr, 1, cursor == C_RATE2, false);
+
+        sprintf(valueStr, "%d", env.getRate3());
+        drawParamItem(canvas, "R3", valueStr, 2, cursor == C_RATE3, false);
+
+        sprintf(valueStr, "%d", env.getRate4());
+        drawParamItem(canvas, "R4", valueStr, 3, cursor == C_RATE4, false);
+
+        // Levelパラメータ (右列)
+        sprintf(valueStr, "%d", env.getLevel1());
+        drawParamItem(canvas, "L1", valueStr, 0, cursor == C_LEVEL1, true);
+
+        sprintf(valueStr, "%d", env.getLevel2());
+        drawParamItem(canvas, "L2", valueStr, 1, cursor == C_LEVEL2, true);
+
+        sprintf(valueStr, "%d", env.getLevel3());
+        drawParamItem(canvas, "L3", valueStr, 2, cursor == C_LEVEL3, true);
+
+        sprintf(valueStr, "%d", env.getLevel4());
+        drawParamItem(canvas, "L4", valueStr, 3, cursor == C_LEVEL4, true);
     }
 
     void drawFooter(GFXcanvas16& canvas) {
@@ -151,46 +169,67 @@ private:
         bool isSelected = (cursor == cursorPos);
         char valueStr[8];
 
-        if (cursorPos == C_ATTACK) {
-            sprintf(valueStr, "%d", env.getAttack());
-            drawParamItem(canvas, "ATTACK", valueStr, 0, isSelected);
-        }
-        else if (cursorPos == C_DECAY) {
-            sprintf(valueStr, "%d", env.getDecay());
-            drawParamItem(canvas, "DECAY", valueStr, 1, isSelected);
-        }
-        else if (cursorPos == C_SUSTAIN) {
-            sprintf(valueStr, "%d", env.getSustain());
-            drawParamItem(canvas, "SUSTAIN", valueStr, 2, isSelected);
-        }
-        else if (cursorPos == C_RELEASE) {
-            sprintf(valueStr, "%d", env.getRelease());
-            drawParamItem(canvas, "RELEASE", valueStr, 3, isSelected);
-        }
-        else if (cursorPos == C_BACK) {
-            drawBackButton(canvas, isSelected);
+        switch (cursorPos) {
+            case C_RATE1:
+                sprintf(valueStr, "%d", env.getRate1());
+                drawParamItem(canvas, "R1", valueStr, 0, isSelected, false);
+                break;
+            case C_RATE2:
+                sprintf(valueStr, "%d", env.getRate2());
+                drawParamItem(canvas, "R2", valueStr, 1, isSelected, false);
+                break;
+            case C_RATE3:
+                sprintf(valueStr, "%d", env.getRate3());
+                drawParamItem(canvas, "R3", valueStr, 2, isSelected, false);
+                break;
+            case C_RATE4:
+                sprintf(valueStr, "%d", env.getRate4());
+                drawParamItem(canvas, "R4", valueStr, 3, isSelected, false);
+                break;
+            case C_LEVEL1:
+                sprintf(valueStr, "%d", env.getLevel1());
+                drawParamItem(canvas, "L1", valueStr, 0, isSelected, true);
+                break;
+            case C_LEVEL2:
+                sprintf(valueStr, "%d", env.getLevel2());
+                drawParamItem(canvas, "L2", valueStr, 1, isSelected, true);
+                break;
+            case C_LEVEL3:
+                sprintf(valueStr, "%d", env.getLevel3());
+                drawParamItem(canvas, "L3", valueStr, 2, isSelected, true);
+                break;
+            case C_LEVEL4:
+                sprintf(valueStr, "%d", env.getLevel4());
+                drawParamItem(canvas, "L4", valueStr, 3, isSelected, true);
+                break;
+            case C_BACK:
+                drawBackButton(canvas, isSelected);
+                break;
         }
     }
 
-    void drawParamItem(GFXcanvas16& canvas, const char* name, const char* value, int index, bool selected) {
+    // 2列レイアウト用のパラメータ描画
+    void drawParamItem(GFXcanvas16& canvas, const char* name, const char* value, int index, bool selected, bool rightColumn) {
         int16_t y = HEADER_H + 2 + (index * ITEM_H);
+        int16_t x = rightColumn ? 64 : 0;
+        int16_t w = 64;
 
-        canvas.fillRect(0, y, SCREEN_WIDTH, ITEM_H, Color::BLACK);
+        canvas.fillRect(x, y, w, ITEM_H, Color::BLACK);
         canvas.setTextSize(1);
 
         if (selected) {
-            canvas.fillRect(2, y + 2, 3, 8, Color::WHITE);
+            canvas.fillRect(x + 2, y + 2, 3, 8, Color::WHITE);
         }
 
         canvas.setTextColor(selected ? Color::WHITE : Color::MD_GRAY);
-        canvas.setCursor(10, y + 4);
+        canvas.setCursor(x + 8, y + 2);
         canvas.print(name);
 
-        canvas.setCursor(80, y + 4);
+        canvas.setCursor(x + 30, y + 2);
         canvas.setTextColor(Color::WHITE);
         canvas.print(value);
 
-        manager->transferPartial(0, y, SCREEN_WIDTH, ITEM_H);
+        manager->transferPartial(x, y, w, ITEM_H);
     }
 
     void drawBackButton(GFXcanvas16& canvas, bool selected) {
@@ -216,39 +255,38 @@ private:
         Synth& synth = Synth::getInstance();
         Envelope& env = const_cast<Envelope&>(synth.getOperatorEnv(operatorIndex));
 
+        auto adjustValue = [](uint8_t current, int8_t dir) -> uint8_t {
+            int16_t newVal = current + dir;
+            if (newVal < 0) newVal = 0;
+            if (newVal > 99) newVal = 99;
+            return static_cast<uint8_t>(newVal);
+        };
+
         switch (cursor) {
-            case C_ATTACK: {
-                uint8_t current = env.getAttack();
-                int16_t newVal = current + direction;
-                if (newVal < 0) newVal = 0;
-                if (newVal > 99) newVal = 99;
-                env.setAttack(newVal);
+            case C_RATE1:
+                env.setRate1(adjustValue(env.getRate1(), direction));
                 break;
-            }
-            case C_DECAY: {
-                uint8_t current = env.getDecay();
-                int16_t newVal = current + direction;
-                if (newVal < 0) newVal = 0;
-                if (newVal > 99) newVal = 99;
-                env.setDecay(newVal);
+            case C_RATE2:
+                env.setRate2(adjustValue(env.getRate2(), direction));
                 break;
-            }
-            case C_SUSTAIN: {
-                uint8_t current = env.getSustain();
-                int16_t newVal = current + direction;
-                if (newVal < 0) newVal = 0;
-                if (newVal > 99) newVal = 99;
-                env.setSustain(newVal);
+            case C_RATE3:
+                env.setRate3(adjustValue(env.getRate3(), direction));
                 break;
-            }
-            case C_RELEASE: {
-                uint8_t current = env.getRelease();
-                int16_t newVal = current + direction;
-                if (newVal < 0) newVal = 0;
-                if (newVal > 99) newVal = 99;
-                env.setRelease(newVal);
+            case C_RATE4:
+                env.setRate4(adjustValue(env.getRate4(), direction));
                 break;
-            }
+            case C_LEVEL1:
+                env.setLevel1(adjustValue(env.getLevel1(), direction));
+                break;
+            case C_LEVEL2:
+                env.setLevel2(adjustValue(env.getLevel2(), direction));
+                break;
+            case C_LEVEL3:
+                env.setLevel3(adjustValue(env.getLevel3(), direction));
+                break;
+            case C_LEVEL4:
+                env.setLevel4(adjustValue(env.getLevel4(), direction));
+                break;
         }
     }
 };
@@ -270,7 +308,7 @@ private:
         C_WAVE,
         C_LEVEL,
         C_PITCH,
-        C_ADSR,
+        C_ENV,  // ADSRからENVに変更
         C_BACK,
         C_MAX
     };
@@ -332,8 +370,8 @@ public:
                 }
                 changed = true;
             }
-            else if (cursor == C_ADSR) {
-                manager->pushScreen(new OperatorADSRScreen(operatorIndex));
+            else if (cursor == C_ENV) {
+                manager->pushScreen(new OperatorEnvelopeScreen(operatorIndex));
                 return;
             }
             else if (cursor == C_BACK) {
@@ -423,8 +461,8 @@ private:
         sprintf(pitchStr, "%.1f", osc.getCoarse());
         drawTextItem(canvas, "PITCH", pitchStr, 3, cursor == C_PITCH);
 
-        // ADSR表示 (サブメニュー)
-        drawMenuItemWithArrow(canvas, "ADSR", 4, cursor == C_ADSR);
+        // ENV表示 (サブメニュー) - ADSRからENVに変更
+        drawMenuItemWithArrow(canvas, "ENV", 4, cursor == C_ENV);
     }
 
     /**
@@ -461,8 +499,8 @@ private:
             sprintf(pitchStr, "%.1f", osc.getCoarse());
             drawTextItem(canvas, "PITCH", pitchStr, 3, isSelected);
         }
-        else if (cursorPos == C_ADSR) {
-            drawMenuItemWithArrow(canvas, "ADSR", 4, isSelected);
+        else if (cursorPos == C_ENV) {
+            drawMenuItemWithArrow(canvas, "ENV", 4, isSelected);
         }
         else if (cursorPos == C_BACK) {
             drawBackButton(canvas, isSelected);
@@ -575,8 +613,8 @@ private:
                 osc.setCoarse(newCoarse);
                 break;
             }
-            case C_ADSR:
-                // ADSRはサブメニューで調整するため、ここでは何もしない
+            case C_ENV:
+                // ENVはサブメニューで調整するため、ここでは何もしない
                 break;
         }
     }

@@ -117,7 +117,11 @@ FASTRUN void Synth::generate() {
                 op_obj.env.update(env_mem);
             }
 
-            if (!op_obj.env.isFinished(env_mem)) note_is_active = true;
+            // キャリアのみでノートアクティブ判定（モジュレーターは無視）
+            // モジュレーターが終わっていなくても、キャリアが終われば音は出ない
+            if ((output_mask & (1 << op_idx)) && !op_obj.env.isFinished(env_mem)) {
+                note_is_active = true;
+            }
         }
 
         // フィードバック書き戻し
@@ -125,6 +129,7 @@ FASTRUN void Synth::generate() {
         fb_history[n][1] = fb_h1;
 
         // --- キャリアのミックス ---
+        int32_t max_output = 0;  // このノートの最大出力レベルを記録
         for(size_t i = 0; i < BUFFER_SIZE; ++i) {
             int32_t sum = 0;
             for(uint8_t k = 0; k < MAX_OPERATORS; ++k) {
@@ -134,9 +139,15 @@ FASTRUN void Synth::generate() {
             }
             mix_buffer_L[i] += sum;
             mix_buffer_R[i] += sum;
+
+            // 最大出力レベルを更新（絶対値で比較）
+            int32_t abs_sum = (sum >= 0) ? sum : -sum;
+            if (abs_sum > max_output) max_output = abs_sum;
         }
 
-        if(!note_is_active) {
+        // 最終出力が無音に近い場合（閾値: 16）は終了とみなす
+        // note_is_activeがfalseか、出力レベルが非常に小さければリセット
+        if(!note_is_active || max_output < 16) {
             notes_to_reset[reset_count++] = n;
         }
     }
@@ -277,12 +288,12 @@ void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
         for (uint8_t i = 0; i < MAX_NOTES; ++i) {
             if (notes[i].order == 0) continue;
 
-            // 全オペレーターがRelease or Idleかチェック（noteOff済み）
+            // 全オペレーターがPhase4 (Release) or Idleかチェック（noteOff済み）
             bool is_releasing = true;
             for(uint8_t op = 0; op < MAX_OPERATORS; ++op) {
                 auto& env_mem = ope_states[op].env_mems[i];
                 auto state = env_mem.state;
-                if (state != Envelope::EnvelopeState::Release &&
+                if (state != Envelope::EnvelopeState::Phase4 &&
                     state != Envelope::EnvelopeState::Idle) {
                     is_releasing = false;
                     break;
@@ -425,11 +436,15 @@ void Synth::loadPreset(uint8_t preset_id) {
             operators[i].osc.setDetune(op_preset.detune);
             operators[i].osc.enable();
 
-            // エンベロープ設定
-            operators[i].env.setAttack(op_preset.attack);
-            operators[i].env.setDecay(op_preset.decay);
-            operators[i].env.setSustain(op_preset.sustain);
-            operators[i].env.setRelease(op_preset.release);
+            // エンベロープ設定 (Rate/Level)
+            operators[i].env.setRate1(op_preset.rate1);
+            operators[i].env.setRate2(op_preset.rate2);
+            operators[i].env.setRate3(op_preset.rate3);
+            operators[i].env.setRate4(op_preset.rate4);
+            operators[i].env.setLevel1(op_preset.level1);
+            operators[i].env.setLevel2(op_preset.level2);
+            operators[i].env.setLevel3(op_preset.level3);
+            operators[i].env.setLevel4(op_preset.level4);
 
             // キャリアの数をカウント
             if (current_algo && (current_algo->output_mask & (1 << i))) {

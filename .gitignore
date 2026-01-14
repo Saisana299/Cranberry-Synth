@@ -1,2 +1,7 @@
 .pio
 .vscode/
+.venv/
+audio_analysis.ipynb
+
+cranberry.wav
+otehon.wav

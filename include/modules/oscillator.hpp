@@ -104,7 +104,7 @@ public:
      * @param note_id ノートID
      * @return int16_t オシレーター出力サンプル
      */
-    FASTRUN inline int16_t getSample(Memory& mem, int32_t mod_product = 0) {
+    FASTRUN inline int16_t getSample(Memory& mem, int32_t mod_input = 0) {
         if(!enabled) return 0;
 
         // ローカル変数にキャッシュ
@@ -115,7 +115,10 @@ public:
         uint32_t base_phase = local_phase;
 
         // モジュレーションの位相オフセット
-        const int32_t mod_phase_offset = mod_product * static_cast<int32_t>(MOD_PHASE_SCALE_FACTOR);
+        // mod_input の範囲: ±32767程度（オペレーター出力）
+        // 位相の範囲: 0〜2^32 (1周期)
+        // スケーリング: mod_input を位相スケールに変換
+        const int32_t mod_phase_offset = mod_input << MOD_PHASE_SHIFT;
 
         // 位相計算
         uint32_t effective_phase = base_phase + static_cast<uint32_t>(mod_phase_offset);
@@ -132,7 +135,11 @@ public:
 private:
     // 定数
     static constexpr float PHASE_SCALE_FACTOR = static_cast<float>(1ULL << 32) / SAMPLE_RATE;
-    static constexpr uint32_t MOD_PHASE_SCALE_FACTOR = 131072; // 2^17
+
+    // FM変調の位相シフト量
+    // 2^32 / (2 * 32767) ≈ 65536 = 2^16
+    // これにより mod_input << 16 で適切な位相オフセットになる
+    static constexpr int MOD_PHASE_SHIFT = 16;
 
     struct WavetableInfo {
         const int16_t* data;
