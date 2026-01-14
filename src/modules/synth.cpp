@@ -22,8 +22,14 @@ FASTRUN void Synth::generate() {
     const uint8_t output_mask = current_algo->output_mask;
     const int8_t feedback_op = current_algo->feedback_op;
 
-    static const uint8_t FB_SHIFTS[8] = { 31, 7, 6, 5, 4, 3, 2, 1 };
-    uint8_t current_fb_shift = (feedback_amount > 7) ? 31 : FB_SHIFTS[feedback_amount];
+    // フィードバックシフト計算
+    // FEEDBACK_BITDEPTH = 8
+    // fb_shift = FEEDBACK_BITDEPTH - feedback (feedback=1→7, feedback=7→1)
+    // feedback=0 の場合は16（事実上無効）
+    static constexpr uint8_t FEEDBACK_BITDEPTH = 8;
+    uint8_t current_fb_shift = (feedback_amount == 0 || feedback_amount > 7)
+                               ? 16
+                               : (FEEDBACK_BITDEPTH - feedback_amount);
 
     // フィードバックソースを特定
     // mod_mask[feedback_op] が 0 なら自己フィードバック、そうでなければクロスフィードバック
@@ -94,8 +100,8 @@ FASTRUN void Synth::generate() {
                 // 2. フィードバック入力（ターゲットオペレーターのみ）
                 if (is_fb_target) {
                     // scaled_fb = (y0 + y) >> (fb_shift + 1)
-                    // 平均化とスケーリングを一度に行う
-                    if (current_fb_shift < 30) {
+                    // fb_shift < 16 の場合のみ有効（16以上は事実上無効）
+                    if (current_fb_shift < 16) {
                         mod_input += (fb_h0 + fb_h1) >> (current_fb_shift + 1);
                     }
                 }
@@ -387,7 +393,7 @@ void Synth::noteReset(uint8_t index) {
         auto& osc_mem = ope_states[op].osc_mems[index];
         auto& env_mem = ope_states[op].env_mems[index];
         oper.osc.reset(osc_mem);
-        oper.env.reset(env_mem);
+        oper.env.clear(env_mem);  // Idle状態に完全リセット
     }
 
     fb_history[index][0] = 0;

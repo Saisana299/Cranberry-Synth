@@ -71,14 +71,13 @@ private:
     /**
      * @brief レートテーブルを生成
      *
-     * Rate 0 = 約30秒, Rate 99 = 即座
-     * Rate 20-50 は最も使用頻度が高いリリース/ディケイ領域
+     * Rate 0 = 約28秒, Rate 13 = 約16秒, Rate 30 = 約8秒, Rate 99 = 即座
      */
     static constexpr std::array<uint32_t, RATE_TABLE_SIZE> generate_rate_table() {
         std::array<uint32_t, RATE_TABLE_SIZE> table{};
 
-        // Rate 10: 約8秒, Rate 30: 約1.5秒, Rate 50: 約300ms
-        // Rate 70: 約50ms, Rate 90: 約5ms, Rate 99: 即座
+        // Rate 13: 約16秒, Rate 30: 約8秒, Rate 50: 約3秒
+        // Rate 70: 約1.3秒, Rate 90: 約0.6秒, Rate 99: 即座
 
         for (size_t i = 0; i < RATE_TABLE_SIZE; ++i) {
             if (i == RATE_TABLE_SIZE - 1) {
@@ -87,10 +86,10 @@ private:
             } else {
                 double time_seconds = 0.0;
 
-                // 連続的な指数カーブ（Rate 0-98）
-                // time = 30 * 2^(-rate/12) で約12レートごとに半減
-                double rate_normalized = static_cast<double>(i) / 12.0;
-                time_seconds = 30.0 * std::pow(0.5, rate_normalized);
+                // 指数カーブ: time = 28 * 2^(-rate/16)
+                // 約16レートごとに半減（緩やかなカーブ）
+                double rate_normalized = static_cast<double>(i) / 16.0;
+                time_seconds = 28.0 * std::pow(0.5, rate_normalized);
 
                 // 最小値を1msに制限
                 if (time_seconds < 0.001) time_seconds = 0.001;
@@ -176,6 +175,7 @@ private:
 public:
     void reset(Memory& mem);
     void release(Memory& mem);
+    void clear(Memory& mem);  // 完全にIdle状態にリセット
 
     FASTRUN void update(Memory& mem);
 

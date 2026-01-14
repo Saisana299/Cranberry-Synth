@@ -10,6 +10,9 @@ bool Oscillator::table_initialized = false;
  * @param note MIDIノート番号
  */
 void Oscillator::setFrequency(Memory& mem, uint8_t note) {
+    // ノート番号を保存（エイリアシング防止用キースケーリングに使用）
+    mem.note = note;
+
     float freq;
     if (is_fixed) {
         // FIXEDモード: MIDIノートに関係なく固定周波数
@@ -56,6 +59,7 @@ void Oscillator::reset(Memory& mem) {
     mem.phase = 0;
     mem.delta = 0;
     mem.vel_vol = 0;
+    mem.note = 60;  // デフォルト値にリセット
 }
 
 /**

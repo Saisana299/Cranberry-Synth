@@ -11,6 +11,7 @@ public:
         uint32_t phase = 0;
         uint32_t delta = 0;
         int16_t vel_vol = 0;
+        uint8_t note = 60;  // エイリアシング防止用のキースケーリングに使用
     };
 
     Oscillator() {
@@ -126,7 +127,13 @@ public:
         // mod_input の範囲: ±32767程度（オペレーター出力）
         // 位相の範囲: 0〜2^32 (1周期)
         // スケーリング: mod_input を位相スケールに変換
-        const int32_t mod_phase_offset = mod_input << MOD_PHASE_SHIFT;
+        //
+        // エイリアシング防止: 高音域で変調深度を自動的に減らす
+        // ノート60(C4)を基準として、それより高い音では変調を抑える
+        // ノート84(C6)以上では変調深度が1/4になる
+        const int32_t key_scale = AudioMath::MOD_KEY_SCALE_TABLE[mem.note];
+        const int32_t scaled_mod = (mod_input * key_scale) >> 10;
+        const int32_t mod_phase_offset = scaled_mod << MOD_PHASE_SHIFT;
 
         // 位相計算
         uint32_t effective_phase = base_phase + static_cast<uint32_t>(mod_phase_offset);
@@ -157,7 +164,7 @@ private:
     static constexpr float PHASE_SCALE_FACTOR = static_cast<float>(1ULL << 32) / SAMPLE_RATE;
 
     // FM変調の位相シフト量
-    static constexpr int MOD_PHASE_SHIFT = 17;
+    static constexpr int MOD_PHASE_SHIFT = 18;
 
     struct WavetableInfo {
         const int16_t* data;

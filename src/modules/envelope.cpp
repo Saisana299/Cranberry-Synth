@@ -24,6 +24,13 @@ void Envelope::release(Memory& mem) {
     }
 }
 
+/** @brief エンベロープを完全にIdle状態にリセット（ノートスロット解放時） */
+void Envelope::clear(Memory& mem) {
+    mem.state = EnvelopeState::Idle;
+    mem.log_level = MAX_ATTENUATION;
+    mem.current_level = 0;
+}
+
 /**
  * @brief エンベロープ状態を更新します
  *

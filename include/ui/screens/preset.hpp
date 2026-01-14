@@ -532,7 +532,7 @@ private:
             }
         }
 
-        // --- B. フィードバックループの描画 (修正版) ---
+        // --- B. フィードバックループの描画 ---
         if (algo.feedback_op >= 0 && algo.feedback_op < MAX_OPERATORS) {
             int dstOp = algo.feedback_op;  // フィードバック先のオペレーター
 

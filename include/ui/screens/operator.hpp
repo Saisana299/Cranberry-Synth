@@ -309,7 +309,7 @@ private:
         C_LEVEL,
         C_MODE,  // RATIO/FIXED モード切り替え
         C_PITCH,
-        C_ENV,  // ADSRからENVに変更
+        C_ENV,   // エンベロープ設定
         C_BACK,
         C_MAX
     };
@@ -484,7 +484,7 @@ private:
         }
         drawTextItem(canvas, "PITCH", pitchStr, 4, cursor == C_PITCH);
 
-        // ENV表示 (サブメニュー) - ADSRからENVに変更
+        // ENV表示 (サブメニュー)
         drawMenuItemWithArrow(canvas, "ENV", 5, cursor == C_ENV);
     }
 
