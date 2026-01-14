@@ -3,6 +3,7 @@
 #include "ui/ui.hpp"
 #include "ui/screens/fx.hpp"
 #include "ui/screens/operator.hpp"
+#include "ui/screens/master.hpp"
 
 class PresetScreen : public Screen {
 private:
@@ -16,11 +17,12 @@ private:
     uint8_t lastPolyCount = 0;
     bool needsFullRedraw = false;
 
-    // --- カーソル管理 ---
+    // カーソル位置
     enum CursorPos {
         C_PRESET = 0,
         C_ALGO,
         C_OP1, C_OP2, C_OP3, C_OP4, C_OP5, C_OP6,
+        C_MASTER,
         C_FX,
         C_POLY,
         C_MENU,
@@ -131,6 +133,11 @@ public:
                 manager->pushScreen(new FXScreen());
                 return;
             }
+            else if (cursor == C_MASTER) {
+                // マスター設定画面へ
+                manager->pushScreen(new MasterScreen());
+                return;
+            }
             else if (cursor >= C_OP1 && cursor <= C_OP6) {
                 // オペレーター設定画面へ
                 uint8_t opIndex = cursor - C_OP1;
@@ -181,6 +188,9 @@ public:
             // オペレーター図形
             drawAlgoDiagram(canvas); // 内部で cursor を見てハイライト判定
 
+            // Mボタン（マスター設定）
+            drawMasterButton(canvas, (cursor == C_MASTER));
+
             // フッター
             canvas.drawFastHLine(0, FOOTER_Y, SCREEN_WIDTH, Color::WHITE);
             drawFooterItems(canvas); // FX, MENU, POLY
@@ -227,6 +237,10 @@ private:
         else if (cursorPos >= C_OP1 && cursorPos <= C_OP6) {
             // オペレーター番号 (0-5)
             drawOpBox(canvas, cursorPos - C_OP1, isSelected);
+        }
+        else if (cursorPos == C_MASTER) {
+            // アルゴリズム図の左下に「M」を配置
+            drawMasterButton(canvas, isSelected);
         }
         else if (cursorPos == C_FX) {
             drawFooterItem(canvas, "FX", 10, FOOTER_Y + 5, isSelected);
@@ -373,17 +387,44 @@ private:
         // FX
         drawFooterItem(canvas, "FX", 10, FOOTER_Y + 5, (cursor == C_FX));
 
+        // 区切り線
+        canvas.drawFastVLine(30, FOOTER_Y + 1, 14, Color::MD_GRAY);
+
         // MENU
         String menuStr = "MENU";
         int16_t menuWidth = menuStr.length() * 6;
         drawFooterItem(canvas, menuStr, SCREEN_WIDTH - menuWidth - 4, FOOTER_Y + 5, (cursor == C_MENU));
 
         // 区切り線
-        canvas.drawFastVLine(30, FOOTER_Y + 1, 14, Color::MD_GRAY);
         canvas.drawFastVLine(SCREEN_WIDTH - 34, FOOTER_Y + 1, 14, Color::MD_GRAY);
 
         // POLY
         updatePolyDisplay(canvas, lastPolyCount);
+    }
+
+    /**
+     * @brief Mボタン（マスター設定）をアルゴリズム図の左下に描画
+     */
+    void drawMasterButton(GFXcanvas16& canvas, bool selected) {
+        // 左下の空きスペース (FOOTER_Yより少し上、左端)
+        int16_t x = 4;
+        int16_t y = FOOTER_Y - 18;  // フッターより18px上
+        int16_t size = 14;
+
+        canvas.fillRect(x, y, size, size, Color::BLACK);
+        
+        if (selected) {
+            canvas.fillRect(x, y, size, size, Color::WHITE);
+            canvas.setTextColor(Color::BLACK);
+        } else {
+            canvas.drawRect(x, y, size, size, Color::MD_GRAY);
+            canvas.setTextColor(Color::MD_GRAY);
+        }
+        
+        canvas.setCursor(x + 4, y + 3);
+        canvas.print("M");
+
+        manager->transferPartial(x, y, size, size);
     }
 
     /**

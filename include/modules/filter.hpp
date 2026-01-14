@@ -6,6 +6,7 @@ class Filter {
 public:
     static constexpr float CUTOFF_MIN = 20.0f;
     static constexpr float CUTOFF_MAX = 20000.0f;
+    static constexpr float HPF_CUTOFF_MIN = 100.0f;  // HPFは100Hz以上（固定小数点精度の都合）
     static constexpr float RESONANCE_MIN = 0.1f;
     static constexpr float RESONANCE_MAX = 10.0f;
     static constexpr float RESONANCE_DEFAULT = 0.70710678f; // 1.0 / sqrt(2)
@@ -110,7 +111,7 @@ private:
 public:
     Filter() {
         setLowPass(20000.0f, RESONANCE_DEFAULT);
-        setHighPass(20.0f, RESONANCE_DEFAULT);
+        setHighPass(120.0f, RESONANCE_DEFAULT);
     }
 
     /**

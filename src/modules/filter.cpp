@@ -73,6 +73,8 @@ void Filter::setLowPass(float cutoff, float resonance) {
  * @param resonance Q値
  */
 void Filter::setHighPass(float cutoff, float resonance) {
+    // 低すぎるカットオフは固定小数点精度の問題でノイズが発生するため制限
+    cutoff = std::max(cutoff, HPF_CUTOFF_MIN);
     hpf_cutoff = cutoff;
     hpf_resonance = resonance;
     hpf_coefs = calculate_biquad(cutoff, resonance, true);

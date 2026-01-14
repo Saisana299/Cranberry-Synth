@@ -145,4 +145,13 @@ public:
     // Delay/Filter オブジェクトへの直接アクセス（設定用）
     Delay& getDelay() { return delay; }
     Filter& getFilter() { return filter; }
+
+    // マスター設定
+    int16_t getMasterLevel() const { return amp_level; }
+    void setMasterLevel(int16_t level) { 
+        amp_level = std::clamp<int16_t>(level, 0, 1024);
+        master_scale = (static_cast<uint32_t>(amp_level) * adjust_level) >> 10;
+    }
+    int16_t getMasterPan() const { return master_pan; }
+    void setMasterPan(int16_t pan) { master_pan = std::clamp<int16_t>(pan, 0, 200); }
 };

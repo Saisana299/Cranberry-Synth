@@ -1,36 +1,29 @@
 #pragma once
 
 #include "ui/ui.hpp"
-#include "ui/screens/delay.hpp"
-#include "ui/screens/hpf.hpp"
-#include "ui/screens/lpf.hpp"
+#include "modules/synth.hpp"
 
-class FXScreen : public Screen {
+class MasterScreen : public Screen {
 private:
-    // 定数
-    const int16_t HEADER_H = 14;
+    const int16_t HEADER_H = 12;
     const int16_t ITEM_H = 16;
-    const int16_t FOOTER_Y = SCREEN_HEIGHT - 14;
+    const int16_t FOOTER_Y = SCREEN_HEIGHT - 12;
 
-    // 状態変数
     bool needsFullRedraw = false;
 
-    // --- カーソル管理 ---
     enum CursorPos {
-        C_DELAY = 0,
-        C_HPF,
-        C_LPF,
+        C_LEVEL = 0,
+        C_PAN,
         C_BACK,
         C_MAX
     };
-    int8_t cursor = C_DELAY;
+    int8_t cursor = C_LEVEL;
 
 public:
-    FXScreen() = default;
+    MasterScreen() = default;
 
     void onEnter(UIManager* manager) override {
         this->manager = manager;
-        cursor = C_DELAY;
         needsFullRedraw = true;
         manager->invalidate();
         manager->triggerFullTransfer();
@@ -40,6 +33,7 @@ public:
 
     void handleInput(uint8_t button) override {
         bool moved = false;
+        bool changed = false;
 
         // カーソル移動（上下）
         if (button == BTN_DN || button == BTN_DN_LONG) {
@@ -53,34 +47,34 @@ public:
             moved = true;
         }
 
-        // ENTERボタン：選択して詳細画面へ
+        // 左右ボタン：値の変更
+        else if (button == BTN_L || button == BTN_L_LONG) {
+            int8_t dir = -1;
+            if (button == BTN_L_LONG) dir = -10;
+            adjustParameter(dir);
+            changed = true;
+        }
+        else if (button == BTN_R || button == BTN_R_LONG) {
+            int8_t dir = 1;
+            if (button == BTN_R_LONG) dir = 10;
+            adjustParameter(dir);
+            changed = true;
+        }
+
+        // ENTERボタン or CANCELボタン：戻る
         else if (button == BTN_ET) {
-            if (cursor == C_DELAY) {
-                manager->pushScreen(new DelayScreen());
-                return;
-            }
-            else if (cursor == C_HPF) {
-                manager->pushScreen(new HPFScreen());
-                return;
-            }
-            else if (cursor == C_LPF) {
-                manager->pushScreen(new LPFScreen());
-                return;
-            }
-            else if (cursor == C_BACK) {
-                // 前の画面に戻る
+            if (cursor == C_BACK) {
                 manager->popScreen();
                 return;
             }
         }
-
-        // CANCELボタン：戻る
         else if (button == BTN_CXL) {
             manager->popScreen();
             return;
         }
 
-        if (moved) {
+        if (moved || changed) {
+            if (changed) needsFullRedraw = true;
             manager->invalidate();
         }
     }
@@ -99,7 +93,7 @@ public:
         if (firstDraw) {
             canvas.fillScreen(Color::BLACK);
             drawHeader(canvas);
-            drawAllFXItems(canvas);
+            drawAllItems(canvas);
             drawFooter(canvas);
 
             firstDraw = false;
@@ -116,96 +110,93 @@ public:
     }
 
 private:
-    /**
-     * @brief ヘッダー描画
-     */
     void drawHeader(GFXcanvas16& canvas) {
         canvas.fillRect(0, 0, SCREEN_WIDTH, HEADER_H, Color::BLACK);
         canvas.setTextSize(1);
         canvas.setTextColor(Color::WHITE);
         canvas.setCursor(2, 2);
-        canvas.print("FX SETTINGS");
+        canvas.print("MASTER SETTINGS");
         canvas.drawFastHLine(0, HEADER_H, SCREEN_WIDTH, Color::WHITE);
         manager->transferPartial(0, 0, SCREEN_WIDTH, HEADER_H + 1);
     }
 
-    /**
-     * @brief すべてのFXアイテムを描画
-     */
-    void drawAllFXItems(GFXcanvas16& canvas) {
-        drawFXItem(canvas, "DELAY", 0, cursor == C_DELAY);
-        drawFXItem(canvas, "HPF", 1, cursor == C_HPF);
-        drawFXItem(canvas, "LPF", 2, cursor == C_LPF);
+    void drawAllItems(GFXcanvas16& canvas) {
+        Synth& synth = Synth::getInstance();
+
+        // LEVEL (%)
+        int16_t level = synth.getMasterLevel();
+        char levelStr[8];
+        sprintf(levelStr, "%d%%", (level * 100) / 1024);
+        drawTextItem(canvas, "LEVEL", levelStr, 0, cursor == C_LEVEL);
+
+        // PAN
+        int16_t pan = synth.getMasterPan();
+        char panStr[8];
+        int16_t displayPan = pan - 100;
+        if (displayPan == 0) {
+            sprintf(panStr, "C");
+        } else if (displayPan < 0) {
+            sprintf(panStr, "L%d", -displayPan);
+        } else {
+            sprintf(panStr, "R%d", displayPan);
+        }
+        drawTextItem(canvas, "PAN", panStr, 1, cursor == C_PAN);
     }
 
-    /**
-     * @brief フッター（BACKボタン）を描画
-     */
     void drawFooter(GFXcanvas16& canvas) {
         canvas.drawFastHLine(0, FOOTER_Y, SCREEN_WIDTH, Color::WHITE);
         drawBackButton(canvas, cursor == C_BACK);
     }
 
-    /**
-     * @brief カーソル位置の要素を更新
-     */
     void updateCursorElement(GFXcanvas16& canvas, int8_t cursorPos) {
+        Synth& synth = Synth::getInstance();
         bool isSelected = (cursor == cursorPos);
 
-        if (cursorPos == C_DELAY) {
-            drawFXItem(canvas, "DELAY", 0, isSelected);
+        if (cursorPos == C_LEVEL) {
+            int16_t level = synth.getMasterLevel();
+            char levelStr[8];
+            sprintf(levelStr, "%d%%", (level * 100) / 1024);
+            drawTextItem(canvas, "LEVEL", levelStr, 0, isSelected);
         }
-        else if (cursorPos == C_HPF) {
-            drawFXItem(canvas, "HPF", 1, isSelected);
-        }
-        else if (cursorPos == C_LPF) {
-            drawFXItem(canvas, "LPF", 2, isSelected);
+        else if (cursorPos == C_PAN) {
+            int16_t pan = synth.getMasterPan();
+            char panStr[8];
+            int16_t displayPan = pan - 100;
+            if (displayPan == 0) {
+                sprintf(panStr, "C");
+            } else if (displayPan < 0) {
+                sprintf(panStr, "L%d", -displayPan);
+            } else {
+                sprintf(panStr, "R%d", displayPan);
+            }
+            drawTextItem(canvas, "PAN", panStr, 1, isSelected);
         }
         else if (cursorPos == C_BACK) {
             drawBackButton(canvas, isSelected);
         }
     }
 
-    /**
-     * @brief FXアイテム（選択メニュー）を描画
-     */
-    void drawFXItem(GFXcanvas16& canvas, const char* name, int index, bool selected) {
-        Synth& synth = Synth::getInstance();
+    void drawTextItem(GFXcanvas16& canvas, const char* name, const char* value, int index, bool selected) {
         int16_t y = HEADER_H + 2 + (index * ITEM_H);
 
-        // 有効状態を取得
-        bool isEnabled = false;
-        if (index == 0) isEnabled = synth.isDelayEnabled();
-        else if (index == 1) isEnabled = synth.isHpfEnabled();
-        else if (index == 2) isEnabled = synth.isLpfEnabled();
-
-        // 背景クリア（行全体）
         canvas.fillRect(0, y, SCREEN_WIDTH, ITEM_H, Color::BLACK);
-
-        // テキスト
         canvas.setTextSize(1);
-        int16_t x = 18;
 
-        // 選択時は小さいインジケータのみ
         if (selected) {
             canvas.fillRect(2, y + 2, 3, 8, Color::WHITE);
         }
 
-        // 有効状態インジケータ（小さい点）
-        if (isEnabled) {
-            canvas.fillCircle(10, y + 6, 2, Color::CYAN);
-        }
-
         canvas.setTextColor(selected ? Color::WHITE : Color::MD_GRAY);
-        canvas.setCursor(x, y + 4);
+        canvas.setCursor(10, y + 4);
         canvas.print(name);
+
+        canvas.setCursor(80, y + 4);
+        canvas.setTextColor(Color::WHITE);
+        canvas.print(value);
 
         manager->transferPartial(0, y, SCREEN_WIDTH, ITEM_H);
     }
 
-    /**
-     * @brief BACKボタンを描画
-     */
     void drawBackButton(GFXcanvas16& canvas, bool selected) {
         int16_t x = 2;
         int16_t y = FOOTER_Y + 2;
@@ -223,5 +214,26 @@ private:
         canvas.print("<");
 
         manager->transferPartial(x, y, w, h);
+    }
+
+    void adjustParameter(int8_t direction) {
+        Synth& synth = Synth::getInstance();
+
+        switch (cursor) {
+            case C_LEVEL: {
+                int16_t level = synth.getMasterLevel();
+                int16_t step = (direction == 1 || direction == -1) ? 10 : 50;
+                int16_t newLevel = level + (direction > 0 ? step : -step);
+                synth.setMasterLevel(newLevel);
+                break;
+            }
+            case C_PAN: {
+                int16_t pan = synth.getMasterPan();
+                int16_t step = (direction == 1 || direction == -1) ? 5 : 20;
+                int16_t newPan = pan + (direction > 0 ? step : -step);
+                synth.setMasterPan(newPan);
+                break;
+            }
+        }
     }
 };
