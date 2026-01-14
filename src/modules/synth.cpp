@@ -153,8 +153,21 @@ FASTRUN void Synth::generate() {
         }
 
         // 最終出力が無音に近い場合（閾値: 16）は終了とみなす
-        // note_is_activeがfalseか、出力レベルが非常に小さければリセット
-        if(!note_is_active || max_output < 16) {
+        // ただし、リリース中（Phase4）またはIdle状態のときのみ
+        // アタック/ディケイ/サステイン中は出力が小さくてもリセットしない
+        bool is_in_release = true;
+        for(uint8_t op = 0; op < MAX_OPERATORS; ++op) {
+            if (output_mask & (1 << op)) {  // キャリアのみチェック
+                auto state = ope_states[op].env_mems[n].state;
+                if (state != Envelope::EnvelopeState::Phase4 &&
+                    state != Envelope::EnvelopeState::Idle) {
+                    is_in_release = false;
+                    break;
+                }
+            }
+        }
+        
+        if(!note_is_active || (is_in_release && max_output < 16)) {
             notes_to_reset[reset_count++] = n;
         }
     }

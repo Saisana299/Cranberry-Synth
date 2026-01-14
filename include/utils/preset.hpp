@@ -4,7 +4,7 @@
 #include <array>
 
 // プリセット最大数
-constexpr uint8_t MAX_PRESETS = 1;
+constexpr uint8_t MAX_PRESETS = 2;
 
 /**
  * @brief オペレータープリセット構造体
@@ -97,7 +97,68 @@ public:
 private:
     // デフォルトプリセットデータ
     static inline const SynthPreset presets_[MAX_PRESETS] = {
-        // --- Preset 1: Melodrama ---
+        // --- Preset 1: Simple Sine ---
+        {
+            "Simple Sine",  // name
+            0,              // algorithm_id
+            0,              // feedback
+            {{              // operators
+                // Operator 0
+                {
+                    0,      // wavetable_id
+                    99,     // level
+                    1.0f,   // coarse
+                    0.0f,   // fine
+                    0,      // detune
+                    false,  // is_fixed
+                    99,     // rate1
+                    99,     // rate2
+                    99,     // rate3
+                    50,     // rate4
+                    99,     // level1
+                    99,     // level2
+                    99,     // level3
+                    0,      // level4
+                    true    // enabled
+                },
+                // Operator 1 (無効)
+                {
+                    0, 0, 1.0f, 0.0f, 0, false,
+                    99, 99, 99, 99, 99, 99, 99, 0,
+                    false
+                },
+                // Operator 2 (無効)
+                {
+                    0, 0, 1.0f, 0.0f, 0, false,
+                    99, 99, 99, 99, 99, 99, 99, 0,
+                    false
+                },
+                // Operator 3 (無効)
+                {
+                    0, 0, 1.0f, 0.0f, 0, false,
+                    99, 99, 99, 99, 99, 99, 99, 0,
+                    false
+                },
+                // Operator 4 (無効)
+                {
+                    0, 0, 1.0f, 0.0f, 0, false,
+                    99, 99, 99, 99, 99, 99, 99, 0,
+                    false
+                },
+                // Operator 5 (無効)
+                {
+                    0, 0, 1.0f, 0.0f, 0, false,
+                    99, 99, 99, 99, 99, 99, 99, 0,
+                    false
+                }
+            }},
+            {   // effects
+                false, 256, 307, 512,
+                false, 20000.0f, 0.70710678f, 1024,
+                false, 20.0f, 0.70710678f, 1024
+            }
+        },
+        // --- Preset 2: Melodrama ---
         {
             "Melodrama",    // name
             1,              // algorithm_id

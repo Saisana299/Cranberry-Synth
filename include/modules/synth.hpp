@@ -29,7 +29,7 @@ private:
     SynthNote notes[MAX_NOTES] = {};
 
     // 非発音時は-1、発音時はnotesのインデックス番号
-    int8_t midi_note_to_index[128];
+    volatile int8_t midi_note_to_index[128];
 
     struct OperatorState {
         Oscillator::Memory osc_mems[MAX_NOTES];

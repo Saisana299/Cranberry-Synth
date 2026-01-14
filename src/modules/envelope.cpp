@@ -44,21 +44,25 @@ FASTRUN void Envelope::update(Memory& mem) {
     switch(mem.state) {
         case EnvelopeState::Phase1:
             // Phase1: 現在レベル → L1（アタック）
-            // 指数カーブ: 残り距離に比例した速度で近づく
+            // 非線形（指数的）カーブ: 残り距離の一定割合を移動
             if (rate1 == MAX_ATTENUATION) {
                 // 即座に到達
                 mem.log_level = target_level1;
                 mem.state = EnvelopeState::Phase2;
             } else if (mem.log_level > target_level1) {
-                // 減衰量を減らす（音量を上げる）方向 - 指数カーブ
+                // 減衰量を減らす（音量を上げる）方向
                 uint32_t distance = mem.log_level - target_level1;
-                // 距離に基づいた指数的アプローチ（距離が大きいほど速く移動）
-                uint32_t step = (distance >> 4) + rate1;  // 距離の1/16 + 基本レート
-                if (step > distance) step = distance;
-                mem.log_level -= step;
-                if (mem.log_level <= target_level1) {
+                // rate1_paramに基づいてシフト量を決定
+                // rate 0: shift=18 (非常に遅い), rate 96: shift=2 (非常に速い)
+                uint32_t shift = 18 - (rate1_param / 6);
+                uint32_t step = distance >> shift;
+                if (step == 0) step = 1;  // 最低1を保証（収束を確実に）
+
+                if (step >= distance) {
                     mem.log_level = target_level1;
                     mem.state = EnvelopeState::Phase2;
+                } else {
+                    mem.log_level -= step;
                 }
             } else if (mem.log_level < target_level1) {
                 // 減衰量を増やす（音量を下げる）方向

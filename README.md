@@ -153,7 +153,7 @@ Cranberry-Synth/
 
 ## License
 
-GNU General Public License Version 3 - see [LICENSE](LICENSE)
+GNU General Public License v3.0 - see [LICENSE](LICENSE)
 
 ---
 
