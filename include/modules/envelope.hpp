@@ -135,7 +135,8 @@ private:
 
         // Level 0-99 を TL (Total Level) 0-127 相当に変換
         // TL 0 = 最大音量, TL 127 = 無音
-        constexpr uint8_t dx7_level_lut[100] = {
+        // AudioMath::LEVEL_TO_TL と同じ値
+        constexpr uint8_t level_lut[100] = {
             127, 122, 118, 114, 110, 107, 104, 102, 100, 98,  // 0-9
             96, 94, 92, 90, 88, 86, 85, 84, 82, 81,           // 10-19
             79, 78, 77, 76, 75, 74, 73, 72, 71, 70,           // 20-29
@@ -152,7 +153,7 @@ private:
             // 減衰量にスケーリング
             // TL 0 → 減衰量 0 (最大音量)
             // TL 127 → 減衰量 MAX_ATTENUATION (無音)
-            uint32_t tl = dx7_level_lut[i];
+            uint32_t tl = level_lut[i];
             table[i] = (tl * MAX_ATTENUATION) / 127;
         }
         return table;

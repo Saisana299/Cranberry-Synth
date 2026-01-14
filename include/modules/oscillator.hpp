@@ -31,17 +31,15 @@ public:
     void setFine(float fine_level);
     void setDetune(int8_t detune_cents);
 
-    // 非線形レベルテーブル
+    // レベルテーブル (Level 0-99 → 線形スケール 0-1024)
+    // AudioMath::levelToLinear() を使用してキャッシュ
     static int16_t level_table[100];
     static bool table_initialized;
     static void initTable() {
         if (table_initialized) return;
 
         for (size_t i = 0; i < 100; ++i) {
-            float x = i / 99.0f;
-            // log(0.5)/log(0.75) の計算結果リテラル
-            const float exponent = 2.40942f;
-            level_table[i] = static_cast<int16_t>(powf(x, exponent) * 1024.0f);
+            level_table[i] = AudioMath::levelToLinear(i);
         }
         table_initialized = true;
     }
@@ -87,6 +85,16 @@ public:
         return detune_cents;
     }
 
+    /** @brief FIXEDモードかどうかを取得 */
+    inline bool isFixed() const {
+        return is_fixed;
+    }
+
+    /** @brief FIXEDモードを設定 */
+    void setFixed(bool fixed) {
+        this->is_fixed = fixed;
+    }
+
     /**
      * @brief オシレーターの状態を更新
      *
@@ -123,13 +131,25 @@ public:
         // 位相計算
         uint32_t effective_phase = base_phase + static_cast<uint32_t>(mod_phase_offset);
 
-        // 波形テーブルを参照する
-        const size_t index = (effective_phase >> bit_padding) & (wavetable_size - 1); // サンプル数が2^Nである前提
-        const int16_t sample = wavetable[index];
+        // 波形テーブルを線形補間で参照
+        // bit_padding: 32 - log2(wavetable_size) で、上位ビットがインデックス
+        const uint32_t phase_shifted = effective_phase >> bit_padding;
+        const size_t index = phase_shifted & (wavetable_size - 1);
+        const size_t next_index = (index + 1) & (wavetable_size - 1);
+
+        // 補間のための小数部を取得（bit_padding未満のビット）
+        // 補間精度: 16ビット (0〜65535)
+        const uint32_t frac_mask = (1U << bit_padding) - 1;
+        const uint32_t frac = (effective_phase & frac_mask) >> (bit_padding - 16);
+
+        // 線形補間: y0 + (y1 - y0) * frac / 65536
+        const int32_t y0 = wavetable[index];
+        const int32_t y1 = wavetable[next_index];
+        const int32_t sample = y0 + (((y1 - y0) * static_cast<int32_t>(frac)) >> 16);
 
         // ベロシティレベルとオシレーターレベルを適用
         const int32_t scaling = (static_cast<int32_t>(local_vel_vol) * static_cast<int32_t>(level)) >> 10;
-        return static_cast<int16_t>((static_cast<int32_t>(sample) * scaling) >> 10);
+        return static_cast<int16_t>((sample * scaling) >> 10);
     }
 
 private:
@@ -137,9 +157,7 @@ private:
     static constexpr float PHASE_SCALE_FACTOR = static_cast<float>(1ULL << 32) / SAMPLE_RATE;
 
     // FM変調の位相シフト量
-    // 2^32 / (2 * 32767) ≈ 65536 = 2^16
-    // これにより mod_input << 16 で適切な位相オフセットになる
-    static constexpr int MOD_PHASE_SHIFT = 16;
+    static constexpr int MOD_PHASE_SHIFT = 17;
 
     struct WavetableInfo {
         const int16_t* data;

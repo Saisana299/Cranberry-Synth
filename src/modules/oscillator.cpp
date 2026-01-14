@@ -10,7 +10,15 @@ bool Oscillator::table_initialized = false;
  * @param note MIDIノート番号
  */
 void Oscillator::setFrequency(Memory& mem, uint8_t note) {
-    mem.delta = AudioMath::ratioToFrequency(note, detune_cents, coarse, fine_level) * PHASE_SCALE_FACTOR;
+    float freq;
+    if (is_fixed) {
+        // FIXEDモード: MIDIノートに関係なく固定周波数
+        freq = AudioMath::fixedToFrequency(detune_cents, coarse, fine_level);
+    } else {
+        // RATIOモード: MIDIノートに対する比率で周波数を設定
+        freq = AudioMath::ratioToFrequency(note, detune_cents, coarse, fine_level);
+    }
+    mem.delta = static_cast<uint32_t>(freq * PHASE_SCALE_FACTOR);
 }
 
 /**

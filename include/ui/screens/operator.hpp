@@ -307,6 +307,7 @@ private:
         C_ENABLED = 0,
         C_WAVE,
         C_LEVEL,
+        C_MODE,  // RATIO/FIXED モード切り替え
         C_PITCH,
         C_ENV,  // ADSRからENVに変更
         C_BACK,
@@ -368,6 +369,13 @@ public:
                 } else {
                     osc.enable();
                 }
+                changed = true;
+            }
+            else if (cursor == C_MODE) {
+                // RATIO/FIXEDモードをトグル
+                Synth& synth = Synth::getInstance();
+                Oscillator& osc = const_cast<Oscillator&>(synth.getOperatorOsc(operatorIndex));
+                osc.setFixed(!osc.isFixed());
                 changed = true;
             }
             else if (cursor == C_ENV) {
@@ -456,13 +464,28 @@ private:
         sprintf(levelStr, "%d", osc.getLevel());
         drawTextItem(canvas, "LEVEL", levelStr, 2, cursor == C_LEVEL);
 
+        // MODE表示 (RATIO/FIXED)
+        const char* modeStr = osc.isFixed() ? "FIXED" : "RATIO";
+        drawTextItem(canvas, "MODE", modeStr, 3, cursor == C_MODE);
+
         // PITCH表示 (Coarse)
-        char pitchStr[8];
-        sprintf(pitchStr, "%.1f", osc.getCoarse());
-        drawTextItem(canvas, "PITCH", pitchStr, 3, cursor == C_PITCH);
+        char pitchStr[16];
+        if (osc.isFixed()) {
+            // FIXEDモード: 周波数を表示
+            float freq = AudioMath::fixedToFrequency(osc.getDetune(), osc.getCoarse(), osc.getFine());
+            if (freq >= 1000.0f) {
+                sprintf(pitchStr, "%.1fkHz", freq / 1000.0f);
+            } else {
+                sprintf(pitchStr, "%.1fHz", freq);
+            }
+        } else {
+            // RATIOモード: 比率を表示
+            sprintf(pitchStr, "%.1f", osc.getCoarse());
+        }
+        drawTextItem(canvas, "PITCH", pitchStr, 4, cursor == C_PITCH);
 
         // ENV表示 (サブメニュー) - ADSRからENVに変更
-        drawMenuItemWithArrow(canvas, "ENV", 4, cursor == C_ENV);
+        drawMenuItemWithArrow(canvas, "ENV", 5, cursor == C_ENV);
     }
 
     /**
@@ -494,13 +517,26 @@ private:
             sprintf(levelStr, "%d", osc.getLevel());
             drawTextItem(canvas, "LEVEL", levelStr, 2, isSelected);
         }
+        else if (cursorPos == C_MODE) {
+            const char* modeStr = osc.isFixed() ? "FIXED" : "RATIO";
+            drawTextItem(canvas, "MODE", modeStr, 3, isSelected);
+        }
         else if (cursorPos == C_PITCH) {
-            char pitchStr[8];
-            sprintf(pitchStr, "%.1f", osc.getCoarse());
-            drawTextItem(canvas, "PITCH", pitchStr, 3, isSelected);
+            char pitchStr[16];
+            if (osc.isFixed()) {
+                float freq = AudioMath::fixedToFrequency(osc.getDetune(), osc.getCoarse(), osc.getFine());
+                if (freq >= 1000.0f) {
+                    sprintf(pitchStr, "%.1fkHz", freq / 1000.0f);
+                } else {
+                    sprintf(pitchStr, "%.1fHz", freq);
+                }
+            } else {
+                sprintf(pitchStr, "%.1f", osc.getCoarse());
+            }
+            drawTextItem(canvas, "PITCH", pitchStr, 4, isSelected);
         }
         else if (cursorPos == C_ENV) {
-            drawMenuItemWithArrow(canvas, "ENV", 4, isSelected);
+            drawMenuItemWithArrow(canvas, "ENV", 5, isSelected);
         }
         else if (cursorPos == C_BACK) {
             drawBackButton(canvas, isSelected);
@@ -604,13 +640,40 @@ private:
                 osc.setLevel(newLevel);
                 break;
             }
+            case C_MODE: {
+                // RATIO/FIXEDモードをトグル
+                osc.setFixed(!osc.isFixed());
+                break;
+            }
             case C_PITCH: {
-                // Coarseを変更 (0.0-31.0)
-                float currentCoarse = osc.getCoarse();
-                float newCoarse = currentCoarse + direction * 0.1f;
-                if (newCoarse < 0.0f) newCoarse = 0.0f;
-                if (newCoarse > 31.0f) newCoarse = 31.0f;
-                osc.setCoarse(newCoarse);
+                // FIXEDモードとRATIOモードでピッチパラメータの調整方法を変える
+                if (osc.isFixed()) {
+                    // FIXEDモード: coarse(0-3)とfine(0-99)で周波数を設定
+                    // 左右で fine を調整、ロングプレスで coarse を調整
+                    if (direction == 1 || direction == -1) {
+                        // 通常押し: fine を調整
+                        float currentFine = osc.getFine();
+                        float newFine = currentFine + direction * 1.0f;
+                        if (newFine < 0.0f) newFine = 0.0f;
+                        if (newFine > 99.0f) newFine = 99.0f;
+                        osc.setFine(newFine);
+                    } else {
+                        // ロングプレス: coarse を調整 (0-3の範囲)
+                        float currentCoarse = osc.getCoarse();
+                        int8_t coarseInt = static_cast<int8_t>(currentCoarse) & 0x03;
+                        coarseInt += (direction > 0) ? 1 : -1;
+                        if (coarseInt < 0) coarseInt = 3;
+                        if (coarseInt > 3) coarseInt = 0;
+                        osc.setCoarse(static_cast<float>(coarseInt));
+                    }
+                } else {
+                    // RATIOモード: Coarseを変更 (0.0-31.0)
+                    float currentCoarse = osc.getCoarse();
+                    float newCoarse = currentCoarse + direction * 0.1f;
+                    if (newCoarse < 0.0f) newCoarse = 0.0f;
+                    if (newCoarse > 31.0f) newCoarse = 31.0f;
+                    osc.setCoarse(newCoarse);
+                }
                 break;
             }
             case C_ENV:

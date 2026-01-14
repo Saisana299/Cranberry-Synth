@@ -72,6 +72,50 @@ public:
     static constexpr float ONE_OVER_127 = 1.0f / 127.0f;
     static constexpr float INT16_TO_FLOAT = 1.0f / 32767.0f;
 
+    // ベロシティテーブル
+    // velocity 0-127 を 64エントリに圧縮（velocity >> 1 でインデックス）
+    // 出力は 0-254 の範囲、非線形カーブで低ベロシティの感度が高い
+    static inline const uint8_t VELOCITY_TABLE[64] = {
+        0, 70, 86, 97, 106, 114, 121, 126, 132, 138, 142, 148, 152, 156, 160, 163,
+        166, 170, 173, 174, 178, 181, 184, 186, 189, 190, 194, 196, 198, 200, 202,
+        205, 206, 209, 211, 214, 216, 218, 220, 222, 224, 225, 227, 229, 230, 232,
+        233, 235, 237, 238, 240, 241, 242, 243, 244, 246, 246, 248, 249, 250, 251,
+        252, 253, 254
+    };
+
+    // レベル → TL (Total Level) 変換テーブル
+    // Level 0 = TL 127 (無音), Level 99 = TL 0 (最大音量)
+    static constexpr uint8_t LEVEL_TO_TL[100] = {
+        127, 122, 118, 114, 110, 107, 104, 102, 100, 98,  // 0-9
+         96,  94,  92,  90,  88,  86,  85,  84,  82,  81,  // 10-19
+         79,  78,  77,  76,  75,  74,  73,  72,  71,  70,  // 20-29
+         69,  68,  67,  66,  65,  64,  63,  62,  61,  60,  // 30-39
+         59,  58,  57,  56,  55,  54,  53,  52,  51,  50,  // 40-49
+         49,  48,  47,  46,  45,  44,  43,  42,  41,  40,  // 50-59
+         39,  38,  37,  36,  35,  34,  33,  32,  31,  30,  // 60-69
+         29,  28,  27,  26,  25,  24,  23,  22,  21,  20,  // 70-79
+         19,  18,  17,  16,  15,  14,  13,  12,  11,  10,  // 80-89
+          9,   8,   7,   6,   5,   4,   3,   2,   1,   0   // 90-99
+    };
+
+    /**
+     * @brief レベル(0-99)を線形スケール(0-1024)に変換
+     * @param level オペレータレベル (0-99)
+     * @return int16_t 線形スケールの音量 (0-1024)
+     */
+    static inline int16_t levelToLinear(uint8_t level) {
+        if (level >= 100) level = 99;
+        uint8_t tl = LEVEL_TO_TL[level];
+        if (tl >= 127) {
+            return 0;
+        }
+        // TLを対数スケールから線形スケールに変換
+        // dB = -0.75 * TL (約96dB range for TL 0-127)
+        float db = -0.75f * tl;
+        float linear = powf(10.0f, db / 20.0f);
+        return static_cast<int16_t>(linear * 1024.0f);
+    }
+
     /**
      * @brief MIDIノートを周波数に変換
      *
@@ -101,19 +145,55 @@ public:
         return noteToFrequency(note) * pitch_mod * detune_factor;
     }
 
+    /**
+     * @brief 固定周波数モードで周波数を計算
+     *
+     * @param detune_cents デチューンするcent数
+     * @param coarse 粗調整 (0-31、下位2ビット0-3が使用される)
+     * @param fine_level 微調整 (0-99)
+     * @return float 固定周波数（Hz）
+     *
+     * 計算式: freq = 10^(coarse & 3) * exp(ln(10) * fine / 100)
+     * - coarse & 3 = 0: 1Hz ベース (1.0 ~ 9.77 Hz)
+     * - coarse & 3 = 1: 10Hz ベース (10 ~ 97.7 Hz)
+     * - coarse & 3 = 2: 100Hz ベース (100 ~ 977 Hz)
+     * - coarse & 3 = 3: 1000Hz ベース (1000 ~ 9772 Hz)
+     */
     static inline float fixedToFrequency(int8_t detune_cents, float coarse, float fine_level) {
-        //TODO
-        return 0.0f;
+        // freq = 10^(coarse & 3) * exp(ln(10) * fine / 100)
+        // ln(10) ≈ 2.302585
+        static constexpr float LN10 = 2.302585093f;
+        static constexpr float FIXED_BASE[4] = {1.0f, 10.0f, 100.0f, 1000.0f};
+
+        uint8_t coarse_int = static_cast<uint8_t>(coarse);
+        float base_freq = FIXED_BASE[coarse_int & 0x03];
+        float freq = base_freq * expf(LN10 * fine_level * 0.01f);
+
+        // デチューン適用
+        float detune_factor = 1.0f;
+        if (detune_cents != 0) {
+            detune_factor = powf(2.0f, detune_cents * 0.00083333333f);
+        }
+
+        return freq * detune_factor;
     }
 
     /**
-     * @brief ベロシティを音量レベルに変換
+     * @brief ベロシティを音量レベルに変換
      *
-     * @param velocity
-     * @return float
+     * @param velocity MIDIベロシティ (0-127)
+     * @return float 0.0〜1.0 の音量係数
      */
     static inline float velocityToAmplitude(uint8_t velocity) {
-        return velocity * ONE_OVER_127;
+        if (velocity == 0) return 0.0f;
+        if (velocity > 127) velocity = 127;
+
+        // テーブルから非線形値を取得 (0-254)
+        uint8_t vel_idx = velocity >> 1;  // 0-63
+        float vel_val = static_cast<float>(VELOCITY_TABLE[vel_idx]);
+
+        // 254を1.0にマッピング
+        return vel_val * (1.0f / 254.0f);
     }
 
     /**

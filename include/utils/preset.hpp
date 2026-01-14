@@ -25,6 +25,7 @@ struct OperatorPreset {
     float coarse = 1.0f;         // 粗調整 (0.0-31.0)
     float fine = 0.0f;           // 微調整 (0.0-99.0)
     int8_t detune = 0;           // デチューン (-7 to 7)
+    bool is_fixed = false;       // FIXEDモード (true: 固定周波数, false: RATIO)
 
     // エンベロープ設定 (Rate/Level)
     uint8_t rate1 = 99;          // Rate1: アタックレート (0-99)
@@ -109,6 +110,7 @@ private:
                     4.0f,   // coarse
                     0.0f,   // fine
                     7,      // detune
+                    false, // is_fixed
                     99,     // rate1
                     32,     // rate2
                     12,     // rate3
@@ -126,6 +128,7 @@ private:
                     4.0f,   // coarse
                     0.0f,   // fine
                     7,      // detune
+                    false, // is_fixed
                     99,     // rate1
                     48,     // rate2
                     10,     // rate3
@@ -143,6 +146,7 @@ private:
                     2.0f,   // coarse
                     0.0f,   // fine
                     -7,     // detune
+                    false, // is_fixed
                     99,     // rate1
                     40,     // rate2
                     10,     // rate3
@@ -160,6 +164,7 @@ private:
                     6.0f,   // coarse
                     0.0f,   // fine
                     -7,     // detune
+                    false, // is_fixed
                     84,     // rate1
                     24,     // rate2
                     10,     // rate3
@@ -177,6 +182,7 @@ private:
                     12.0f,  // coarse
                     0.0f,   // fine
                     -7,     // detune
+                    false, // is_fixed
                     82,     // rate1
                     26,     // rate2
                     10,     // rate3
@@ -194,6 +200,7 @@ private:
                     0.0f,   // coarse
                     65.0f,  // fine
                     0,      // detune
+                    true, // is_fixed
                     96,     // rate1
                     76,     // rate2
                     10,     // rate3
@@ -207,7 +214,7 @@ private:
             }},
             {   // effects
                 false, 256, 307, 512,
-                true, 6000.0f, 0.70710678f, 1024,
+                false, 6000.0f, 0.70710678f, 1024,
                 false, 20.0f, 0.70710678f, 1024
             }
         },

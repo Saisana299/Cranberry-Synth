@@ -93,9 +93,10 @@ FASTRUN void Synth::generate() {
 
                 // 2. フィードバック入力（ターゲットオペレーターのみ）
                 if (is_fb_target) {
-                    int32_t fb_val = (fb_h0 + fb_h1) >> 1;
+                    // scaled_fb = (y0 + y) >> (fb_shift + 1)
+                    // 平均化とスケーリングを一度に行う
                     if (current_fb_shift < 30) {
-                        mod_input += (fb_val >> current_fb_shift);
+                        mod_input += (fb_h0 + fb_h1) >> (current_fb_shift + 1);
                     }
                 }
 
@@ -434,6 +435,7 @@ void Synth::loadPreset(uint8_t preset_id) {
             operators[i].osc.setCoarse(op_preset.coarse);
             operators[i].osc.setFine(op_preset.fine);
             operators[i].osc.setDetune(op_preset.detune);
+            operators[i].osc.setFixed(op_preset.is_fixed);
             operators[i].osc.enable();
 
             // エンベロープ設定 (Rate/Level)
