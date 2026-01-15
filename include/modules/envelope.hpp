@@ -71,36 +71,35 @@ private:
     /**
      * @brief レートテーブルを生成
      *
-     * Rate 0 = 約28秒, Rate 13 = 約16秒, Rate 30 = 約8秒, Rate 99 = 即座
+     * Rate 0 = 約28秒, Rate 13 = 約16秒, Rate 30 = 約8秒, Rate 99 = 約2ms
+     * クリックノイズ防止のため、Rate 99でも最低2msのスムージング時間を確保
      */
     static constexpr std::array<uint32_t, RATE_TABLE_SIZE> generate_rate_table() {
         std::array<uint32_t, RATE_TABLE_SIZE> table{};
 
         // Rate 13: 約16秒, Rate 30: 約8秒, Rate 50: 約3秒
-        // Rate 70: 約1.3秒, Rate 90: 約0.6秒, Rate 99: 即座
+        // Rate 70: 約1.3秒, Rate 90: 約0.6秒, Rate 99: 約2ms（クリックノイズ防止）
+
+        // 最小時間: 2ms（クリックノイズ防止、業界標準）
+        constexpr double MIN_TIME_SECONDS = 0.002;
 
         for (size_t i = 0; i < RATE_TABLE_SIZE; ++i) {
-            if (i == RATE_TABLE_SIZE - 1) {
-                // Rate 99 は即座
-                table[i] = MAX_ATTENUATION;
-            } else {
-                double time_seconds = 0.0;
+            double time_seconds = 0.0;
 
-                // 指数カーブ: time = 28 * 2^(-rate/16)
-                // 約16レートごとに半減（緩やかなカーブ）
-                double rate_normalized = static_cast<double>(i) / 16.0;
-                time_seconds = 28.0 * std::pow(0.5, rate_normalized);
+            // 指数カーブ: time = 28 * 2^(-rate/16)
+            // 約16レートごとに半減（緩やかなカーブ）
+            double rate_normalized = static_cast<double>(i) / 16.0;
+            time_seconds = 28.0 * std::pow(0.5, rate_normalized);
 
-                // 最小値を1msに制限
-                if (time_seconds < 0.001) time_seconds = 0.001;
+            // 最小値を5msに制限（クリックノイズ防止）
+            if (time_seconds < MIN_TIME_SECONDS) time_seconds = MIN_TIME_SECONDS;
 
-                // time_seconds で MAX_ATTENUATION を移動するための1サンプルあたりの増分
-                double samples = time_seconds * SAMPLE_RATE;
-                if (samples < 1.0) samples = 1.0;
+            // time_seconds で MAX_ATTENUATION を移動するための1サンプルあたりの増分
+            double samples = time_seconds * SAMPLE_RATE;
+            if (samples < 1.0) samples = 1.0;
 
-                table[i] = static_cast<uint32_t>(MAX_ATTENUATION / samples);
-                if (table[i] == 0) table[i] = 1; // 最低でも1
-            }
+            table[i] = static_cast<uint32_t>(MAX_ATTENUATION / samples);
+            if (table[i] == 0) table[i] = 1; // 最低でも1
         }
         return table;
     }

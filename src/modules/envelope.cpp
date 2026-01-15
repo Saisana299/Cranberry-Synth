@@ -45,11 +45,7 @@ FASTRUN void Envelope::update(Memory& mem) {
         case EnvelopeState::Phase1:
             // Phase1: 現在レベル → L1（アタック）
             // 非線形（指数的）カーブ: 残り距離の一定割合を移動
-            if (rate1 == MAX_ATTENUATION) {
-                // 即座に到達
-                mem.log_level = target_level1;
-                mem.state = EnvelopeState::Phase2;
-            } else if (mem.log_level > target_level1) {
+            if (mem.log_level > target_level1) {
                 // 減衰量を減らす（音量を上げる）方向
                 uint32_t distance = mem.log_level - target_level1;
                 // rate1_paramに基づいてシフト量を決定
@@ -80,10 +76,7 @@ FASTRUN void Envelope::update(Memory& mem) {
 
         case EnvelopeState::Phase2:
             // Phase2: L1 → L2（ディケイ1）
-            if (rate2 == MAX_ATTENUATION) {
-                mem.log_level = target_level2;
-                mem.state = EnvelopeState::Phase3;
-            } else if (mem.log_level < target_level2) {
+            if (mem.log_level < target_level2) {
                 // 減衰量を増やす（音量を下げる）方向
                 uint32_t next = mem.log_level + rate2;
                 if (next >= target_level2) {
@@ -109,10 +102,7 @@ FASTRUN void Envelope::update(Memory& mem) {
         case EnvelopeState::Phase3:
             // Phase3: L2 → L3（ディケイ2/サステイン）
             // ノートオフまでこのフェーズに留まる
-            if (rate3 == MAX_ATTENUATION) {
-                mem.log_level = target_level3;
-                // Phase3はサステインなので、留まる
-            } else if (mem.log_level < target_level3) {
+            if (mem.log_level < target_level3) {
                 uint32_t next = mem.log_level + rate3;
                 if (next >= target_level3) {
                     mem.log_level = target_level3;
@@ -132,10 +122,7 @@ FASTRUN void Envelope::update(Memory& mem) {
 
         case EnvelopeState::Phase4:
             // Phase4: 現在レベル → L4（リリース）
-            if (rate4 == MAX_ATTENUATION) {
-                mem.log_level = target_level4;
-                mem.state = EnvelopeState::Idle;
-            } else if (mem.log_level < target_level4) {
+            if (mem.log_level < target_level4) {
                 uint32_t next = mem.log_level + rate4;
                 if (next >= target_level4) {
                     mem.log_level = target_level4;
