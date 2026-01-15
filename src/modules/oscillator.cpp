@@ -73,6 +73,7 @@ void Oscillator::setLevel(int16_t level) {
 
 void Oscillator::setLevelNonLinear(uint8_t level) {
     uint8_t clamped_level = std::clamp<uint8_t>(level, 0, 99);
+    this->level_raw = clamped_level;
     this->level = level_table[clamped_level];
 }
 

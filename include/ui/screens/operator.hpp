@@ -948,12 +948,12 @@ private:
             }
             case C_LEVEL: {
                 // レベルを変更 (0-99)
-                int16_t currentLevel = osc.getLevel();
+                int16_t currentLevel = static_cast<int16_t>(osc.getLevel());
                 int16_t step = (direction == 1 || direction == -1) ? 1 : 5;
                 int16_t newLevel = currentLevel + (direction > 0 ? step : -step);
                 if (newLevel < 0) newLevel = 0;
                 if (newLevel > 99) newLevel = 99;
-                osc.setLevelNonLinear(newLevel);
+                osc.setLevelNonLinear(static_cast<uint8_t>(newLevel));
                 break;
             }
             case C_PITCH:

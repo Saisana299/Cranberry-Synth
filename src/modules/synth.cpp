@@ -166,7 +166,7 @@ FASTRUN void Synth::generate() {
                 }
             }
         }
-        
+
         if(!note_is_active || (is_in_release && max_output < 16)) {
             notes_to_reset[reset_count++] = n;
         }
