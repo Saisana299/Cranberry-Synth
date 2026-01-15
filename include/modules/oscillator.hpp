@@ -66,8 +66,13 @@ public:
         return 0;
     }
 
-    /** @brief レベルを取得 */
-    inline int16_t getLevel() const {
+    /** @brief レベルを取得 (0-99) */
+    inline uint8_t getLevel() const {
+        return level_raw;
+    }
+
+    /** @brief 線形レベルを取得 (0-1024) */
+    inline int16_t getLevelLinear() const {
         return level;
     }
 
@@ -200,7 +205,8 @@ private:
     const int16_t* wavetable = Wavetable::sine;
     size_t wavetable_size = sizeof(Wavetable::sine) / sizeof(Wavetable::sine[0]);
     bool enabled = false;
-    int16_t level = 0;
+    int16_t level = 0;      // 線形スケール (0-1024)
+    uint8_t level_raw = 0;  // 非線形レベル (0-99)
 
     // ピッチ
     float coarse = 1.0f;
