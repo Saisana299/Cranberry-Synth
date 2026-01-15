@@ -4,7 +4,7 @@
 #include <array>
 
 // プリセット最大数
-constexpr uint8_t MAX_PRESETS = 2;
+constexpr uint8_t MAX_PRESETS = 3;
 
 /**
  * @brief オペレータープリセット構造体
@@ -268,6 +268,127 @@ private:
                     31,     // rate4
                     99,     // level1
                     92,     // level2
+                    0,      // level3
+                    0,      // level4
+                    true    // enabled
+                }
+            }},
+            {   // effects
+                false, 256, 307, 512,
+                false, 6000.0f, 0.70710678f, 1024,
+                false, 20.0f, 0.70710678f, 1024
+            }
+        },
+        // --- Preset 3: KinzkHarp ---
+        {
+            "KinzkHarp",    // name
+            2,              // algorithm_id
+            7,              // feedback
+            {{              // operators
+                // Operator 0
+                {
+                    0,      // wavetable_id (sine)
+                    94,     // level
+                    2.0f,   // coarse
+                    0.0f,   // fine
+                    0,      // detune
+                    false, // is_fixed
+                    99,     // rate1
+                    99,     // rate2
+                    23,     // rate3
+                    39,     // rate4
+                    99,     // level1
+                    99,     // level2
+                    0,      // level3
+                    0,      // level4
+                    true    // enabled
+                },
+                // Operator 1
+                {
+                    0,      // wavetable_id (sine)
+                    73,     // level
+                    6.0f,   // coarse
+                    0.0f,   // fine
+                    -2,      // detune
+                    false, // is_fixed
+                    95,     // rate1
+                    35,     // rate2
+                    23,     // rate3
+                    28,     // rate4
+                    99,     // level1
+                    70,     // level2
+                    0,     // level3
+                    0,      // level4
+                    true    // enabled
+                },
+                // Operator 2
+                {
+                    0,      // wavetable_id (sine)
+                    91,     // level
+                    16.0f,   // coarse
+                    0.0f,   // fine
+                    -6,     // detune
+                    false, // is_fixed
+                    95,     // rate1
+                    48,     // rate2
+                    28,     // rate3
+                    24,     // rate4
+                    94,     // level1
+                    79,     // level2
+                    0,      // level3
+                    0,      // level4
+                    true    // enabled
+                },
+                // Operator 3
+                {
+                    0,      // wavetable_id (sine)
+                    99,     // level
+                    2.0f,   // coarse
+                    0.0f,   // fine
+                    -7,     // detune
+                    false, // is_fixed
+                    59,     // rate1
+                    99,     // rate2
+                    23,     // rate3
+                    39,     // rate4
+                    66,     // level1
+                    99,     // level2
+                    0,     // level3
+                    0,      // level4
+                    true    // enabled
+                },
+                // Operator 4
+                {
+                    0,      // wavetable_id (sine)
+                    75,     // level
+                    6.0f,  // coarse
+                    0.0f,   // fine
+                    4,     // detune
+                    false, // is_fixed
+                    95,     // rate1
+                    35,     // rate2
+                    23,     // rate3
+                    28,     // rate4
+                    99,     // level1
+                    70,     // level2
+                    0,      // level3
+                    0,      // level4
+                    true    // enabled
+                },
+                // Operator 5
+                {
+                    0,      // wavetable_id (sine)
+                    99,     // level
+                    14.0f,   // coarse
+                    0.0f,  // fine
+                    -1,      // detune
+                    false, // is_fixed
+                    95,     // rate1
+                    48,     // rate2
+                    28,     // rate3
+                    24,     // rate4
+                    93,     // level1
+                    78,     // level2
                     0,      // level3
                     0,      // level4
                     true    // enabled

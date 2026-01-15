@@ -1,7 +1,7 @@
 .pio
 .vscode/
 .venv/
-audio_analysis.ipynb
+envelope_comparison.ipynb
 
 cranberry.wav
 otehon.wav

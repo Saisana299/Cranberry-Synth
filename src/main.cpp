@@ -1,5 +1,5 @@
 /** Cranberry Synth **/
-/** Mini Wavetable Synthesizer on Teensy 4.1 **/
+/** Mini FM Synthesizer on Teensy 4.1 **/
 /** @author Saisana299 **/
 
 #include <Arduino.h>
@@ -78,7 +78,6 @@ void setup() {
     digitalWrite(LED_BUILTIN, LOW);
 }
 
-// 1ループ2900μsまで
 void loop() {
     static uint8_t last_mode = state.getModeState();
     auto mode_state = state.getModeState();
