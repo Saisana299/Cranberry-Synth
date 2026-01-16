@@ -1,7 +1,4 @@
-.pio
+.pio/
 .vscode/
 .venv/
-envelope_comparison.ipynb
-
-cranberry.wav
-otehon.wav
+.compare/

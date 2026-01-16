@@ -162,6 +162,7 @@ GNU General Public License v3.0 - see [LICENSE](LICENSE)
 - [PJRC](https://www.pjrc.com/) – Teensy & Audio Library
 - [Adafruit](https://www.adafruit.com/) – GFX Libraries
 - [MajicDesigns](https://github.com/MajicDesigns/MD_MIDIFile) – MIDI File Library
+- [Dexed](https://github.com/asb2m10/dexed) – DX7 compatible FM synthesis algorithms (envelope, feedback, key scaling)
 
 ---
 

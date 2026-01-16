@@ -4,15 +4,24 @@ static_assert((Envelope::EXP_TABLE_SIZE & (Envelope::EXP_TABLE_SIZE - 1)) == 0, 
 
 /** @brief エンベロープを初期位置に戻す（ノートオン時） */
 void Envelope::reset(Memory& mem) {
-    mem.state = EnvelopeState::Phase1;
-
     // 新規ノートの場合（完全に無音 or Idle状態）は初期化
-    if (mem.log_level >= MAX_ATTENUATION) {
+    if (mem.log_level >= MAX_ATTENUATION || mem.state == EnvelopeState::Idle) {
         mem.log_level = MAX_ATTENUATION;
         mem.current_level = 0;
+        mem.state = EnvelopeState::Phase1;
+    } else {
+        // リトリガーの場合：現在のlog_levelを維持
+        // 現在の音量がtarget_level1より高い（減衰量が小さい）場合は
+        // Phase1をスキップしてPhase2から開始（音量が下がるのを防止）
+        if (mem.log_level <= target_level1) {
+            // 現在の音量 >= level1 → Phase2から開始
+            mem.state = EnvelopeState::Phase2;
+        } else {
+            // 現在の音量 < level1 → Phase1から開始（通常のアタック）
+            mem.state = EnvelopeState::Phase1;
+        }
     }
-    // リトリガーの場合は現在のlog_levelを維持し、そこからPhase1を再開
-    // ただしcurrent_levelはlog_levelに合わせて更新
+    // current_levelをlog_levelに合わせて更新
     uint32_t index = (mem.log_level >> FIXED_POINT_SHIFT) & EXP_TABLE_MASK;
     mem.current_level = exp_table[index];
 }
