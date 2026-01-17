@@ -85,7 +85,7 @@ void Filter::reset() {
     hpf_state_L = {}; hpf_state_R = {};
 }
 
-FASTRUN void Filter::processBlock(int16_t* bufL, int16_t* bufR, size_t size) {
+FASTRUN void Filter::processBlock(Sample16_t* bufL, Sample16_t* bufR, size_t size) {
     // ローカル変数にコピーしてアクセス速度向上
     const bool lpf_active = (lpf_mix > 0);
     const bool hpf_active = (hpf_mix > 0);
@@ -94,12 +94,12 @@ FASTRUN void Filter::processBlock(int16_t* bufL, int16_t* bufR, size_t size) {
     if (!lpf_active && !hpf_active) return;
 
     for (size_t i = 0; i < size; ++i) {
-        int16_t l = bufL[i];
-        int16_t r = bufR[i];
+        Sample16_t l = bufL[i];
+        Sample16_t r = bufR[i];
 
         // LPF適用
         if (lpf_active) {
-            // Mix最大(1024)のときは関数内で分岐最適化される
+            // Mix最大(Q15_MAX)のときは関数内で分岐最適化される
             l = process_with_mix(lpf_coefs, lpf_state_L, l, lpf_mix);
             r = process_with_mix(lpf_coefs, lpf_state_R, r, lpf_mix);
         }

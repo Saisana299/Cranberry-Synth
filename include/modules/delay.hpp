@@ -1,48 +1,51 @@
 #pragma once
 
+#include "types.hpp"
 #include "handlers/audio.hpp"
 #include "utils/buffer.hpp"
 
 constexpr uint32_t DELAY_BUFFER_MS = 300;
 constexpr uint32_t DELAY_BUFFER_SIZE = (DELAY_BUFFER_MS * SAMPLE_RATE) / 1000;
-constexpr uint8_t  FIXED_POINT_SHIFT = 10;
 
 constexpr int32_t MIN_TIME = 1;
 constexpr int32_t MAX_TIME = 300;
-constexpr int32_t MIN_LEVEL = 0;
-constexpr int32_t MAX_LEVEL = 1024;
-constexpr int32_t MIN_FEEDBACK = 0;
-constexpr int32_t MAX_FEEDBACK = 1024;
+constexpr Gain_t MIN_LEVEL = 0;
+constexpr Gain_t MAX_LEVEL = Q15_MAX;
+constexpr Gain_t MIN_FEEDBACK = 0;
+constexpr Gain_t MAX_FEEDBACK = Q15_MAX;
 
 class Delay {
 private:
     // 13230samples = 44100hz * 300ms
-    IntervalRingBuffer<int16_t, DELAY_BUFFER_SIZE> buffer_L = {}, buffer_R = {};
+    IntervalRingBuffer<Sample16_t, DELAY_BUFFER_SIZE> buffer_L = {}, buffer_R = {};
 
-    int32_t time = 256;
-    int32_t level = 307;
-    int32_t feedback = 512;
+    int32_t time = 80;          // ms (1-300)
+    Gain_t level = 9830;        // Q15 (default: 30% = 9830)
+    Gain_t feedback = 16384;    // Q15 (default: 50% = 16384)
     uint32_t delay_length = 0;
 
     inline float getFeedbackRatio() const {
-        return static_cast<float>(feedback) / static_cast<float>(MAX_FEEDBACK);
+        return Q15_to_float(feedback);
     }
 
     uint32_t getTotalSamples() const;
 
-    static inline int32_t clamp_param(int32_t value, int32_t min, int32_t max) {
-        return std::clamp<int32_t>(value, min, max);
+    static inline Gain_t clamp_gain(Gain_t value, Gain_t min, Gain_t max) {
+        return std::clamp<Gain_t>(value, min, max);
     }
 
 public:
     void reset();
-    void setDelay(int32_t time = 256, int32_t level = 307, int32_t feedback = 512);
-    int16_t processL(int16_t in);
-    int16_t processR(int16_t in);
+    void setDelay(int32_t time, Gain_t level, Gain_t feedback);
+    void setTime(int32_t time);
+    void setLevel(Gain_t level);
+    void setFeedback(Gain_t feedback);
+    Sample16_t processL(Sample16_t in);
+    Sample16_t processR(Sample16_t in);
     uint32_t getDelayLength() const;
 
     // パラメータ取得
     int32_t getTime() const { return time; }
-    int32_t getLevel() const { return level; }
-    int32_t getFeedback() const { return feedback; }
+    Gain_t getLevel() const { return level; }
+    Gain_t getFeedback() const { return feedback; }
 };

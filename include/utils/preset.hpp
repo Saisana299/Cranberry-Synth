@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <array>
+#include "types.hpp"
 
 // プリセット最大数
 constexpr uint8_t MAX_PRESETS = 3;
@@ -45,21 +46,21 @@ struct OperatorPreset {
 struct EffectPreset {
     // ディレイ設定
     bool delay_enabled = false;
-    int32_t delay_time = 256;          // ディレイタイム (1-300ms)
-    int32_t delay_level = 307;         // ディレイレベル (0-1024)
-    int32_t delay_feedback = 512;      // ディレイフィードバック (0-1024)
+    int32_t delay_time = 80;           // ディレイタイム (1-300ms)
+    Gain_t delay_level = 9830;         // ディレイレベル (Q15: 30% = 9830)
+    Gain_t delay_feedback = 16384;     // ディレイフィードバック (Q15: 50% = 16384)
 
     // ローパスフィルタ設定
     bool lpf_enabled = false;
     float lpf_cutoff = 20000.0f;       // カットオフ周波数 (20-20000 Hz)
     float lpf_resonance = 0.70710678f; // Q値 (0.1-10.0)
-    int16_t lpf_mix = 1024;            // ミックス量 (0-1024)
+    Gain_t lpf_mix = Q15_MAX;          // ミックス量 (0-Q15_MAX)
 
     // ハイパスフィルタ設定
     bool hpf_enabled = false;
     float hpf_cutoff = 20.0f;          // カットオフ周波数 (20-20000 Hz)
     float hpf_resonance = 0.70710678f; // Q値 (0.1-10.0)
-    int16_t hpf_mix = 1024;            // ミックス量 (0-1024)
+    Gain_t hpf_mix = Q15_MAX;          // ミックス量 (0-Q15_MAX)
 };
 
 // シンセサイザープリセット構造体

@@ -129,14 +129,14 @@ public:
 
     // エフェクトパラメータ取得
     int32_t getDelayTime() const { return delay.getTime(); }
-    int32_t getDelayLevel() const { return delay.getLevel(); }
-    int32_t getDelayFeedback() const { return delay.getFeedback(); }
+    Gain_t getDelayLevel() const { return delay.getLevel(); }
+    Gain_t getDelayFeedback() const { return delay.getFeedback(); }
     float getLpfCutoff() const { return filter.getLpfCutoff(); }
     float getLpfResonance() const { return filter.getLpfResonance(); }
-    int16_t getLpfMix() const { return filter.getLpfMix(); }
+    Gain_t getLpfMix() const { return filter.getLpfMix(); }
     float getHpfCutoff() const { return filter.getHpfCutoff(); }
     float getHpfResonance() const { return filter.getHpfResonance(); }
-    int16_t getHpfMix() const { return filter.getHpfMix(); }
+    Gain_t getHpfMix() const { return filter.getHpfMix(); }
 
     // エフェクト設定
     void setDelayEnabled(bool enabled) { delay_enabled = enabled; }
