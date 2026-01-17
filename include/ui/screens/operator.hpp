@@ -260,7 +260,7 @@ private:
 
     /**
      * @brief エンベロープグラフを描画
-     * DX7スタイルの4ポイントエンベロープを視覚化
+     * FMスタイルの4ポイントエンベロープを視覚化
      */
     void drawEnvelopeGraph(GFXcanvas16& canvas) {
         Synth& synth = Synth::getInstance();

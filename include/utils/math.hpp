@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include "types.hpp"
 
 class AudioMath {
 public:
@@ -128,11 +129,11 @@ public:
     };
 
     /**
-     * @brief レベル(0-99)を線形スケール(0-1024)に変換
+     * @brief レベル(0-99)をQ15線形スケール(0-32767)に変換
      * @param level オペレータレベル (0-99)
-     * @return int16_t 線形スケールの音量 (0-1024)
+     * @return Gain_t Q15線形スケールの音量 (0-32767)
      */
-    static inline int16_t levelToLinear(uint8_t level) {
+    static inline Gain_t levelToLinear(uint8_t level) {
         if (level >= 100) level = 99;
         uint8_t tl = LEVEL_TO_TL[level];
         if (tl >= 127) {
@@ -142,7 +143,7 @@ public:
         // dB = -0.75 * TL (約96dB range for TL 0-127)
         float db = -0.75f * tl;
         float linear = powf(10.0f, db / 20.0f);
-        return static_cast<int16_t>(linear * 1024.0f);
+        return static_cast<Gain_t>(linear * Q15_MAX);
     }
 
     /**

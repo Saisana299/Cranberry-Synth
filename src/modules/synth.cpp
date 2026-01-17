@@ -107,8 +107,7 @@ FASTRUN void Synth::generate() {
                 }
 
                 // 3. 発音
-                // TODO: オシレーターが Audio24_t (Q23) を返すようになったら変換を削除
-                Audio24_t raw_wave = Sample16_to_Q23(op_obj.osc.getSample(osc_mem, mod_input));
+                Audio24_t raw_wave = op_obj.osc.getSample(osc_mem, mod_input);
                 // TODO: エンベロープが Gain_t (Q15) を返すようになったら変換を削除
                 Gain_t env_level = static_cast<Gain_t>(op_obj.env.currentLevel(env_mem) << 5);
                 // Q23 × Q15 = Q38 → Q15シフトでQ23に戻す

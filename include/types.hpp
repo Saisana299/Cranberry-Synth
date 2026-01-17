@@ -9,13 +9,13 @@
 // ============================================
 
 // === Q23形式:  オーディオ経路の内部演算用 ===
-// 範囲: -1.0 ～ +1.0 = -8388608 ～ +8388607
+// 範囲: -1.0 ～ +1.0 = -8388607 ～ +8388607 (対称)
 // 精度: 約0.00000012 (144dB SNR)
 using Audio24_t = int32_t;
 constexpr int Q23_SHIFT = 23;
-constexpr Audio24_t Q23_ONE = 1 << Q23_SHIFT;          // 8388608 = 1. 0
+constexpr Audio24_t Q23_ONE = 1 << Q23_SHIFT;          // 8388608 = 1.0
 constexpr Audio24_t Q23_MAX = 8388607;                 // 最大値
-constexpr Audio24_t Q23_MIN = -8388608;                // 最小値
+constexpr Audio24_t Q23_MIN = -8388607;                // 最小値 (対称)
 
 // === Q15形式: レベル/ゲイン用 ===
 // 範囲: 0.0 ～ 1.0 = 0 ～ 32767
@@ -27,10 +27,12 @@ constexpr Gain_t Q15_MAX = 32767;
 constexpr Gain_t Q15_ZERO = 0;
 
 // === Q31形式: 位相変調の高精度計算用 ===
-// 範囲: -1.0 ～ +1.0 = -2147483648 ～ +2147483647
+// 範囲: -1.0 ～ +1.0 = -2147483647 ～ +2147483647 (対称)
 using ModDepth_t = int32_t;
 constexpr int Q31_SHIFT = 31;
-constexpr ModDepth_t Q31_ONE = 0x7FFFFFFF;
+constexpr ModDepth_t Q31_ONE = 0x7FFFFFFF;             // 2147483647 = 1.0
+constexpr ModDepth_t Q31_MAX = 2147483647;             // 最大値
+constexpr ModDepth_t Q31_MIN = -2147483647;            // 最小値 (対称)
 
 // === 位相:  32bit符号なし ===
 using Phase_t = uint32_t;
@@ -39,7 +41,7 @@ constexpr Phase_t PHASE_MAX = 0xFFFFFFFF;
 // === 16bit DAC出力 ===
 using Sample16_t = int16_t;
 constexpr Sample16_t SAMPLE16_MAX = 32767;
-constexpr Sample16_t SAMPLE16_MIN = -32768;
+constexpr Sample16_t SAMPLE16_MIN = -32767;                // 対称
 
 // ============================================
 // 変換関数
@@ -184,28 +186,28 @@ inline Phase_t freq_to_phase_delta(float freq, float sample_rate) {
 }
 
 /**
- * @brief DX7レベルカーブ (0～99 → Q15)
- * @param level_dx7 DX7レベル (0～99)
+ * @brief FMレベルカーブ (0～99 → Q15)
+ * @param level FMレベル (0～99)
  * @return Q15ゲイン
- * @note DX7の非線形カーブを再現（指数的）
+ * @note 非線形カーブ（指数的）
  */
-inline Gain_t dx7_level_to_Q15(uint8_t level_dx7) {
-    if (level_dx7 == 0) return 0;
-    if (level_dx7 >= 99) return Q15_MAX;
+inline Gain_t fm_level_to_Q15(uint8_t level) {
+    if (level == 0) return 0;
+    if (level >= 99) return Q15_MAX;
 
-    // DX7の近似カーブ:  (level/99)^1.5
-    float normalized = level_dx7 / 99.0f;
+    // 非線形カーブ: (level/99)^1.5
+    float normalized = level / 99.0f;
     float curved = powf(normalized, 1.5f);
 
     return float_to_Q15(curved);
 }
 
 /**
- * @brief Q15 → DX7レベル逆変換
+ * @brief Q15 → FMレベル逆変換
  * @param gain Q15ゲイン
- * @return DX7レベル (0～99)
+ * @return FMレベル (0～99)
  */
-inline uint8_t Q15_to_dx7_level(Gain_t gain) {
+inline uint8_t Q15_to_fm_level(Gain_t gain) {
     if (gain <= 0) return 0;
     if (gain >= Q15_MAX) return 99;
 

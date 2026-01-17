@@ -53,7 +53,7 @@ FASTRUN void Envelope::update(Memory& mem) {
     switch(mem.state) {
         case EnvelopeState::Phase1:
             // Phase1: 現在レベル → L1（アタック）
-            // Dexed方式: 現在のlog_levelに基づくステップ計算
+            // 対数カーブ方式: 現在のlog_levelに基づくステップ計算
             // これによりtarget_level1に関係なく一定速度でアタックが進む
             if (mem.log_level > target_level1) {
                 // 減衰量を減らす（音量を上げる）方向
@@ -61,7 +61,7 @@ FASTRUN void Envelope::update(Memory& mem) {
                 // rate1_paramに基づいてシフト量を決定
                 // rate 0: shift=18 (非常に遅い), rate 96: shift=2 (非常に速い)
                 uint32_t shift = 18 - (rate1_param / 6);
-                // 修正: distance → mem.log_level (Dexed方式)
+                // 対数カーブ方式: distance → mem.log_level
                 uint32_t step = mem.log_level >> shift;
                 if (step == 0) step = 1;  // 最低1を保証（収束を確実に）
 
