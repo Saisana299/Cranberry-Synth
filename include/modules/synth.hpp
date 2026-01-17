@@ -14,22 +14,21 @@
 #include "utils/color.hpp"
 #include "utils/preset.hpp"
 
-constexpr uint8_t MAX_NOTES = 16;
-constexpr uint8_t MAX_CHANNELS = 16; //TODO チャンネル別で音色を選択できるようにする エフェクトの個別適用は処理速度を確認
-constexpr uint8_t MAX_VOICE = 8;
+//TODO チャンネル別で音色を選択できるようにする エフェクトの個別適用は処理速度を確認
+constexpr uint8_t MAX_NOTES = 16;    // 最大同時発音数
+constexpr uint8_t MAX_CHANNELS = 16; // 最大MIDIチャンネル数
 
 class Synth {
 private:
     struct SynthNote {
-        uint8_t order = 0;
-        uint8_t note = 255;
-        uint8_t velocity = 0;
-        uint8_t channel = 0;
+        uint8_t order = 0;    // ノート整理番号 0= 非発音, 1=最古, ...
+        uint8_t note = 255;   // MIDIノート番号
+        uint8_t velocity = 0; // MIDIベロシティ
+        uint8_t channel = 0;  // MIDIチャンネル
     };
     SynthNote notes[MAX_NOTES] = {};
 
-    // 非発音時は-1、発音時はnotesのインデックス番号
-    volatile int8_t midi_note_to_index[128];
+    volatile int8_t midi_note_to_index[128]; // MIDI番号ごとにノートのインデックスを記録　非発音時は-1
 
     struct OperatorState {
         Oscillator::Memory osc_mems[MAX_NOTES];
@@ -53,23 +52,23 @@ private:
 
     uint8_t order_max = 0;
     uint8_t last_index = 0;
-    int16_t amp_level = 1 << 10;
-    int16_t adjust_level = (1 << 10) / MAX_NOTES;
-    // int16_t master_pan = 100;
 
-    // 本来はamp_level * キャリアの数 * adjust_levelで調整する。
-    int16_t master_scale = (static_cast<uint32_t>(amp_level) * adjust_level) >> 10;
+    Gain_t master_volume = static_cast<Gain_t>(Q15_MAX * 0.707); // 71% = 23170 (-3dB)
+    Gain_t polyphony_divisor = Q15_MAX / MAX_NOTES; // 32767 / 16 = 2047
+    uint8_t active_carriers = 1; // アクティブなキャリア数（最低1）
+
+    // 最終スケール = master_volume / キャリア数 × polyphony_divisor
+    Gain_t output_scale = static_cast<Gain_t>((static_cast<int32_t>(master_volume / active_carriers) * polyphony_divisor) >> Q15_SHIFT);
 
     // チャンネル別のバッファ
-    int32_t left[MAX_CHANNELS] = {};
-    int32_t right[MAX_CHANNELS] = {};
+    Audio24_t left[MAX_CHANNELS] = {};
+    Audio24_t right[MAX_CHANNELS] = {};
+    Audio24_t fb_history[MAX_NOTES][2] = {};
 
     const Algorithm* current_algo = nullptr;
-    int32_t fb_history[MAX_NOTES][2] = {};
     uint8_t feedback_amount = 0; // 0=disable, 1~7
     uint8_t current_preset_id = 0; // 現在ロードされているプリセットID
     int8_t transpose = 0; // トランスポーズ (-24 ～ +24)
-    uint8_t active_carriers = 1; // アクティブなキャリア数（最低1）
 
     FASTRUN void generate();
     void updateOrder(uint8_t removed);
@@ -149,11 +148,11 @@ public:
     Filter& getFilter() { return filter; }
 
     // マスター設定
-    int16_t getMasterLevel() const { return amp_level; }
-    void setMasterLevel(int16_t level) {
-        amp_level = std::clamp<int16_t>(level, 0, 1024);
+    Gain_t getMasterLevel() const { return master_volume; }
+    void setMasterLevel(Gain_t level) {
+        master_volume = std::clamp<Gain_t>(level, 0, Q15_MAX);
         // キャリア数で割って正規化（loadPresetと同じ計算）
-        master_scale = (static_cast<uint32_t>(amp_level / active_carriers) * adjust_level) >> 10;
+        output_scale = static_cast<Gain_t>((static_cast<int32_t>(master_volume / active_carriers) * polyphony_divisor) >> Q15_SHIFT);
     }
 
     // トランスポーズ

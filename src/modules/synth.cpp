@@ -13,7 +13,7 @@ void Synth::init() {
 
 /** @brief シンセ生成 */
 FASTRUN void Synth::generate() {
-    if(samples_ready_flags != 0) return;
+    if(samples_ready_flags != false) return;
     if(current_algo == nullptr) return;
 
     // 定数キャッシュ
@@ -45,8 +45,8 @@ FASTRUN void Synth::generate() {
     }
 
     // 出力バッファをクリア
-    int32_t mix_buffer_L[BUFFER_SIZE] = {0};
-    int32_t mix_buffer_R[BUFFER_SIZE] = {0};
+    Audio24_t mix_buffer_L[BUFFER_SIZE] = {0};
+    Audio24_t mix_buffer_R[BUFFER_SIZE] = {0};
 
     // リセット待ちのノートを記録
     uint8_t notes_to_reset[MAX_NOTES];
@@ -59,11 +59,11 @@ FASTRUN void Synth::generate() {
         bool note_is_active = false;
 
         // オペレータ出力の一時保存用バッファ [Op][Sample]
-        int32_t op_buffer[MAX_OPERATORS][BUFFER_SIZE];
+        Audio24_t op_buffer[MAX_OPERATORS][BUFFER_SIZE];
 
         // フィードバック変数のローカルキャッシュ（ノートループの外でキャッシュ）
-        int32_t fb_h0 = fb_history[n][0];
-        int32_t fb_h1 = fb_history[n][1];
+        Audio24_t fb_h0 = fb_history[n][0];
+        Audio24_t fb_h1 = fb_history[n][1];
 
         // --- オペレータ毎処理 ---
         // #pragma GCC unroll 6
@@ -84,7 +84,7 @@ FASTRUN void Synth::generate() {
 
             // --- サンプル毎処理 ---
             for(size_t i = 0; i < BUFFER_SIZE; ++i) {
-                int32_t mod_input = 0;
+                Audio24_t mod_input = 0;
 
                 // 1. 変調入力（クロスフィードバック時はmod_maskからの通常入力をスキップ）
                 if (mask) {
@@ -107,9 +107,12 @@ FASTRUN void Synth::generate() {
                 }
 
                 // 3. 発音
-                int16_t raw_wave = op_obj.osc.getSample(osc_mem, mod_input);
-                int32_t env_level = op_obj.env.currentLevel(env_mem);
-                int32_t output = (static_cast<int32_t>(raw_wave) * env_level) >> 10;
+                // TODO: オシレーターが Audio24_t (Q23) を返すようになったら変換を削除
+                Audio24_t raw_wave = Sample16_to_Q23(op_obj.osc.getSample(osc_mem, mod_input));
+                // TODO: エンベロープが Gain_t (Q15) を返すようになったら変換を削除
+                Gain_t env_level = static_cast<Gain_t>(op_obj.env.currentLevel(env_mem) << 5);
+                // Q23 × Q15 = Q38 → Q15シフトでQ23に戻す
+                Audio24_t output = Q23_mul_Q15(raw_wave, env_level);
 
                 op_buffer[op_idx][i] = output; // バッファに書き込み
 
@@ -136,9 +139,9 @@ FASTRUN void Synth::generate() {
         fb_history[n][1] = fb_h1;
 
         // --- キャリアのミックス ---
-        int32_t max_output = 0;  // このノートの最大出力レベルを記録
+        Audio24_t max_output = 0;  // このノートの最大出力レベルを記録
         for(size_t i = 0; i < BUFFER_SIZE; ++i) {
-            int32_t sum = 0;
+            Audio24_t sum = 0;
             for(uint8_t k = 0; k < MAX_OPERATORS; ++k) {
                 if (output_mask & (1 << k)) {
                     sum += op_buffer[k][i];
@@ -148,7 +151,7 @@ FASTRUN void Synth::generate() {
             mix_buffer_R[i] += sum;
 
             // 最大出力レベルを更新（絶対値で比較）
-            int32_t abs_sum = (sum >= 0) ? sum : -sum;
+            Audio24_t abs_sum = (sum >= 0) ? sum : -sum;
             if (abs_sum > max_output) max_output = abs_sum;
         }
 
@@ -178,7 +181,7 @@ FASTRUN void Synth::generate() {
     }
 
     // 定数キャッシュ
-    const int32_t current_scale = master_scale;
+    const Gain_t current_scale = output_scale;
     const bool enable_lpf = lpf_enabled;
     const bool enable_hpf = hpf_enabled;
     const bool enable_delay = delay_enabled;
@@ -187,52 +190,47 @@ FASTRUN void Synth::generate() {
 
     // --- 最終出力段 (Filter, Delay) ---
     for(size_t i = 0; i < BUFFER_SIZE; ++i) {
-        int32_t left = mix_buffer_L[i];
-        int32_t right = mix_buffer_R[i];
+        Audio24_t left = mix_buffer_L[i];
+        Audio24_t right = mix_buffer_R[i];
 
-        // マスターボリューム適用
-        left = (left * current_scale) >> 10;
-        right = (right * current_scale) >> 10;
+        // マスターボリューム適用 (Q23 × Q15 → Q23)
+        left = Q23_mul_Q15(left, current_scale);
+        right = Q23_mul_Q15(right, current_scale);
 
-        // クリップ処理
-        left = AudioMath::fastClampInt16(left);
-        right = AudioMath::fastClampInt16(right);
-        // フィルタはそれぞれでクリッピングがあるためこれ以降は必要無し
+        // Q23 → 16bit 変換（フィルター/ディレイは16bitで処理）
+        Sample16_t left_16 = Q23_to_Sample16(left);
+        Sample16_t right_16 = Q23_to_Sample16(right);
 
-        // エフェクト処理
+        // エフェクト処理 (16bit)
         // Low-pass filter
         if(enable_lpf) {
-            left = filter.processLpfL(left);
-            right = filter.processLpfR(right);
+            left_16 = filter.processLpfL(left_16);
+            right_16 = filter.processLpfR(right_16);
         }
         // High-pass filter
         if(enable_hpf) {
-            left = filter.processHpfL(left);
-            right = filter.processHpfR(right);
+            left_16 = filter.processHpfL(left_16);
+            right_16 = filter.processHpfR(right_16);
         }
         // Delay
         if(enable_delay) {
-            left = delay.processL(left);
-            right = delay.processR(right);
+            left_16 = delay.processL(left_16);
+            right_16 = delay.processR(right_16);
         }
 
-        // パンニング
-        // left = (left * pan_gain_l) >> 15;
-        // right = (right * pan_gain_r) >> 15;
-
         // 出力バッファへ
-        samples_L[i] = static_cast<int16_t>(left);
-        samples_R[i] = static_cast<int16_t>(right);
+        samples_L[i] = left_16;
+        samples_R[i] = right_16;
 
         // バランス接続用反転
-        if (left == INT16_MIN) samples_LM[i] = INT16_MAX;
-        else samples_LM[i] = static_cast<int16_t>(-left);
+        if (left_16 == INT16_MIN) samples_LM[i] = INT16_MAX;
+        else samples_LM[i] = static_cast<Sample16_t>(-left_16);
 
-        if (right == INT16_MIN) samples_RM[i] = INT16_MAX;
-        else samples_RM[i] = static_cast<int16_t>(-right);
+        if (right_16 == INT16_MIN) samples_RM[i] = INT16_MAX;
+        else samples_RM[i] = static_cast<Sample16_t>(-right_16);
     }
 
-    samples_ready_flags = 1;
+    samples_ready_flags = true;
 }
 
 /** @brief シンセ更新 */
@@ -509,7 +507,7 @@ void Synth::loadPreset(uint8_t preset_id) {
 
     // マスタースケールを調整
     if (active_carriers == 0) active_carriers = 1; // 0除算防止
-    master_scale = (static_cast<uint32_t>(amp_level / active_carriers) * adjust_level) >> 10;
+    output_scale = static_cast<Gain_t>((static_cast<int32_t>(master_volume / active_carriers) * polyphony_divisor) >> Q15_SHIFT);
 }
 
 const char* Synth::getCurrentPresetName() const {

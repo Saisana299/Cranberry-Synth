@@ -7,16 +7,17 @@
 #include <SerialFlash.h>
 #include <atomic>
 
+#include "types.hpp"
 #include "utils/state.hpp"
 
 // --------------
 // Audio Buffer
 // --------------
-extern int16_t samples_L[];   // L
-extern int16_t samples_R[];   // R
-extern int16_t samples_LM[];  // L (位相反転)
-extern int16_t samples_RM[];  // R (位相反転)
-extern std::atomic<uint32_t> samples_ready_flags; // サンプルの送信準備が完了したか
+extern Sample16_t samples_L[];   // L
+extern Sample16_t samples_R[];   // R
+extern Sample16_t samples_LM[];  // L (位相反転)
+extern Sample16_t samples_RM[];  // R (位相反転)
+extern std::atomic<bool> samples_ready_flags; // サンプルの送信準備が完了したか
 
 // --------------
 // Audio Setting

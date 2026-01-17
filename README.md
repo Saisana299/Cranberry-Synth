@@ -25,7 +25,7 @@
 ## Features
 
 - **6-Operator FM Synthesis** – DX7-style FM engine with configurable algorithms
-- **Wavetable Oscillators** – Sine, Triangle, Saw, Square (2048 samples)
+- **Wavetable Oscillators** – Sine, Triangle, Saw, Square
 - **16-Voice Polyphony** – 16 simultaneous notes across 16 MIDI channels
 - **Real-time Effects** – Delay (300ms), Biquad LPF/HPF
 - **ADSR Envelopes** – Per-operator with exponential curves

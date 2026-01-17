@@ -1,5 +1,6 @@
 #pragma once
 
+#include "types.hpp"
 #include "handlers/audio.hpp"
 #include "modules/envelope.hpp"
 #include "utils/math.hpp"
@@ -8,9 +9,9 @@
 class Oscillator {
 public:
     struct Memory {
-        uint32_t phase = 0;
-        uint32_t delta = 0;
-        int16_t vel_vol = 0;
+        Phase_t phase = 0;
+        Phase_t delta = 0;
+        Gain_t vel_vol = 0;
         uint8_t note = 60;  // エイリアシング防止用のキースケーリングに使用
     };
 
@@ -20,7 +21,7 @@ public:
 
     void setFrequency(Memory& mem, uint8_t note);
     void setVelocity(Memory& mem, uint8_t velocity);
-    void setPhase(Memory& mem, uint32_t phase);
+    void setPhase(Memory& mem, Phase_t phase);
     void reset(Memory& mem);
     void enable();
     void disable();

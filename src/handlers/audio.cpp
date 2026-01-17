@@ -1,10 +1,10 @@
 #include "handlers/audio.hpp"
 
-int16_t samples_L[BUFFER_SIZE];
-int16_t samples_R[BUFFER_SIZE];
-int16_t samples_LM[BUFFER_SIZE];
-int16_t samples_RM[BUFFER_SIZE];
-std::atomic<uint32_t> samples_ready_flags = 0;
+Sample16_t samples_L[BUFFER_SIZE];
+Sample16_t samples_R[BUFFER_SIZE];
+Sample16_t samples_LM[BUFFER_SIZE];
+Sample16_t samples_RM[BUFFER_SIZE];
+std::atomic<bool> samples_ready_flags = false;
 
 /** @brief オーディオハンドラ初期化処理 */
 void AudioHandler::init() {
@@ -26,7 +26,7 @@ void AudioHandler::process() {
         queue_R.play(samples_R, BUFFER_SIZE);
         queue_LM.play(samples_LM, BUFFER_SIZE);
         queue_RM.play(samples_RM, BUFFER_SIZE);
-        samples_ready_flags.store(0);
+        samples_ready_flags.store(false);
     }
 }
 
