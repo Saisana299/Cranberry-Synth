@@ -44,6 +44,7 @@ public:
         EnvelopeState state = EnvelopeState::Idle;
         uint32_t log_level = MAX_ATTENUATION; // 対数スケールの内部レベル（減衰量）
         Gain_t current_level = 0;  // 線形スケールの最終出力レベル (Q15: 0-32767)
+        int8_t rate_scaling_delta = 0; // Rate Scalingによるrate増分 (ノートごとに計算)
     };
 
 private:
@@ -58,6 +59,8 @@ private:
     uint8_t level2_param = 99;  // ディケイ1到達レベル
     uint8_t level3_param = 99;  // サステインレベル
     uint8_t level4_param = 0;   // リリース到達レベル（通常0）
+
+    uint8_t rate_scaling_param = 0; // Rate Scaling sensitivity (0-7)
 
     // 内部用変換済み値
     uint32_t rate1 = MAX_ATTENUATION;
@@ -227,4 +230,28 @@ public:
     inline uint8_t getLevel2() const { return level2_param; }
     inline uint8_t getLevel3() const { return level3_param; }
     inline uint8_t getLevel4() const { return level4_param; }
+
+    // Rate Scaling 設定/取得 (0-7)
+    void setRateScaling(uint8_t sensitivity);
+    inline uint8_t getRateScaling() const { return rate_scaling_param; }
+
+    /**
+     * @brief Rate Scaling計算
+     *
+     * MIDIノート番号とsensitivityからrate増分を計算
+     * 高いノートほどエンベロープが速くなる
+     *
+     * @param midinote MIDIノート番号 (0-127)
+     * @param sensitivity Rate Scaling sensitivity (0-7)
+     * @return int8_t rate増分 (0-27)
+     */
+    static int8_t calcRateScalingDelta(uint8_t midinote, uint8_t sensitivity);
+
+    /**
+     * @brief ノートごとのRate Scaling増分を設定
+     *
+     * @param mem エンベロープメモリ
+     * @param midinote MIDIノート番号
+     */
+    void applyRateScaling(Memory& mem, uint8_t midinote);
 };

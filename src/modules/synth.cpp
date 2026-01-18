@@ -296,6 +296,7 @@ void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
             auto& env_mem = ope_states[op].env_mems[i];
             operators[op].osc.setVelocity(osc_mem, velocity);
             operators[op].osc.setFrequency(osc_mem, actual_note);
+            operators[op].env.applyRateScaling(env_mem, actual_note); // Rate Scaling適用
             operators[op].env.reset(env_mem); // エンベロープをAttackから再開
         }
         return;
@@ -361,6 +362,7 @@ void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
                 operators[op].osc.setVelocity(osc_mem, velocity);
                 operators[op].osc.setFrequency(osc_mem, actual_note);
                 operators[op].osc.setPhase(osc_mem, 0);
+                operators[op].env.applyRateScaling(env_mem, actual_note); // Rate Scaling適用
                 operators[op].env.reset(env_mem); // 初期化IdleからAttackへ
             }
             return;
@@ -469,6 +471,7 @@ void Synth::loadPreset(uint8_t preset_id) {
             operators[i].env.setLevel2(op_preset.level2);
             operators[i].env.setLevel3(op_preset.level3);
             operators[i].env.setLevel4(op_preset.level4);
+            operators[i].env.setRateScaling(op_preset.rate_scaling);
 
             // キャリアの数をカウント
             if (current_algo && (current_algo->output_mask & (1 << i))) {

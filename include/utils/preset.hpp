@@ -38,6 +38,9 @@ struct OperatorPreset {
     uint8_t level3 = 99;         // Level3: サステインレベル (0-99)
     uint8_t level4 = 0;          // Level4: リリース到達レベル (0-99)
 
+    // Rate Scaling
+    uint8_t rate_scaling = 0;    // Rate Scaling sensitivity (0-7): 高音ほどエンベロープが速くなる
+
     // オペレーター有効/無効
     bool enabled = false;
 };
@@ -120,37 +123,38 @@ private:
                     99,     // level2
                     99,     // level3
                     0,      // level4
+                    0,      // rate_scaling
                     true    // enabled
                 },
                 // Operator 1 (無効)
                 {
                     0, 0, 1.0f, 0.0f, 0, false,
                     99, 99, 99, 99, 99, 99, 99, 0,
-                    false
+                    0, false
                 },
                 // Operator 2 (無効)
                 {
                     0, 0, 1.0f, 0.0f, 0, false,
                     99, 99, 99, 99, 99, 99, 99, 0,
-                    false
+                    0, false
                 },
                 // Operator 3 (無効)
                 {
                     0, 0, 1.0f, 0.0f, 0, false,
                     99, 99, 99, 99, 99, 99, 99, 0,
-                    false
+                    0, false
                 },
                 // Operator 4 (無効)
                 {
                     0, 0, 1.0f, 0.0f, 0, false,
                     99, 99, 99, 99, 99, 99, 99, 0,
-                    false
+                    0, false
                 },
                 // Operator 5 (無効)
                 {
                     0, 0, 1.0f, 0.0f, 0, false,
                     99, 99, 99, 99, 99, 99, 99, 0,
-                    false
+                    0, false
                 }
             }},
             {   // effects
@@ -181,6 +185,7 @@ private:
                     75,     // level2
                     0,      // level3
                     0,      // level4
+                    0,      // rate_scaling
                     true    // enabled
                 },
                 // Operator 1
@@ -199,6 +204,7 @@ private:
                     81,     // level2
                     59,     // level3
                     0,      // level4
+                    0,      // rate_scaling
                     true    // enabled
                 },
                 // Operator 2
@@ -217,6 +223,7 @@ private:
                     27,     // level2
                     0,      // level3
                     0,      // level4
+                    0,      // rate_scaling
                     true    // enabled
                 },
                 // Operator 3
@@ -235,6 +242,7 @@ private:
                     98,     // level2
                     36,     // level3
                     0,      // level4
+                    0,      // rate_scaling
                     true    // enabled
                 },
                 // Operator 4
@@ -253,6 +261,7 @@ private:
                     91,     // level2
                     0,      // level3
                     0,      // level4
+                    0,      // rate_scaling
                     true    // enabled
                 },
                 // Operator 5
@@ -271,6 +280,7 @@ private:
                     92,     // level2
                     0,      // level3
                     0,      // level4
+                    0,      // rate_scaling
                     true    // enabled
                 }
             }},
@@ -302,6 +312,7 @@ private:
                     99,     // level2
                     0,      // level3
                     0,      // level4
+                    0,      // rate_scaling
                     true    // enabled
                 },
                 // Operator 1
@@ -320,6 +331,7 @@ private:
                     70,     // level2
                     0,     // level3
                     0,      // level4
+                    0,      // rate_scaling
                     true    // enabled
                 },
                 // Operator 2
@@ -338,6 +350,7 @@ private:
                     79,     // level2
                     0,      // level3
                     0,      // level4
+                    0,      // rate_scaling
                     true    // enabled
                 },
                 // Operator 3
@@ -356,6 +369,7 @@ private:
                     99,     // level2
                     0,     // level3
                     0,      // level4
+                    0,      // rate_scaling
                     true    // enabled
                 },
                 // Operator 4
@@ -374,6 +388,7 @@ private:
                     70,     // level2
                     0,      // level3
                     0,      // level4
+                    0,      // rate_scaling
                     true    // enabled
                 },
                 // Operator 5
@@ -392,6 +407,7 @@ private:
                     78,     // level2
                     0,      // level3
                     0,      // level4
+                    0,      // rate_scaling
                     true    // enabled
                 }
             }},
