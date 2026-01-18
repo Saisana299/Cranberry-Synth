@@ -108,8 +108,7 @@ FASTRUN void Synth::generate() {
 
                 // 3. 発音
                 Audio24_t raw_wave = op_obj.osc.getSample(osc_mem, mod_input);
-                // TODO: エンベロープが Gain_t (Q15) を返すようになったら変換を削除
-                Gain_t env_level = static_cast<Gain_t>(op_obj.env.currentLevel(env_mem) << 5);
+                Gain_t env_level = op_obj.env.currentLevel(env_mem);
                 // Q23 × Q15 = Q38 → Q15シフトでQ23に戻す
                 Audio24_t output = Q23_mul_Q15(raw_wave, env_level);
 
@@ -222,10 +221,10 @@ FASTRUN void Synth::generate() {
         samples_R[i] = right_16;
 
         // バランス接続用反転
-        if (left_16 == INT16_MIN) samples_LM[i] = INT16_MAX;
+        if (left_16 == SAMPLE16_MIN) samples_LM[i] = SAMPLE16_MAX;
         else samples_LM[i] = static_cast<Sample16_t>(-left_16);
 
-        if (right_16 == INT16_MIN) samples_RM[i] = INT16_MAX;
+        if (right_16 == SAMPLE16_MIN) samples_RM[i] = SAMPLE16_MAX;
         else samples_RM[i] = static_cast<Sample16_t>(-right_16);
     }
 

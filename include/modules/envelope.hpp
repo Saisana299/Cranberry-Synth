@@ -2,6 +2,7 @@
 
 #include "handlers/audio.hpp"
 #include "utils/math.hpp"
+#include "types.hpp"
 
 /**
  * @brief FM方式エンベロープジェネレーター
@@ -42,7 +43,7 @@ public:
     struct Memory {
         EnvelopeState state = EnvelopeState::Idle;
         uint32_t log_level = MAX_ATTENUATION; // 対数スケールの内部レベル（減衰量）
-        int16_t current_level = 0;  // 線形スケールの最終出力レベル
+        Gain_t current_level = 0;  // 線形スケールの最終出力レベル (Q15: 0-32767)
     };
 
 private:
@@ -106,19 +107,19 @@ private:
 
     // 配列のサイズは EXP_TABLE_SIZE に合わせる
     // 指数テーブル: 対数レベル(減衰量) → 線形レベル(音量)
-    // インデックス0で最大音量(1023)、最大インデックスで無音(0)
-    static constexpr std::array<int16_t, EXP_TABLE_SIZE> generate_exp_table() {
-        std::array<int16_t, EXP_TABLE_SIZE> table{};
+    // インデックス0で最大音量(Q15_MAX)、最大インデックスで無音(0)
+    static constexpr std::array<Gain_t, EXP_TABLE_SIZE> generate_exp_table() {
+        std::array<Gain_t, EXP_TABLE_SIZE> table{};
         // ダイナミックレンジ: 96dB
         // これにより減衰がより自然になる
         constexpr double TOTAL_DB_RANGE = 96.0;
         for(size_t i = 0; i < EXP_TABLE_SIZE; ++i) {
             double normalized = static_cast<double>(i) / (EXP_TABLE_SIZE - 1);
-            // dB = -48 * normalized
+            // dB = -96 * normalized
             double db = -TOTAL_DB_RANGE * normalized;
             // dB → 線形スケール: 10^(dB/20)
             double linear = std::pow(10.0, db / 20.0);
-            table[i] = static_cast<int16_t>(1023.0 * linear);
+            table[i] = static_cast<Gain_t>(Q15_MAX * linear);
         }
         return table;
     }
@@ -165,8 +166,8 @@ private:
     inline static const std::array<uint32_t, RATE_TABLE_SIZE> rate_table = generate_rate_table();
 
     // 指数テーブル（対数レベル -> 線形レベルへ）
-    // インデックス = 0 で最大レベル、EXP_TABLE_SIZE - 1 で最小レベル
-    inline static const std::array<int16_t, EXP_TABLE_SIZE> exp_table = generate_exp_table();
+    // インデックス = 0 で最大レベル(Q15_MAX)、EXP_TABLE_SIZE - 1 で最小レベル(0)
+    inline static const std::array<Gain_t, EXP_TABLE_SIZE> exp_table = generate_exp_table();
 
     // レベル -> 減衰量 変換テーブル
     inline static const std::array<uint32_t, LEVEL_TABLE_SIZE> level_to_attenuation_table = generate_level_to_attenuation_table();
@@ -193,9 +194,9 @@ public:
     /**
      * @brief 現在のレベルを返す
      *
-     * @return int16_t Min: 0, Max: 1024
+     * @return Gain_t Q15スケール (0-32767)
      */
-    inline int16_t currentLevel(const Memory& mem) const {
+    inline Gain_t currentLevel(const Memory& mem) const {
         return mem.current_level;
     }
 
@@ -210,8 +211,8 @@ public:
         // Idle状態なら終了
         if (mem.state == EnvelopeState::Idle) return true;
         // Phase4（リリース中）で音量が非常に小さい場合も終了とみなす
-        // current_level は 0-1024 のスケール、2未満なら実質無音
-        if (mem.state == EnvelopeState::Phase4 && mem.current_level < 2) return true;
+        // current_level は Q15スケール (0-32767)、64未満なら実質無音
+        if (mem.state == EnvelopeState::Phase4 && mem.current_level < 64) return true;
         return false;
     }
 
