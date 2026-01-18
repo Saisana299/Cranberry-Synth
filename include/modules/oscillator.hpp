@@ -133,13 +133,8 @@ public:
         // mod_input の範囲: ±8388607 (Q23)
         // 位相の範囲: 0〜2^32 (1周期)
         // スケーリング: mod_input を位相スケールに変換
-        //
-        // エイリアシング防止: 高音域で変調深度を自動的に減らす
-        // ノート60(C4)を基準として、それより高い音では変調を抑える
-        // ノート84(C6)以上では変調深度が1/4になる
-        const int32_t key_scale = AudioMath::MOD_KEY_SCALE_TABLE[mem.note];
         // Q23入力をスケーリング（Q23 >> 8 = Q15相当にしてから処理）
-        const int32_t scaled_mod = ((mod_input >> 8) * key_scale) >> 10;
+        const int32_t scaled_mod = (mod_input >> 8);
         const int32_t mod_phase_offset = scaled_mod << MOD_PHASE_SHIFT;
 
         // 位相計算

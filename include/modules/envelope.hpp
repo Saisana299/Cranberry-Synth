@@ -139,13 +139,6 @@ private:
     static constexpr std::array<uint32_t, LEVEL_TABLE_SIZE> generate_level_to_attenuation_table() {
         std::array<uint32_t, LEVEL_TABLE_SIZE> table{};
 
-        // 低レベル用テーブル (0-19の非線形変換)
-        // 低い値ほど変化が大きい（圧縮されている）
-        constexpr int levellut[] = {
-            0, 5, 9, 13, 17, 20, 23, 25, 27, 29,   // 0-9
-            31, 33, 35, 37, 39, 41, 42, 43, 45, 46 // 10-19
-        };
-
         for (size_t i = 0; i < LEVEL_TABLE_SIZE; ++i) {
             int scaled = 0;
             if (i >= 20) {
@@ -153,7 +146,7 @@ private:
                 scaled = 28 + static_cast<int>(i);
             } else {
                 // 低レベル域: 非線形テーブル参照 (出力: 0-46)
-                scaled = levellut[i];
+                scaled = AudioMath::LOW_LEVEL_LUT[i];
             }
 
             // 音量値 → 減衰量に変換 (127から引く)
