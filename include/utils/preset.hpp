@@ -397,7 +397,7 @@ private:
                     99,     // level
                     14.0f,   // coarse
                     0.0f,  // fine
-                    -1,      // detune
+                    1,      // detune
                     false, // is_fixed
                     95,     // rate1
                     48,     // rate2

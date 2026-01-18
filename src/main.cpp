@@ -2,6 +2,8 @@
 /** Mini FM Synthesizer on Teensy 4.1 **/
 /** @author Saisana299 **/
 
+//TODO: RATE SCALING設定は将来的に実装予定
+
 #include <Arduino.h>
 #include <Entropy.h>
 #include <Adafruit_GFX.h>
