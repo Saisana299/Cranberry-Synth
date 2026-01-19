@@ -38,6 +38,15 @@ constexpr ModDepth_t Q31_MIN = -2147483647;            // 最小値 (対称)
 using Phase_t = uint32_t;
 constexpr Phase_t PHASE_MAX = 0xFFFFFFFF;
 
+// === エンベロープレベル: Q24対数形式 ===
+// 大きいほど音が大きい（通常の減衰量とは逆）
+// 2^24 = 1オクターブ = 2倍の音量変化
+using EnvLevel_t = int32_t;
+constexpr int ENV_Q24_SHIFT = 24;
+constexpr EnvLevel_t ENV_LEVEL_MIN = 16 << 16;     // 最小レベル (実質無音)
+constexpr EnvLevel_t ENV_LEVEL_MAX = 3840 << 16;   // 最大レベル
+constexpr EnvLevel_t ENV_JUMPTARGET = 1716 << 16;  // アタックカーブ用閾値
+
 // === 16bit DAC出力 ===
 using Sample16_t = int16_t;
 constexpr Sample16_t SAMPLE16_MAX = 32767;

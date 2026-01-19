@@ -23,13 +23,12 @@ class Envelope {
 public:
     static constexpr uint32_t RATE_TABLE_SIZE = 100;
     static constexpr uint32_t LEVEL_TABLE_SIZE = 100;
-    static constexpr uint32_t EXP_TABLE_SIZE = 4096;
-    static constexpr uint32_t EXP_TABLE_MASK = EXP_TABLE_SIZE - 1; // 0xFFF
 
-    // 固定小数点のシフト量を定義 (8ビット = 1/256)
-    static constexpr int FIXED_POINT_SHIFT = 8;
-
-    static constexpr uint32_t MAX_ATTENUATION = (EXP_TABLE_SIZE - 1) << FIXED_POINT_SHIFT;
+    // Q24形式の対数レベル
+    // level_ は Q24/doubling log format (2^24 = 1オクターブ = 2倍)
+    // Exp2テーブルサイズ (1024サンプル)
+    static constexpr uint32_t EXP2_LG_N_SAMPLES = 10;
+    static constexpr uint32_t EXP2_N_SAMPLES = 1 << EXP2_LG_N_SAMPLES;
 
     // エンベロープステート
     enum class EnvelopeState {
@@ -42,9 +41,14 @@ public:
 
     struct Memory {
         EnvelopeState state = EnvelopeState::Idle;
-        uint32_t log_level = MAX_ATTENUATION; // 対数スケールの内部レベル（減衰量）
+        EnvLevel_t level_ = 0;  // Q24対数レベル (大きいほど音が大きい)
         Gain_t current_level = 0;  // 線形スケールの最終出力レベル (Q15: 0-32767)
         int8_t rate_scaling_delta = 0; // Rate Scalingによるrate増分 (ノートごとに計算)
+        // ノートごとのターゲットレベル (対数レベル、大きいほど音が大きい)
+        EnvLevel_t target_level1 = ENV_LEVEL_MIN;
+        EnvLevel_t target_level2 = ENV_LEVEL_MIN;
+        EnvLevel_t target_level3 = ENV_LEVEL_MIN;
+        EnvLevel_t target_level4 = ENV_LEVEL_MIN;
     };
 
 private:
@@ -62,117 +66,66 @@ private:
 
     uint8_t rate_scaling_param = 0; // Rate Scaling sensitivity (0-7)
 
-    // 内部用変換済み値
-    uint32_t rate1 = MAX_ATTENUATION;
-    uint32_t rate2 = MAX_ATTENUATION;
-    uint32_t rate3 = MAX_ATTENUATION;
-    uint32_t rate4 = MAX_ATTENUATION;
-    uint32_t target_level1 = 0;             // L1の減衰量
-    uint32_t target_level2 = 0;             // L2の減衰量
-    uint32_t target_level3 = 0;             // L3の減衰量
-    uint32_t target_level4 = MAX_ATTENUATION; // L4の減衰量
+    // オペレーター出力レベル (クラスメンバー)
+    EnvLevel_t outlevel_ = 0;
 
     /**
      * @brief レートテーブルを生成
      *
-     * Rate 0 = 約28秒, Rate 13 = 約16秒, Rate 30 = 約8秒, Rate 99 = 約2ms
-     * クリックノイズ防止のため、Rate 99でも最低2msのスムージング時間を確保
+     * inc = (4 + (qrate & 3)) << (2 + LG_N + (qrate >> 2))
+     * qrate = (rate * 41) >> 6 + rate_scaling
+     * ここではrate_scalingを除いた基本レートを計算
      */
     static constexpr std::array<uint32_t, RATE_TABLE_SIZE> generate_rate_table() {
         std::array<uint32_t, RATE_TABLE_SIZE> table{};
-
-        // Rate 13: 約16秒, Rate 30: 約8秒, Rate 50: 約3秒
-        // Rate 70: 約1.3秒, Rate 90: 約0.6秒, Rate 99: 約2ms（クリックノイズ防止）
-
-        // 最小時間: 2ms（クリックノイズ防止、業界標準）
-        constexpr double MIN_TIME_SECONDS = 0.002;
+        constexpr int LG_N = 6;  // N=64
 
         for (size_t i = 0; i < RATE_TABLE_SIZE; ++i) {
-            double time_seconds = 0.0;
-
-            // 指数カーブ: time = 28 * 2^(-rate/16)
-            // 約16レートごとに半減（緩やかなカーブ）
-            double rate_normalized = static_cast<double>(i) / 16.0;
-            time_seconds = 28.0 * std::pow(0.5, rate_normalized);
-
-            // 最小値を5msに制限（クリックノイズ防止）
-            if (time_seconds < MIN_TIME_SECONDS) time_seconds = MIN_TIME_SECONDS;
-
-            // time_seconds で MAX_ATTENUATION を移動するための1サンプルあたりの増分
-            double samples = time_seconds * SAMPLE_RATE;
-            if (samples < 1.0) samples = 1.0;
-
-            table[i] = static_cast<uint32_t>(MAX_ATTENUATION / samples);
-            if (table[i] == 0) table[i] = 1; // 最低でも1
+            int qrate = (static_cast<int>(i) * 41) >> 6;
+            if (qrate > 63) qrate = 63;
+            // インクリメント計算
+            table[i] = static_cast<uint32_t>((4 + (qrate & 3)) << (2 + LG_N + (qrate >> 2)));
         }
         return table;
     }
 
-    // 配列のサイズは EXP_TABLE_SIZE に合わせる
-    // 指数テーブル: 対数レベル(減衰量) → 線形レベル(音量)
-    // インデックス0で最大音量(Q15_MAX)、最大インデックスで無音(0)
-    static constexpr std::array<Gain_t, EXP_TABLE_SIZE> generate_exp_table() {
-        std::array<Gain_t, EXP_TABLE_SIZE> table{};
-        // ダイナミックレンジ: 96dB
-        // これにより減衰がより自然になる
-        constexpr double TOTAL_DB_RANGE = 96.0;
-        for(size_t i = 0; i < EXP_TABLE_SIZE; ++i) {
-            double normalized = static_cast<double>(i) / (EXP_TABLE_SIZE - 1);
-            // dB = -96 * normalized
-            double db = -TOTAL_DB_RANGE * normalized;
-            // dB → 線形スケール: 10^(dB/20)
-            double linear = std::pow(10.0, db / 20.0);
-            table[i] = static_cast<Gain_t>(Q15_MAX * linear);
+    // Exp2テーブル (Q24 log → Q24 linear)
+    // 2^(x / 2^24) を計算するためのテーブル
+    static constexpr std::array<int32_t, EXP2_N_SAMPLES * 2> generate_exp2_table() {
+        std::array<int32_t, EXP2_N_SAMPLES * 2> table{};
+        double inc = std::pow(2.0, 1.0 / EXP2_N_SAMPLES);
+        double y = static_cast<double>(1 << 30);
+        for (size_t i = 0; i < EXP2_N_SAMPLES; ++i) {
+            table[(i << 1) + 1] = static_cast<int32_t>(y + 0.5);
+            y *= inc;
         }
+        for (size_t i = 0; i < EXP2_N_SAMPLES - 1; ++i) {
+            table[i << 1] = table[(i << 1) + 3] - table[(i << 1) + 1];
+        }
+        table[(EXP2_N_SAMPLES << 1) - 2] = (1U << 31) - table[(EXP2_N_SAMPLES << 1) - 1];
         return table;
     }
 
-    /**
-     * @brief レベル->減衰量 変換テーブルを生成 (Dexed/DX7互換)
-     *
-     * レベル0=無音（最大減衰）、レベル99=最大音量（減衰なし）
-     *
-     * OUTPUT LEVEL変換方式:
-     * - 低レベル域 (0-19): 非線形（テーブル参照）- 実用的でない範囲を圧縮
-     * - 高レベル域 (20-99): 線形 (28 + level) - よく使う範囲の精度を確保
-     */
-    static constexpr std::array<uint32_t, LEVEL_TABLE_SIZE> generate_level_to_attenuation_table() {
-        std::array<uint32_t, LEVEL_TABLE_SIZE> table{};
-
-        for (size_t i = 0; i < LEVEL_TABLE_SIZE; ++i) {
-            int scaled = 0;
-            if (i >= 20) {
-                // 高レベル域: 線形 (出力: 48-127)
-                scaled = 28 + static_cast<int>(i);
-            } else {
-                // 低レベル域: 非線形テーブル参照 (出力: 0-46)
-                scaled = AudioMath::LOW_LEVEL_LUT[i];
-            }
-
-            // 音量値 → 減衰量に変換 (127から引く)
-            // scaled: 0=無音, 127=最大音量
-            // tl: 127=無音, 0=最大音量
-            uint32_t tl = 127 - scaled;
-
-            // MAX_ATTENUATIONにスケーリング
-            table[i] = (tl * MAX_ATTENUATION) / 127;
-        }
-        return table;
+    // Exp2::lookup (Q24 in, Q24 out)
+    static inline int32_t exp2_lookup(int32_t x) {
+        constexpr int SHIFT = 24 - EXP2_LG_N_SAMPLES;
+        int lowbits = x & ((1 << SHIFT) - 1);
+        int x_int = (x >> (SHIFT - 1)) & ((EXP2_N_SAMPLES - 1) << 1);
+        int dy = exp2_table[x_int];
+        int y0 = exp2_table[x_int + 1];
+        int y = y0 + (((int64_t)dy * (int64_t)lowbits) >> SHIFT);
+        return y >> (6 - (x >> 24));
     }
 
     static inline uint8_t clamp_param(uint8_t value) {
         return (value >= RATE_TABLE_SIZE) ? (RATE_TABLE_SIZE - 1) : value;
     }
 
-    // レートテーブル（0-99）-> 実際の増分値へ。非線形なカーブを持つ。
+    // レートテーブル（0-99）-> 増分値
     inline static const std::array<uint32_t, RATE_TABLE_SIZE> rate_table = generate_rate_table();
 
-    // 指数テーブル（対数レベル -> 線形レベルへ）
-    // インデックス = 0 で最大レベル(Q15_MAX)、EXP_TABLE_SIZE - 1 で最小レベル(0)
-    inline static const std::array<Gain_t, EXP_TABLE_SIZE> exp_table = generate_exp_table();
-
-    // レベル -> 減衰量 変換テーブル
-    inline static const std::array<uint32_t, LEVEL_TABLE_SIZE> level_to_attenuation_table = generate_level_to_attenuation_table();
+    // Exp2テーブル (対数レベル -> 線形レベルへ)
+    inline static const std::array<int32_t, EXP2_N_SAMPLES * 2> exp2_table = generate_exp2_table();
 
 public:
     void reset(Memory& mem);
@@ -180,6 +133,9 @@ public:
     void clear(Memory& mem);  // 完全にIdle状態にリセット
 
     FASTRUN void update(Memory& mem);
+
+    // 対数レベルから線形レベルへ変換
+    static void updateCurrentLevel(Memory& mem);
 
     // Rate設定 (0-99: 0=遅い, 99=即座)
     void setRate1(uint8_t rate_0_99);
@@ -203,6 +159,15 @@ public:
     }
 
     /**
+     * @brief 内部対数レベルを返す
+     *
+     * @return EnvLevel_t 対数レベル (大きいほど音が大きい)
+     */
+    inline EnvLevel_t getLevel(const Memory& mem) const {
+        return mem.level_;
+    }
+
+    /**
      * @brief エンベロープ終了判定
      *
      * Idle状態、または音量レベルが十分小さい場合（聞こえない程度）に終了とみなす
@@ -213,8 +178,8 @@ public:
         // Idle状態なら終了
         if (mem.state == EnvelopeState::Idle) return true;
         // Phase4（リリース中）で音量が非常に小さい場合も終了とみなす
-        // current_level は Q15スケール (0-32767)、64未満なら実質無音
-        if (mem.state == EnvelopeState::Phase4 && mem.current_level < 64) return true;
+        // level_がENV_LEVEL_MIN以下なら実質無音
+        if (mem.state == EnvelopeState::Phase4 && mem.level_ <= ENV_LEVEL_MIN) return true;
         return false;
     }
 
@@ -253,4 +218,52 @@ public:
      * @param midinote MIDIノート番号
      */
     void applyRateScaling(Memory& mem, uint8_t midinote);
+
+    /**
+     * @brief レベル(0-99)を内部スケールに変換
+     *
+     * 低レベル域(0-19)は非線形テーブル参照、高レベル域(20-99)は線形(28+level)
+     *
+     * @param level オペレータレベル (0-99)
+     * @return int 変換後の値 (0-127)
+     */
+    static inline int scaleoutlevel(int level) {
+        return (level >= 20) ? (28 + level) : static_cast<int>(AudioMath::LOW_LEVEL_LUT[level]);
+    }
+
+    /**
+     * @brief オペレーター出力レベルとベロシティから基準レベルを設定
+     *
+     * Output LevelとVelocityを組み合わせて
+     * outlevel_を計算する。オペレーターごとに1回呼び出す。
+     * ノートごとのターゲットレベル計算はcalcNoteTargetLevels()で行う。
+     *
+     * @param op_level オペレーター出力レベル (0-99)
+     * @param velocity MIDIベロシティ (0-127)
+     * @param velocity_sens ベロシティ感度 (0-7、0=感度なし)
+     */
+    void setOutlevel(uint8_t op_level, uint8_t velocity, uint8_t velocity_sens = 0);
+
+    /**
+     * @brief ノートごとのターゲットレベルを計算
+     *
+     * setOutlevel()で設定されたoutlevel_を使用して、
+     * ノートごとのターゲットレベル(mem.target_level1-4)を計算する。
+     * ノートオン時に呼び出す。
+     *
+     * @param mem エンベロープメモリ
+     */
+    void calcNoteTargetLevels(Memory& mem);
+
+    /**
+     * @brief ターゲットレベル計算時にoutlevelを適用
+     *
+     * actuallevel = scaleoutlevel(env_level) >> 1 + outlevel - 4256
+     * targetlevel = actuallevel << 16
+     *
+     * @param env_level エンベロープレベルパラメータ (0-99)
+     * @param outlevel オペレーター基準レベル (setOutlevelで設定)
+     * @return EnvLevel_t ターゲットレベル (Q24形式相当)
+     */
+    static EnvLevel_t calcTargetLevel(uint8_t env_level, EnvLevel_t outlevel);
 };

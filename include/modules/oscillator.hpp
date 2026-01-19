@@ -115,6 +115,8 @@ public:
     /**
      * @brief oscillatorのサンプルを取得
      *
+     * Dexed互換: 波形出力のみを返す。レベル・ベロシティはエンベロープ側で適用。
+     *
      * @param mem オシレーターメモリ
      * @param mod_input 変調入力 (Q23)
      * @return Audio24_t オシレーター出力サンプル (Q23)
@@ -123,19 +125,18 @@ public:
         if(!enabled) return 0;
 
         // ローカル変数にキャッシュ
-        const Gain_t local_vel_vol = mem.vel_vol;
         const Phase_t local_phase = mem.phase;
 
         // キャリアのベース位相
         Phase_t base_phase = local_phase;
 
         // モジュレーションの位相オフセット
-        // mod_input の範囲: ±8388607 (Q23)
-        // 位相の範囲: 0〜2^32 (1周期)
-        // スケーリング: mod_input を位相スケールに変換
-        // Q23入力をスケーリング（Q23 >> 8 = Q15相当にしてから処理）
-        const int32_t scaled_mod = (mod_input >> 8);
-        const int32_t mod_phase_offset = scaled_mod << MOD_PHASE_SHIFT;
+        // DEXED互換: mod_inputをそのまま位相に加算
+        // DEXED: Sin::lookup(phase + mod_input)、位相は2^24で1周期
+        // Cranberry: 位相は2^32で1周期
+        // → mod_input (Q23) を 2^8 倍 (<<8) して位相スケールに合わせる
+        // Q23 << 8 = Q31 ≒ 2^32位相スケール
+        const int32_t mod_phase_offset = mod_input << MOD_PHASE_SHIFT;
 
         // 位相計算
         Phase_t effective_phase = base_phase + static_cast<Phase_t>(mod_phase_offset);
@@ -156,11 +157,9 @@ public:
         const Audio24_t y1 = wavetable[next_index];
         const Audio24_t sample = y0 + (((y1 - y0) * static_cast<int32_t>(frac)) >> 16);
 
-        // ベロシティレベルとオシレーターレベルを適用
-        // scaling: vel_vol(Q15) × level(Q15) >> 15 → Q15
-        const int32_t scaling = (static_cast<int32_t>(local_vel_vol) * static_cast<int32_t>(level)) >> Q15_SHIFT;
-        // sample(Q23) × scaling(Q15) >> 15 → Q23
-        return static_cast<Audio24_t>((static_cast<int64_t>(sample) * scaling) >> Q15_SHIFT);
+        // Dexed互換: 波形出力のみを返す
+        // レベル(Output Level)とベロシティはエンベロープ(outlevel)で適用される
+        return sample;
     }
 
 private:
@@ -168,7 +167,12 @@ private:
     static constexpr float PHASE_SCALE_FACTOR = static_cast<float>(1ULL << 32) / SAMPLE_RATE;
 
     // FM変調の位相シフト量
-    static constexpr int MOD_PHASE_SHIFT = 18;
+    // DEXED互換: mod_input(Q23)を位相(2^32)スケールに変換
+    // DEXED: 位相2^24で1周期、mod_inputをそのまま加算
+    // Cranberry: 位相2^32で1周期
+    // → Q23 << 8 = Q31 ≒ 2^32スケール (実質2^31で半周期)
+    // 微調整: 変調深度を合わせるため << 9 (DEXEDより少し深め)
+    static constexpr int MOD_PHASE_SHIFT = 9;
 
     struct WavetableInfo {
         const Audio24_t* data;

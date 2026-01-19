@@ -82,47 +82,93 @@ FASTRUN void Synth::generate() {
             // フィードバック履歴を更新するオペレーター（fb_source）
             bool is_fb_source = (op_idx == fb_source && feedback_amount > 0);
 
-            // --- サンプル毎処理 ---
-            for(size_t i = 0; i < BUFFER_SIZE; ++i) {
+            // DX7/DEXED互換: エンベロープは64サンプルごとに1回更新
+            // BUFFER_SIZE = 128 なので、2回に分けて処理
+            constexpr size_t ENV_BLOCK_SIZE = 64;
+
+            // --- 前半64サンプル ---
+            // DEXED互換: ゲイン補間でクリックノイズを防止
+            Gain_t gain1 = op_obj.env.currentLevel(env_mem);
+            op_obj.env.update(env_mem);
+            Gain_t gain2 = op_obj.env.currentLevel(env_mem);
+
+            // dgain = (gain2 - gain1 + 32) >> 6 (64サンプルで線形補間)
+            int32_t dgain = (static_cast<int32_t>(gain2) - static_cast<int32_t>(gain1) + 32) >> 6;
+            int32_t gain = static_cast<int32_t>(gain1);
+
+            for(size_t i = 0; i < ENV_BLOCK_SIZE; ++i) {
+                gain += dgain;  // 毎サンプル増分
                 Audio24_t mod_input = 0;
 
-                // 1. 変調入力（クロスフィードバック時はmod_maskからの通常入力をスキップ）
+                // 1. 変調入力
                 if (mask) {
                     for(uint8_t src = 0; src < MAX_OPERATORS; ++src) {
                          if (mask & (1 << src)) {
-                             // クロスフィードバックの場合、ソースからの入力はフィードバック経由で処理
                              if (is_fb_target && src == fb_source) continue;
-                             mod_input += op_buffer[src][i]; // 計算済みのバッファから読む
+                             mod_input += op_buffer[src][i];
                          }
                     }
                 }
 
-                // 2. フィードバック入力（ターゲットオペレーターのみ）
-                if (is_fb_target) {
-                    // scaled_fb = (y0 + y) >> (fb_shift + 1)
-                    // fb_shift < 16 の場合のみ有効（16以上は事実上無効）
-                    if (current_fb_shift < 16) {
-                        mod_input += (fb_h0 + fb_h1) >> (current_fb_shift + 1);
-                    }
+                // 2. フィードバック入力
+                if (is_fb_target && current_fb_shift < 16) {
+                    mod_input += (fb_h0 + fb_h1) >> (current_fb_shift + 1);
                 }
 
-                // 3. 発音
+                // 3. 発音（補間されたゲインを使用）
                 Audio24_t raw_wave = op_obj.osc.getSample(osc_mem, mod_input);
-                Gain_t env_level = op_obj.env.currentLevel(env_mem);
-                // Q23 × Q15 = Q38 → Q15シフトでQ23に戻す
-                Audio24_t output = Q23_mul_Q15(raw_wave, env_level);
+                Audio24_t output = Q23_mul_Q15(raw_wave, static_cast<Gain_t>(gain));
+                op_buffer[op_idx][i] = output;
 
-                op_buffer[op_idx][i] = output; // バッファに書き込み
-
-                // 4. FB履歴更新（ソースオペレーターの出力を記録）
+                // 4. FB履歴更新
                 if (is_fb_source) {
                     fb_h1 = fb_h0;
                     fb_h0 = output;
                 }
 
-                // 状態更新
                 op_obj.osc.update(osc_mem);
-                op_obj.env.update(env_mem);
+            }
+
+            // --- 後半64サンプル ---
+            // 前半終了時のgain2を次のgain1として使用
+            gain1 = gain2;
+            op_obj.env.update(env_mem);
+            gain2 = op_obj.env.currentLevel(env_mem);
+
+            dgain = (static_cast<int32_t>(gain2) - static_cast<int32_t>(gain1) + 32) >> 6;
+            gain = static_cast<int32_t>(gain1);
+
+            for(size_t i = ENV_BLOCK_SIZE; i < BUFFER_SIZE; ++i) {
+                gain += dgain;  // 毎サンプル増分
+                Audio24_t mod_input = 0;
+
+                // 1. 変調入力
+                if (mask) {
+                    for(uint8_t src = 0; src < MAX_OPERATORS; ++src) {
+                         if (mask & (1 << src)) {
+                             if (is_fb_target && src == fb_source) continue;
+                             mod_input += op_buffer[src][i];
+                         }
+                    }
+                }
+
+                // 2. フィードバック入力
+                if (is_fb_target && current_fb_shift < 16) {
+                    mod_input += (fb_h0 + fb_h1) >> (current_fb_shift + 1);
+                }
+
+                // 3. 発音（補間されたゲインを使用）
+                Audio24_t raw_wave = op_obj.osc.getSample(osc_mem, mod_input);
+                Audio24_t output = Q23_mul_Q15(raw_wave, static_cast<Gain_t>(gain));
+                op_buffer[op_idx][i] = output;
+
+                // 4. FB履歴更新
+                if (is_fb_source) {
+                    fb_h1 = fb_h0;
+                    fb_h0 = output;
+                }
+
+                op_obj.osc.update(osc_mem);
             }
 
             // キャリアのみでノートアクティブ判定（モジュレーターは無視）
@@ -294,8 +340,11 @@ void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
         for(uint8_t op = 0; op < MAX_OPERATORS; ++op) {
             auto& osc_mem = ope_states[op].osc_mems[i];
             auto& env_mem = ope_states[op].env_mems[i];
-            operators[op].osc.setVelocity(osc_mem, velocity);
             operators[op].osc.setFrequency(osc_mem, actual_note);
+            // Output Level + Velocity をエンベロープのoutlevelとして設定
+            uint8_t op_level = operators[op].osc.getLevel();
+            operators[op].env.setOutlevel(op_level, velocity, 0); // velocity_sens=0 (後で拡張可能)
+            operators[op].env.calcNoteTargetLevels(env_mem); // ノートごとのターゲットレベル計算
             operators[op].env.applyRateScaling(env_mem, actual_note); // Rate Scaling適用
             operators[op].env.reset(env_mem); // エンベロープをAttackから再開
         }
@@ -359,9 +408,12 @@ void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
             for(uint8_t op = 0; op < MAX_OPERATORS; ++op) {
                 auto& osc_mem = ope_states[op].osc_mems[i];
                 auto& env_mem = ope_states[op].env_mems[i];
-                operators[op].osc.setVelocity(osc_mem, velocity);
                 operators[op].osc.setFrequency(osc_mem, actual_note);
                 operators[op].osc.setPhase(osc_mem, 0);
+                // Output Level + Velocity をエンベロープのoutlevelとして設定
+                uint8_t op_level = operators[op].osc.getLevel();
+                operators[op].env.setOutlevel(op_level, velocity, 0); // velocity_sens=0
+                operators[op].env.calcNoteTargetLevels(env_mem); // ノートごとのターゲットレベル計算
                 operators[op].env.applyRateScaling(env_mem, actual_note); // Rate Scaling適用
                 operators[op].env.reset(env_mem); // 初期化IdleからAttackへ
             }
