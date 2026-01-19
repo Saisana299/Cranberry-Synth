@@ -125,9 +125,9 @@ private:
         Synth& synth = Synth::getInstance();
 
         // LEVEL (%)
-        int16_t level = synth.getMasterLevel();
+        Gain_t level = synth.getMasterLevel();
         char levelStr[8];
-        sprintf(levelStr, "%d%%", (level * 100) / Q15_MAX);
+        sprintf(levelStr, "%d%%", (int)((int32_t)level * 100 / Q15_MAX));
         drawTextItem(canvas, "LEVEL", levelStr, 0, cursor == C_LEVEL);
 
         // TRANSPOSE (-24 ～ +24)
@@ -157,9 +157,9 @@ private:
         bool isSelected = (cursor == cursorPos);
 
         if (cursorPos == C_LEVEL) {
-            int16_t level = synth.getMasterLevel();
+            Gain_t level = synth.getMasterLevel();
             char levelStr[8];
-            sprintf(levelStr, "%d%%", (level * 100) / Q15_MAX);
+            sprintf(levelStr, "%d%%", (int)((int32_t)level * 100 / Q15_MAX));
             drawTextItem(canvas, "LEVEL", levelStr, 0, isSelected);
         }
         else if (cursorPos == C_TRANSPOSE) {

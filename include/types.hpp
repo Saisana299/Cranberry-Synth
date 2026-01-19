@@ -47,6 +47,14 @@ constexpr EnvLevel_t ENV_LEVEL_MIN = 16 << 16;     // 最小レベル (実質無
 constexpr EnvLevel_t ENV_LEVEL_MAX = 3840 << 16;   // 最大レベル
 constexpr EnvLevel_t ENV_JUMPTARGET = 1716 << 16;  // アタックカーブ用閾値
 
+// === エンベロープゲイン: Q24線形形式 ===
+// エンベロープ出力用の高精度ゲイン（クリップ回避）
+// 範囲: 0 ～ 16777215 (2^24 - 1)
+using EnvGain_t = int32_t;
+constexpr int ENVGAIN_SHIFT = 24;
+constexpr EnvGain_t ENVGAIN_MAX = (1 << ENVGAIN_SHIFT) - 1;  // 16777215
+constexpr EnvGain_t ENVGAIN_ZERO = 0;
+
 // === 16bit DAC出力 ===
 using Sample16_t = int16_t;
 constexpr Sample16_t SAMPLE16_MAX = 32767;
@@ -148,6 +156,24 @@ inline Gain_t Q15_mul_Q15(Gain_t a, Gain_t b) {
     if (result < 0) return 0;
 
     return static_cast<Gain_t>(result);
+}
+
+/**
+ * @brief Q23 × EnvGain(Q24) = Q23 乗算
+ * @param audio Q23オーディオサンプル
+ * @param gain EnvGain_t (Q24ゲイン)
+ * @return Q23オーディオサンプル
+ * @note (Q23 × Q24) >> 24 = Q23
+ */
+inline Audio24_t Q23_mul_EnvGain(Audio24_t audio, EnvGain_t gain) {
+    // 64bit演算で精度確保
+    int64_t result = (static_cast<int64_t>(audio) * static_cast<int64_t>(gain)) >> ENVGAIN_SHIFT;
+
+    // クリッピング
+    if (result > Q23_MAX) return Q23_MAX;
+    if (result < Q23_MIN) return Q23_MIN;
+
+    return static_cast<Audio24_t>(result);
 }
 
 /**

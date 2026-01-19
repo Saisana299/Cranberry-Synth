@@ -30,7 +30,7 @@ public:
 
     void onEnter(UIManager* manager) override {
         this->manager = manager;
-        cursor = C_DELAY;
+        // カーソル位置は保持する（リセットしない）
         needsFullRedraw = true;
         manager->invalidate();
         manager->triggerFullTransfer();

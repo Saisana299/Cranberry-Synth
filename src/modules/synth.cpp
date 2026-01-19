@@ -82,15 +82,15 @@ FASTRUN void Synth::generate() {
             // フィードバック履歴を更新するオペレーター（fb_source）
             bool is_fb_source = (op_idx == fb_source && feedback_amount > 0);
 
-            // DX7/DEXED互換: エンベロープは64サンプルごとに1回更新
+            // エンベロープは64サンプルごとに1回更新
             // BUFFER_SIZE = 128 なので、2回に分けて処理
             constexpr size_t ENV_BLOCK_SIZE = 64;
 
             // --- 前半64サンプル ---
-            // DEXED互換: ゲイン補間でクリックノイズを防止
-            Gain_t gain1 = op_obj.env.currentLevel(env_mem);
+            // ゲイン補間でクリックノイズを防止
+            EnvGain_t gain1 = op_obj.env.currentLevel(env_mem);
             op_obj.env.update(env_mem);
-            Gain_t gain2 = op_obj.env.currentLevel(env_mem);
+            EnvGain_t gain2 = op_obj.env.currentLevel(env_mem);
 
             // dgain = (gain2 - gain1 + 32) >> 6 (64サンプルで線形補間)
             int32_t dgain = (static_cast<int32_t>(gain2) - static_cast<int32_t>(gain1) + 32) >> 6;
@@ -117,7 +117,7 @@ FASTRUN void Synth::generate() {
 
                 // 3. 発音（補間されたゲインを使用）
                 Audio24_t raw_wave = op_obj.osc.getSample(osc_mem, mod_input);
-                Audio24_t output = Q23_mul_Q15(raw_wave, static_cast<Gain_t>(gain));
+                Audio24_t output = Q23_mul_EnvGain(raw_wave, static_cast<EnvGain_t>(gain));
                 op_buffer[op_idx][i] = output;
 
                 // 4. FB履歴更新
@@ -159,7 +159,7 @@ FASTRUN void Synth::generate() {
 
                 // 3. 発音（補間されたゲインを使用）
                 Audio24_t raw_wave = op_obj.osc.getSample(osc_mem, mod_input);
-                Audio24_t output = Q23_mul_Q15(raw_wave, static_cast<Gain_t>(gain));
+                Audio24_t output = Q23_mul_EnvGain(raw_wave, static_cast<EnvGain_t>(gain));
                 op_buffer[op_idx][i] = output;
 
                 // 4. FB履歴更新

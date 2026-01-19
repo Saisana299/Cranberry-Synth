@@ -363,12 +363,10 @@ void Envelope::updateCurrentLevel(Memory& mem) {
     // Exp2 lookup で線形に変換 (Q24 → Q24)
     int32_t linear = exp2_lookup(level_in);
 
-    // Q24 → Q15 に変換
-    // 出力は約 ±(1<<24) 程度、Q15_MAXは32767
-    // linear >> 9 で大体のスケールになる
-    int32_t q15_level = linear >> 9;
-    if (q15_level > Q15_MAX) q15_level = Q15_MAX;
-    if (q15_level < 0) q15_level = 0;
+    // Q24のままクリップせずに保持
+    // exp2_lookupの出力は最大約 1<<24 なのでENVGAIN_MAXでクリップ
+    if (linear > ENVGAIN_MAX) linear = ENVGAIN_MAX;
+    if (linear < 0) linear = 0;
 
-    mem.current_level = static_cast<Gain_t>(q15_level);
+    mem.current_level = static_cast<EnvGain_t>(linear);
 }

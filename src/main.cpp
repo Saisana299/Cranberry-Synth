@@ -95,10 +95,10 @@ void loop() {
     // 優先度0: サウンド生成関連処理
     switch(mode_state) {
         case MODE_SYNTH:
-            // /*debug*/ uint32_t t0 = ARM_DWT_CYCCNT;
+            /*debug*/ uint32_t t0 = ARM_DWT_CYCCNT;
             synth.update();
-            // /*debug*/ uint32_t t1 = ARM_DWT_CYCCNT;
-            // /*debug*/ Serial.println((t1 - t0) / 600);
+            /*debug*/ uint32_t t1 = ARM_DWT_CYCCNT;
+            /*debug*/ Serial.println((t1 - t0) / 600);
             // sine波1音+LPFで62µs以内目標
             break;
     }

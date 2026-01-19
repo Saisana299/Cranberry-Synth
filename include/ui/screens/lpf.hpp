@@ -107,9 +107,9 @@ public:
                 changed = true;
             }
             else if (cursor == C_MIX) {
-                Gain_t mix = synth.getLpfMix() + MIX_STEP;
+                int32_t mix = synth.getLpfMix() + MIX_STEP;
                 if (mix > Q15_MAX) mix = Q15_MAX;
-                synth.getFilter().setLpfMix(mix);
+                synth.getFilter().setLpfMix(static_cast<Gain_t>(mix));
                 changed = true;
             }
         }
@@ -325,7 +325,7 @@ private:
         canvas.setCursor(80, y + 4);
         canvas.setTextColor(Color::WHITE);
         char valStr[16];
-        sprintf(valStr, "%d%%", (value * 100) / Q15_MAX);
+        sprintf(valStr, "%d%%", (int)((int32_t)value * 100 / Q15_MAX));
         canvas.print(valStr);
 
         manager->transferPartial(0, y, SCREEN_WIDTH, ITEM_H);

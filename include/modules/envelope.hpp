@@ -42,7 +42,7 @@ public:
     struct Memory {
         EnvelopeState state = EnvelopeState::Idle;
         EnvLevel_t level_ = 0;  // Q24対数レベル (大きいほど音が大きい)
-        Gain_t current_level = 0;  // 線形スケールの最終出力レベル (Q15: 0-32767)
+        EnvGain_t current_level = 0;  // 線形スケールの最終出力レベル (Q24: 0-16777215)
         int8_t rate_scaling_delta = 0; // Rate Scalingによるrate増分 (ノートごとに計算)
         // ノートごとのターゲットレベル (対数レベル、大きいほど音が大きい)
         EnvLevel_t target_level1 = ENV_LEVEL_MIN;
@@ -152,9 +152,9 @@ public:
     /**
      * @brief 現在のレベルを返す
      *
-     * @return Gain_t Q15スケール (0-32767)
+     * @return EnvGain_t Q24スケール (0-16777215)
      */
-    inline Gain_t currentLevel(const Memory& mem) const {
+    inline EnvGain_t currentLevel(const Memory& mem) const {
         return mem.current_level;
     }
 
