@@ -94,13 +94,24 @@ void loop() {
 
     // 優先度0: サウンド生成関連処理
     switch(mode_state) {
-        case MODE_SYNTH:
-            /*debug*/ uint32_t t0 = ARM_DWT_CYCCNT;
+        case MODE_SYNTH: {
+            // CPU使用率計測開始
+            uint32_t t0 = ARM_DWT_CYCCNT;
             synth.update();
-            /*debug*/ uint32_t t1 = ARM_DWT_CYCCNT;
-            /*debug*/ Serial.println((t1 - t0) / 600);
-            // sine波1音+LPFで62µs以内目標
+            uint32_t t1 = ARM_DWT_CYCCNT;
+
+            // CPU使用率計算
+            // Teensy 4.1: 600MHz, 1ブロック = 128サンプル @ 44100Hz ≈ 2.9ms
+            // 2.9ms = 600MHz * 0.0029s = 1,740,000 cycles
+            constexpr float CYCLES_PER_BLOCK = 600000000.0f / 44100.0f * 128.0f;
+            float usage = (float)(t1 - t0) / CYCLES_PER_BLOCK * 100.0f;
+
+            // スムージング (急激な変化を抑える)
+            static float smoothed_usage = 0.0f;
+            smoothed_usage = smoothed_usage * 0.9f + usage * 0.1f;
+            state.setCpuUsage(smoothed_usage);
             break;
+        }
     }
 
     // 優先度:1 音声信号処理(AD/DA)

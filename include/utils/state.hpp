@@ -43,9 +43,14 @@ public:
     uint8_t getBtnState() const { return btn_state; }
     void setBtnState(uint8_t value) { btn_state = value; }
 
+    // CPU使用率 (%)
+    float getCpuUsage() const { return cpu_usage; }
+    void setCpuUsage(float value) { cpu_usage = value; }
+
 private:
     bool led_midi = false;
     bool led_audio = false;
     uint8_t mode_state = MODE_TITLE;
     uint8_t btn_state = BTN_NONE;
+    float cpu_usage = 0.0f;
 };
