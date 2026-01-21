@@ -104,12 +104,23 @@ void loop() {
             // Teensy 4.1: 600MHz, 1ブロック = 128サンプル @ 44100Hz ≈ 2.9ms
             // 2.9ms = 600MHz * 0.0029s = 1,740,000 cycles
             constexpr float CYCLES_PER_BLOCK = 600000000.0f / 44100.0f * 128.0f;
+            // /*debug*/ constexpr float CYCLES_PER_US = 600.0f; // 600MHz = 600 cycles/μs
             float usage = (float)(t1 - t0) / CYCLES_PER_BLOCK * 100.0f;
+            // /*debug*/ float elapsed_us = (float)(t1 - t0) / CYCLES_PER_US;
 
             // スムージング (急激な変化を抑える)
             static float smoothed_usage = 0.0f;
+            // /*debug*/ static float smoothed_us = 0.0f;
             smoothed_usage = smoothed_usage * 0.9f + usage * 0.1f;
+            // /*debug*/ smoothed_us = smoothed_us * 0.9f + elapsed_us * 0.1f;
             state.setCpuUsage(smoothed_usage);
+
+            // // デバッグ出力 (500ms間隔)
+            // /*debug*/ static uint32_t last_debug_time = 0;
+            // /*debug*/ if (millis() - last_debug_time >= 500) {
+            // /*debug*/     Serial.printf("[DEBUG] synth.update(): %.1f us (%.1f%% CPU)\n", smoothed_us, smoothed_usage);
+            // /*debug*/     last_debug_time = millis();
+            // /*debug*/ }
             break;
         }
     }
