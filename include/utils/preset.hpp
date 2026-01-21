@@ -41,6 +41,13 @@ struct OperatorPreset {
     // Rate Scaling
     uint8_t rate_scaling = 0;    // Rate Scaling sensitivity (0-7): 高音ほどエンベロープが速くなる
 
+    // Keyboard Level Scaling
+    uint8_t kbd_break_point = 39;   // ブレークポイント (0-99, 39=C3)
+    uint8_t kbd_left_depth = 0;     // 左側スケーリング深さ (0-99)
+    uint8_t kbd_right_depth = 0;    // 右側スケーリング深さ (0-99)
+    uint8_t kbd_left_curve = 0;     // 左側カーブ (0-3: -LN, -EX, +EX, +LN)
+    uint8_t kbd_right_curve = 0;    // 右側カーブ (0-3: -LN, -EX, +EX, +LN)
+
     // オペレーター有効/無効
     bool enabled = false;
 };
@@ -124,37 +131,38 @@ private:
                     99,     // level3
                     0,      // level4
                     0,      // rate_scaling
+                    39, 0, 0, 0, 0,  // kbd_break_point, kbd_left_depth, kbd_right_depth, kbd_left_curve, kbd_right_curve
                     true    // enabled
                 },
                 // Operator 1 (無効)
                 {
                     0, 0, 1.0f, 0.0f, 0, false,
                     99, 99, 99, 99, 99, 99, 99, 0,
-                    0, false
+                    0, 39, 0, 0, 0, 0, false
                 },
                 // Operator 2 (無効)
                 {
                     0, 0, 1.0f, 0.0f, 0, false,
                     99, 99, 99, 99, 99, 99, 99, 0,
-                    0, false
+                    0, 39, 0, 0, 0, 0, false
                 },
                 // Operator 3 (無効)
                 {
                     0, 0, 1.0f, 0.0f, 0, false,
                     99, 99, 99, 99, 99, 99, 99, 0,
-                    0, false
+                    0, 39, 0, 0, 0, 0, false
                 },
                 // Operator 4 (無効)
                 {
                     0, 0, 1.0f, 0.0f, 0, false,
                     99, 99, 99, 99, 99, 99, 99, 0,
-                    0, false
+                    0, 39, 0, 0, 0, 0, false
                 },
                 // Operator 5 (無効)
                 {
                     0, 0, 1.0f, 0.0f, 0, false,
                     99, 99, 99, 99, 99, 99, 99, 0,
-                    0, false
+                    0, 39, 0, 0, 0, 0, false
                 }
             }},
             {   // effects
@@ -186,6 +194,7 @@ private:
                     0,      // level3
                     0,      // level4
                     0,      // rate_scaling
+                    39, 99, 40, 3, 0,  // KLS (disabled)
                     true    // enabled
                 },
                 // Operator 1
@@ -205,6 +214,7 @@ private:
                     59,     // level3
                     0,      // level4
                     0,      // rate_scaling
+                    39, 0, 10, 1, 2,  // KLS (disabled)
                     true    // enabled
                 },
                 // Operator 2
@@ -224,6 +234,7 @@ private:
                     0,      // level3
                     0,      // level4
                     0,      // rate_scaling
+                    39, 0, 16, 0, 0,  // KLS (disabled)
                     true    // enabled
                 },
                 // Operator 3
@@ -243,6 +254,7 @@ private:
                     36,     // level3
                     0,      // level4
                     0,      // rate_scaling
+                    39, 0, 6, 0, 0,  // KLS (disabled)
                     true    // enabled
                 },
                 // Operator 4
@@ -262,6 +274,7 @@ private:
                     0,      // level3
                     0,      // level4
                     0,      // rate_scaling
+                    39, 2, 8, 3, 0,  // KLS (disabled)
                     true    // enabled
                 },
                 // Operator 5
@@ -281,6 +294,7 @@ private:
                     0,      // level3
                     0,      // level4
                     0,      // rate_scaling
+                    39, 7, 0, 0, 0,  // KLS (disabled)
                     true    // enabled
                 }
             }},
@@ -312,7 +326,8 @@ private:
                     99,     // level2
                     0,      // level3
                     0,      // level4
-                    0,      // rate_scaling
+                    3,      // rate_scaling
+                    38, 0, 0, 3, 0,  // KLS (disabled)
                     true    // enabled
                 },
                 // Operator 1
@@ -331,7 +346,8 @@ private:
                     70,     // level2
                     0,     // level3
                     0,      // level4
-                    0,      // rate_scaling
+                    4,      // rate_scaling
+                    40, 0, 15, 3, 0,  // KLS (disabled)
                     true    // enabled
                 },
                 // Operator 2
@@ -350,7 +366,8 @@ private:
                     79,     // level2
                     0,      // level3
                     0,      // level4
-                    0,      // rate_scaling
+                    7,      // rate_scaling
+                    52, 10, 0, 0, 0,  // KLS (disabled)
                     true    // enabled
                 },
                 // Operator 3
@@ -369,7 +386,8 @@ private:
                     99,     // level2
                     0,     // level3
                     0,      // level4
-                    0,      // rate_scaling
+                    3,      // rate_scaling
+                    39, 0, 0, 3, 0,  // KLS (disabled)
                     true    // enabled
                 },
                 // Operator 4
@@ -388,7 +406,8 @@ private:
                     70,     // level2
                     0,      // level3
                     0,      // level4
-                    0,      // rate_scaling
+                    4,      // rate_scaling
+                    40, 0, 15, 3, 0,  // KLS (disabled)
                     true    // enabled
                 },
                 // Operator 5
@@ -407,7 +426,8 @@ private:
                     78,     // level2
                     0,      // level3
                     0,      // level4
-                    0,      // rate_scaling
+                    7,      // rate_scaling
+                    48, 10, 11, 0, 0,  // KLS (disabled)
                     true    // enabled
                 }
             }},

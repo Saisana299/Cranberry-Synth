@@ -49,8 +49,9 @@ FASTRUN void Envelope::update(Memory& mem) {
     const int8_t rs_delta = mem.rate_scaling_delta;
 
     // qrate計算とinc計算
-    auto calcInc = [rs_delta](uint8_t rate_param) -> int32_t {
-        int qrate = (static_cast<int>(rate_param) * 41) >> 6;
+    // 係数: 58 (通常), 45 (リリース用 - より遅く)
+    auto calcInc = [rs_delta](uint8_t rate_param, int coef = 58) -> int32_t {
+        int qrate = (static_cast<int>(rate_param) * coef) >> 6;
         qrate += rs_delta;
         if (qrate < 0) qrate = 0;
         if (qrate > 63) qrate = 63;
@@ -88,7 +89,8 @@ FASTRUN void Envelope::update(Memory& mem) {
 
         case EnvelopeState::Phase2: {
             // Phase2: ディケイ1 (target_level1 → target_level2)
-            int32_t inc = calcInc(rate2_param);
+            // 係数42で減衰
+            int32_t inc = calcInc(rate2_param, 42);
             if (mem.level_ > tgt2) {
                 // falling (レベルを下げる)
                 mem.level_ -= inc;
@@ -114,7 +116,8 @@ FASTRUN void Envelope::update(Memory& mem) {
 
         case EnvelopeState::Phase3: {
             // Phase3: ディケイ2/サステイン (target_level2 → target_level3)
-            int32_t inc = calcInc(rate3_param);
+            // 係数55で減衰
+            int32_t inc = calcInc(rate3_param, 55);
             if (mem.level_ > tgt3) {
                 mem.level_ -= inc;
                 if (mem.level_ <= tgt3) {
@@ -135,7 +138,8 @@ FASTRUN void Envelope::update(Memory& mem) {
 
         case EnvelopeState::Phase4: {
             // Phase4: リリース (現在レベル → target_level4)
-            int32_t inc = calcInc(rate4_param);
+            // リリース係数45（より遅く）
+            int32_t inc = calcInc(rate4_param, 45);
             if (mem.level_ > tgt4) {
                 mem.level_ -= inc;
                 if (mem.level_ <= tgt4) {
@@ -279,26 +283,168 @@ void Envelope::applyRateScaling(Memory& mem, uint8_t midinote) {
     mem.rate_scaling_delta = calcRateScalingDelta(midinote, rate_scaling_param);
 }
 
+// ===== Keyboard Level Scaling =====
+
+/**
+ * @brief ブレークポイントを設定
+ * @param break_point 0-99 (0=A-1, 39=C3, 99=C8)
+ */
+void Envelope::setBreakPoint(uint8_t break_point) {
+    kbd_break_point = (break_point > 99) ? 99 : break_point;
+}
+
+/**
+ * @brief 左側スケーリング深さを設定
+ * @param depth 0-99
+ */
+void Envelope::setLeftDepth(uint8_t depth) {
+    kbd_left_depth = (depth > 99) ? 99 : depth;
+}
+
+/**
+ * @brief 右側スケーリング深さを設定
+ * @param depth 0-99
+ */
+void Envelope::setRightDepth(uint8_t depth) {
+    kbd_right_depth = (depth > 99) ? 99 : depth;
+}
+
+/**
+ * @brief 左側スケーリングカーブを設定
+ * @param curve KeyScaleCurve
+ */
+void Envelope::setLeftCurve(KeyScaleCurve curve) {
+    kbd_left_curve = curve;
+}
+
+/**
+ * @brief 右側スケーリングカーブを設定
+ * @param curve KeyScaleCurve
+ */
+void Envelope::setRightCurve(KeyScaleCurve curve) {
+    kbd_right_curve = curve;
+}
+
+/**
+ * @brief 左側スケーリングカーブを設定 (数値)
+ * @param curve 0-3 (0=-LN, 1=-EX, 2=+EX, 3=+LN)
+ */
+void Envelope::setLeftCurve(uint8_t curve) {
+    if (curve > 3) curve = 3;
+    kbd_left_curve = static_cast<KeyScaleCurve>(curve);
+}
+
+/**
+ * @brief 右側スケーリングカーブを設定 (数値)
+ * @param curve 0-3 (0=-LN, 1=-EX, 2=+EX, 3=+LN)
+ */
+void Envelope::setRightCurve(uint8_t curve) {
+    if (curve > 3) curve = 3;
+    kbd_right_curve = static_cast<KeyScaleCurve>(curve);
+}
+
+/**
+ * @brief スケーリングカーブ計算
+ *
+ * groupとdepthとカーブタイプからスケーリング値を計算
+ *
+ * @param group ブレークポイントからの距離グループ (0-31+)
+ * @param depth スケーリング深さ (0-99)
+ * @param curve カーブタイプ
+ * @return int スケーリング値 (正=音量増加, 負=音量減少)
+ */
+int Envelope::scaleCurve(int group, int depth, KeyScaleCurve curve) {
+    int scale;
+
+    if (curve == KeyScaleCurve::NegLin || curve == KeyScaleCurve::PosLin) {
+        // 線形カーブ
+        scale = (group * depth * 329) >> 12;
+    } else {
+        // 指数カーブ
+        constexpr int n_scale_data = sizeof(EXP_SCALE_DATA);
+        int raw_exp = EXP_SCALE_DATA[std::min(group, n_scale_data - 1)];
+        scale = (raw_exp * depth * 329) >> 15;
+    }
+
+    // カーブ方向: NegLin(0), NegExp(1) は負方向
+    if (curve == KeyScaleCurve::NegLin || curve == KeyScaleCurve::NegExp) {
+        scale = -scale;
+    }
+
+    return scale;
+}
+
+/**
+ * @brief Keyboard Level Scaling計算
+ *
+ * MIDIノート番号とブレークポイント、左右の深さ・カーブから
+ * レベルスケーリング値を計算
+ *
+ * @param midinote MIDIノート番号 (0-127)
+ * @param break_pt ブレークポイント (0-99)
+ * @param left_depth 左側深さ (0-99)
+ * @param right_depth 右側深さ (0-99)
+ * @param left_curve 左側カーブ
+ * @param right_curve 右側カーブ
+ * @return int レベルスケーリング値 (outlevelに加算)
+ */
+int Envelope::scaleLevel(int midinote, int break_pt, int left_depth, int right_depth,
+                        KeyScaleCurve left_curve, KeyScaleCurve right_curve) {
+    // offset = midinote - break_pt - 17
+    // break_pt=39 が C4 (MIDI note 60) に対応
+    int offset = midinote - break_pt - 17;
+
+    if (offset >= 0) {
+        // ブレークポイントより高いノート → 右側スケーリング
+        return scaleCurve((offset + 1) / 3, right_depth, right_curve);
+    } else {
+        // ブレークポイントより低いノート → 左側スケーリング
+        return scaleCurve(-(offset - 1) / 3, left_depth, left_curve);
+    }
+}
+
+/**
+ * @brief Keyboard Level Scalingを適用したスケーリング値を計算
+ *
+ * 現在のKLSパラメータを使用してレベルスケーリングを計算
+ *
+ * @param midinote MIDIノート番号 (0-127)
+ * @return int レベルスケーリング値
+ */
+int Envelope::calcKeyboardLevelScaling(uint8_t midinote) const {
+    return scaleLevel(midinote, kbd_break_point, kbd_left_depth, kbd_right_depth,
+                     kbd_left_curve, kbd_right_curve);
+}
+
 // ===== Outlevel =====
 
 /**
  * @brief オペレーター出力レベルとベロシティから基準レベルを設定
  *
- * Output LevelとVelocityを組み合わせて
- * outlevel_を計算する。オペレーターごとに1回呼び出す。
+ * Output Level、Velocity、Keyboard Level Scalingを組み合わせて
+ * outlevel_を計算する。ノートごとに呼び出す。
  *
  * @param op_level オペレーター出力レベル (0-99)
  * @param velocity MIDIベロシティ (0-127)
+ * @param midinote MIDIノート番号 (0-127) - Keyboard Level Scaling用
  * @param velocity_sens ベロシティ感度 (0-7、0=感度なし)
  */
-void Envelope::setOutlevel(uint8_t op_level, uint8_t velocity, uint8_t velocity_sens) {
+void Envelope::setOutlevel(uint8_t op_level, uint8_t velocity, uint8_t midinote, uint8_t velocity_sens) {
     // 1. Output Level → scaleoutlevel (0-127)
     int outlevel = scaleoutlevel(op_level);
 
-    // 2. 内部精度へ拡張 (<< 5 = ×32)
+    // 2. Keyboard Level Scaling を適用
+    int level_scaling = calcKeyboardLevelScaling(midinote);
+    outlevel += level_scaling;
+
+    // 3. 0-127 にクランプ
+    if (outlevel > 127) outlevel = 127;
+    if (outlevel < 0) outlevel = 0;
+
+    // 4. 内部精度へ拡張 (<< 5 = ×32)
     outlevel = outlevel << 5;
 
-    // 3. ベロシティスケーリング
+    // 5. ベロシティスケーリング
     if (velocity_sens > 0) {
         // velocity 127 = 減衰なし, velocity 0 = 最大減衰
         int sens_squared = velocity_sens * velocity_sens;
@@ -306,7 +452,7 @@ void Envelope::setOutlevel(uint8_t op_level, uint8_t velocity, uint8_t velocity_
         outlevel = std::max(0, outlevel - vel_attenuation);
     }
 
-    // クラスメンバーに保存 (オペレーターごとに固定)
+    // クラスメンバーに保存
     outlevel_ = outlevel;
 }
 

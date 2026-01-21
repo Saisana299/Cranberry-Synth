@@ -341,9 +341,9 @@ void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
             auto& osc_mem = ope_states[op].osc_mems[i];
             auto& env_mem = ope_states[op].env_mems[i];
             operators[op].osc.setFrequency(osc_mem, actual_note);
-            // Output Level + Velocity をエンベロープのoutlevelとして設定
+            // Output Level + Velocity + Keyboard Level Scaling をエンベロープのoutlevelとして設定
             uint8_t op_level = operators[op].osc.getLevel();
-            operators[op].env.setOutlevel(op_level, velocity, 0); // velocity_sens=0 (後で拡張可能)
+            operators[op].env.setOutlevel(op_level, velocity, actual_note, 0); // velocity_sens=0 (後で拡張可能)
             operators[op].env.calcNoteTargetLevels(env_mem); // ノートごとのターゲットレベル計算
             operators[op].env.applyRateScaling(env_mem, actual_note); // Rate Scaling適用
             operators[op].env.reset(env_mem); // エンベロープをAttackから再開
@@ -410,9 +410,9 @@ void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
                 auto& env_mem = ope_states[op].env_mems[i];
                 operators[op].osc.setFrequency(osc_mem, actual_note);
                 operators[op].osc.setPhase(osc_mem, 0);
-                // Output Level + Velocity をエンベロープのoutlevelとして設定
+                // Output Level + Velocity + Keyboard Level Scaling をエンベロープのoutlevelとして設定
                 uint8_t op_level = operators[op].osc.getLevel();
-                operators[op].env.setOutlevel(op_level, velocity, 0); // velocity_sens=0
+                operators[op].env.setOutlevel(op_level, velocity, actual_note, 0); // velocity_sens=0
                 operators[op].env.calcNoteTargetLevels(env_mem); // ノートごとのターゲットレベル計算
                 operators[op].env.applyRateScaling(env_mem, actual_note); // Rate Scaling適用
                 operators[op].env.reset(env_mem); // 初期化IdleからAttackへ
@@ -524,6 +524,13 @@ void Synth::loadPreset(uint8_t preset_id) {
             operators[i].env.setLevel3(op_preset.level3);
             operators[i].env.setLevel4(op_preset.level4);
             operators[i].env.setRateScaling(op_preset.rate_scaling);
+
+            // Keyboard Level Scaling設定
+            operators[i].env.setBreakPoint(op_preset.kbd_break_point);
+            operators[i].env.setLeftDepth(op_preset.kbd_left_depth);
+            operators[i].env.setRightDepth(op_preset.kbd_right_depth);
+            operators[i].env.setLeftCurve(op_preset.kbd_left_curve);
+            operators[i].env.setRightCurve(op_preset.kbd_right_curve);
 
             // キャリアの数をカウント
             if (current_algo && (current_algo->output_mask & (1 << i))) {

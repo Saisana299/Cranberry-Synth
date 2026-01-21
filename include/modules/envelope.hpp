@@ -5,6 +5,22 @@
 #include "types.hpp"
 
 /**
+ * @brief Keyboard Level Scaling のカーブタイプ
+ *
+ * スケーリングカーブ：
+ * - NegLin (-LN): 負方向・線形
+ * - NegExp (-EX): 負方向・指数関数的
+ * - PosExp (+EX): 正方向・指数関数的
+ * - PosLin (+LN): 正方向・線形
+ */
+enum class KeyScaleCurve : uint8_t {
+    NegLin = 0,  // -LN: ブレークポイントから離れるほど音量減少（線形）
+    NegExp = 1,  // -EX: ブレークポイントから離れるほど音量減少（指数）
+    PosExp = 2,  // +EX: ブレークポイントから離れるほど音量増加（指数）
+    PosLin = 3   // +LN: ブレークポイントから離れるほど音量増加（線形）
+};
+
+/**
  * @brief FM方式エンベロープジェネレーター
  *
  * 4つのRate (R1-R4) と 4つのLevel (L1-L4) で構成される。
@@ -17,6 +33,11 @@
  *
  * Rate: 0=最も遅い, 99=最も速い（即座に到達）
  * Level: 0=無音, 99=最大音量
+ *
+ * Keyboard Level Scaling:
+ * - Break Point: スケーリングの基準となるノート (0-99 → A-1～C8)
+ * - Left Depth/Right Depth: 左右のスケーリング深さ (0-99)
+ * - Left Curve/Right Curve: スケーリングカーブタイプ (-LN, -EX, +EX, +LN)
  */
 class Envelope {
 
@@ -66,22 +87,37 @@ private:
 
     uint8_t rate_scaling_param = 0; // Rate Scaling sensitivity (0-7)
 
+    // === Keyboard Level Scaling パラメータ ===
+    uint8_t kbd_break_point = 39;          // ブレークポイント (0-99, デフォルト39=C3)
+    uint8_t kbd_left_depth = 0;            // 左側スケーリング深さ (0-99)
+    uint8_t kbd_right_depth = 0;           // 右側スケーリング深さ (0-99)
+    KeyScaleCurve kbd_left_curve = KeyScaleCurve::NegLin;   // 左側カーブ
+    KeyScaleCurve kbd_right_curve = KeyScaleCurve::NegLin;  // 右側カーブ
+
     // オペレーター出力レベル (クラスメンバー)
     EnvLevel_t outlevel_ = 0;
+
+    // === 指数スケーリング用データテーブル ===
+    // 33要素: group 0-32 に対応する指数カーブ値
+    static constexpr uint8_t EXP_SCALE_DATA[33] = {
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 14, 16, 19, 23, 27, 33, 39, 47, 56, 66,
+        80, 94, 110, 126, 142, 158, 174, 190, 206, 222, 238, 250
+    };
 
     /**
      * @brief レートテーブルを生成
      *
      * inc = (4 + (qrate & 3)) << (2 + LG_N + (qrate >> 2))
-     * qrate = (rate * 41) >> 6 + rate_scaling
+     * qrate = (rate * 58) >> 6 + rate_scaling
      * ここではrate_scalingを除いた基本レートを計算
+     * ※係数58はDexenvとの速度差補正 (元は41)
      */
     static constexpr std::array<uint32_t, RATE_TABLE_SIZE> generate_rate_table() {
         std::array<uint32_t, RATE_TABLE_SIZE> table{};
         constexpr int LG_N = 6;  // N=64
 
         for (size_t i = 0; i < RATE_TABLE_SIZE; ++i) {
-            int qrate = (static_cast<int>(i) * 41) >> 6;
+            int qrate = (static_cast<int>(i) * 58) >> 6;
             if (qrate > 63) qrate = 63;
             // インクリメント計算
             table[i] = static_cast<uint32_t>((4 + (qrate & 3)) << (2 + LG_N + (qrate >> 2)));
@@ -219,6 +255,106 @@ public:
      */
     void applyRateScaling(Memory& mem, uint8_t midinote);
 
+    // =============================================
+    // Keyboard Level Scaling
+    // =============================================
+
+    /**
+     * @brief ブレークポイントを設定
+     *
+     * @param break_point 0-99 (0=A-1, 39=C3, 99=C8)
+     */
+    void setBreakPoint(uint8_t break_point);
+
+    /**
+     * @brief 左側スケーリング深さを設定
+     *
+     * @param depth 0-99
+     */
+    void setLeftDepth(uint8_t depth);
+
+    /**
+     * @brief 右側スケーリング深さを設定
+     *
+     * @param depth 0-99
+     */
+    void setRightDepth(uint8_t depth);
+
+    /**
+     * @brief 左側スケーリングカーブを設定
+     *
+     * @param curve KeyScaleCurve (0-3)
+     */
+    void setLeftCurve(KeyScaleCurve curve);
+
+    /**
+     * @brief 右側スケーリングカーブを設定
+     *
+     * @param curve KeyScaleCurve (0-3)
+     */
+    void setRightCurve(KeyScaleCurve curve);
+
+    /**
+     * @brief 左側スケーリングカーブを設定 (数値)
+     *
+     * @param curve 0-3 (0=-LN, 1=-EX, 2=+EX, 3=+LN)
+     */
+    void setLeftCurve(uint8_t curve);
+
+    /**
+     * @brief 右側スケーリングカーブを設定 (数値)
+     *
+     * @param curve 0-3 (0=-LN, 1=-EX, 2=+EX, 3=+LN)
+     */
+    void setRightCurve(uint8_t curve);
+
+    // Keyboard Level Scaling ゲッター
+    inline uint8_t getBreakPoint() const { return kbd_break_point; }
+    inline uint8_t getLeftDepth() const { return kbd_left_depth; }
+    inline uint8_t getRightDepth() const { return kbd_right_depth; }
+    inline KeyScaleCurve getLeftCurve() const { return kbd_left_curve; }
+    inline KeyScaleCurve getRightCurve() const { return kbd_right_curve; }
+
+    /**
+     * @brief スケーリングカーブ計算
+     *
+     * groupとdepthとカーブタイプからスケーリング値を計算
+     *
+     * @param group ブレークポイントからの距離グループ (0-31+)
+     * @param depth スケーリング深さ (0-99)
+     * @param curve カーブタイプ (KeyScaleCurve)
+     * @return int スケーリング値 (正=音量増加, 負=音量減少)
+     */
+    static int scaleCurve(int group, int depth, KeyScaleCurve curve);
+
+    /**
+     * @brief Keyboard Level Scaling計算
+     *
+     * MIDIノート番号とブレークポイント、左右の深さ・カーブから
+     * レベルスケーリング値を計算
+     *
+     * @param midinote MIDIノート番号 (0-127)
+     * @param break_pt ブレークポイント (0-99)
+     * @param left_depth 左側深さ (0-99)
+     * @param right_depth 右側深さ (0-99)
+     * @param left_curve 左側カーブ
+     * @param right_curve 右側カーブ
+     * @return int レベルスケーリング値 (outlevelに加算)
+     */
+    static int scaleLevel(int midinote, int break_pt, int left_depth, int right_depth,
+                         KeyScaleCurve left_curve, KeyScaleCurve right_curve);
+
+    /**
+     * @brief Keyboard Level Scalingを適用したoutlevelを計算
+     *
+     * 現在のKLSパラメータを使用してレベルスケーリングを計算し、
+     * outlevel_に反映する
+     *
+     * @param midinote MIDIノート番号 (0-127)
+     * @return int レベルスケーリング値
+     */
+    int calcKeyboardLevelScaling(uint8_t midinote) const;
+
     /**
      * @brief レベル(0-99)を内部スケールに変換
      *
@@ -234,15 +370,16 @@ public:
     /**
      * @brief オペレーター出力レベルとベロシティから基準レベルを設定
      *
-     * Output LevelとVelocityを組み合わせて
-     * outlevel_を計算する。オペレーターごとに1回呼び出す。
+     * Output Level、Velocity、Keyboard Level Scalingを組み合わせて
+     * outlevel_を計算する。ノートごとに呼び出す。
      * ノートごとのターゲットレベル計算はcalcNoteTargetLevels()で行う。
      *
      * @param op_level オペレーター出力レベル (0-99)
      * @param velocity MIDIベロシティ (0-127)
+     * @param midinote MIDIノート番号 (0-127) - Keyboard Level Scaling用
      * @param velocity_sens ベロシティ感度 (0-7、0=感度なし)
      */
-    void setOutlevel(uint8_t op_level, uint8_t velocity, uint8_t velocity_sens = 0);
+    void setOutlevel(uint8_t op_level, uint8_t velocity, uint8_t midinote, uint8_t velocity_sens = 0);
 
     /**
      * @brief ノートごとのターゲットレベルを計算
