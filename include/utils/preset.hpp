@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <array>
+#include "types.hpp"
 
 // プリセット最大数
 constexpr uint8_t MAX_PRESETS = 3;
@@ -37,6 +38,16 @@ struct OperatorPreset {
     uint8_t level3 = 99;         // Level3: サステインレベル (0-99)
     uint8_t level4 = 0;          // Level4: リリース到達レベル (0-99)
 
+    // Rate Scaling
+    uint8_t rate_scaling = 0;    // Rate Scaling sensitivity (0-7): 高音ほどエンベロープが速くなる
+
+    // Keyboard Level Scaling
+    uint8_t kbd_break_point = 39;   // ブレークポイント (0-99, 39=C3)
+    uint8_t kbd_left_depth = 0;     // 左側スケーリング深さ (0-99)
+    uint8_t kbd_right_depth = 0;    // 右側スケーリング深さ (0-99)
+    uint8_t kbd_left_curve = 0;     // 左側カーブ (0-3: -LN, -EX, +EX, +LN)
+    uint8_t kbd_right_curve = 0;    // 右側カーブ (0-3: -LN, -EX, +EX, +LN)
+
     // オペレーター有効/無効
     bool enabled = false;
 };
@@ -45,21 +56,21 @@ struct OperatorPreset {
 struct EffectPreset {
     // ディレイ設定
     bool delay_enabled = false;
-    int32_t delay_time = 256;          // ディレイタイム (1-300ms)
-    int32_t delay_level = 307;         // ディレイレベル (0-1024)
-    int32_t delay_feedback = 512;      // ディレイフィードバック (0-1024)
+    int32_t delay_time = 80;           // ディレイタイム (1-300ms)
+    Gain_t delay_level = 9830;         // ディレイレベル (Q15: 30% = 9830)
+    Gain_t delay_feedback = 16384;     // ディレイフィードバック (Q15: 50% = 16384)
 
     // ローパスフィルタ設定
     bool lpf_enabled = false;
     float lpf_cutoff = 20000.0f;       // カットオフ周波数 (20-20000 Hz)
     float lpf_resonance = 0.70710678f; // Q値 (0.1-10.0)
-    int16_t lpf_mix = 1024;            // ミックス量 (0-1024)
+    Gain_t lpf_mix = Q15_MAX;          // ミックス量 (0-Q15_MAX)
 
     // ハイパスフィルタ設定
     bool hpf_enabled = false;
     float hpf_cutoff = 20.0f;          // カットオフ周波数 (20-20000 Hz)
     float hpf_resonance = 0.70710678f; // Q値 (0.1-10.0)
-    int16_t hpf_mix = 1024;            // ミックス量 (0-1024)
+    Gain_t hpf_mix = Q15_MAX;          // ミックス量 (0-Q15_MAX)
 };
 
 // シンセサイザープリセット構造体
@@ -119,37 +130,39 @@ private:
                     99,     // level2
                     99,     // level3
                     0,      // level4
+                    0,      // rate_scaling
+                    39, 0, 0, 0, 0,  // kbd_break_point, kbd_left_depth, kbd_right_depth, kbd_left_curve, kbd_right_curve
                     true    // enabled
                 },
                 // Operator 1 (無効)
                 {
                     0, 0, 1.0f, 0.0f, 0, false,
                     99, 99, 99, 99, 99, 99, 99, 0,
-                    false
+                    0, 39, 0, 0, 0, 0, false
                 },
                 // Operator 2 (無効)
                 {
                     0, 0, 1.0f, 0.0f, 0, false,
                     99, 99, 99, 99, 99, 99, 99, 0,
-                    false
+                    0, 39, 0, 0, 0, 0, false
                 },
                 // Operator 3 (無効)
                 {
                     0, 0, 1.0f, 0.0f, 0, false,
                     99, 99, 99, 99, 99, 99, 99, 0,
-                    false
+                    0, 39, 0, 0, 0, 0, false
                 },
                 // Operator 4 (無効)
                 {
                     0, 0, 1.0f, 0.0f, 0, false,
                     99, 99, 99, 99, 99, 99, 99, 0,
-                    false
+                    0, 39, 0, 0, 0, 0, false
                 },
                 // Operator 5 (無効)
                 {
                     0, 0, 1.0f, 0.0f, 0, false,
                     99, 99, 99, 99, 99, 99, 99, 0,
-                    false
+                    0, 39, 0, 0, 0, 0, false
                 }
             }},
             {   // effects
@@ -180,6 +193,8 @@ private:
                     75,     // level2
                     0,      // level3
                     0,      // level4
+                    0,      // rate_scaling
+                    39, 99, 40, 3, 0,  // KLS (disabled)
                     true    // enabled
                 },
                 // Operator 1
@@ -198,6 +213,8 @@ private:
                     81,     // level2
                     59,     // level3
                     0,      // level4
+                    0,      // rate_scaling
+                    39, 0, 10, 1, 2,  // KLS (disabled)
                     true    // enabled
                 },
                 // Operator 2
@@ -216,6 +233,8 @@ private:
                     27,     // level2
                     0,      // level3
                     0,      // level4
+                    0,      // rate_scaling
+                    39, 0, 16, 0, 0,  // KLS (disabled)
                     true    // enabled
                 },
                 // Operator 3
@@ -234,6 +253,8 @@ private:
                     98,     // level2
                     36,     // level3
                     0,      // level4
+                    0,      // rate_scaling
+                    39, 0, 6, 0, 0,  // KLS (disabled)
                     true    // enabled
                 },
                 // Operator 4
@@ -252,6 +273,8 @@ private:
                     91,     // level2
                     0,      // level3
                     0,      // level4
+                    0,      // rate_scaling
+                    39, 2, 8, 3, 0,  // KLS (disabled)
                     true    // enabled
                 },
                 // Operator 5
@@ -270,6 +293,8 @@ private:
                     92,     // level2
                     0,      // level3
                     0,      // level4
+                    0,      // rate_scaling
+                    39, 7, 0, 0, 0,  // KLS (disabled)
                     true    // enabled
                 }
             }},
@@ -301,6 +326,8 @@ private:
                     99,     // level2
                     0,      // level3
                     0,      // level4
+                    3,      // rate_scaling
+                    38, 0, 0, 3, 0,  // KLS (disabled)
                     true    // enabled
                 },
                 // Operator 1
@@ -319,6 +346,8 @@ private:
                     70,     // level2
                     0,     // level3
                     0,      // level4
+                    4,      // rate_scaling
+                    40, 0, 15, 3, 0,  // KLS (disabled)
                     true    // enabled
                 },
                 // Operator 2
@@ -337,6 +366,8 @@ private:
                     79,     // level2
                     0,      // level3
                     0,      // level4
+                    7,      // rate_scaling
+                    52, 10, 0, 0, 0,  // KLS (disabled)
                     true    // enabled
                 },
                 // Operator 3
@@ -355,6 +386,8 @@ private:
                     99,     // level2
                     0,     // level3
                     0,      // level4
+                    3,      // rate_scaling
+                    39, 0, 0, 3, 0,  // KLS (disabled)
                     true    // enabled
                 },
                 // Operator 4
@@ -373,6 +406,8 @@ private:
                     70,     // level2
                     0,      // level3
                     0,      // level4
+                    4,      // rate_scaling
+                    40, 0, 15, 3, 0,  // KLS (disabled)
                     true    // enabled
                 },
                 // Operator 5
@@ -381,7 +416,7 @@ private:
                     99,     // level
                     14.0f,   // coarse
                     0.0f,  // fine
-                    -1,      // detune
+                    1,      // detune
                     false, // is_fixed
                     95,     // rate1
                     48,     // rate2
@@ -391,6 +426,8 @@ private:
                     78,     // level2
                     0,      // level3
                     0,      // level4
+                    7,      // rate_scaling
+                    48, 10, 11, 0, 0,  // KLS (disabled)
                     true    // enabled
                 }
             }},

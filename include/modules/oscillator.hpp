@@ -1,5 +1,6 @@
 #pragma once
 
+#include "types.hpp"
 #include "handlers/audio.hpp"
 #include "modules/envelope.hpp"
 #include "utils/math.hpp"
@@ -8,9 +9,9 @@
 class Oscillator {
 public:
     struct Memory {
-        uint32_t phase = 0;
-        uint32_t delta = 0;
-        int16_t vel_vol = 0;
+        Phase_t phase = 0;
+        Phase_t delta = 0;
+        Gain_t vel_vol = 0;
         uint8_t note = 60;  // エイリアシング防止用のキースケーリングに使用
     };
 
@@ -20,21 +21,21 @@ public:
 
     void setFrequency(Memory& mem, uint8_t note);
     void setVelocity(Memory& mem, uint8_t velocity);
-    void setPhase(Memory& mem, uint32_t phase);
+    void setPhase(Memory& mem, Phase_t phase);
     void reset(Memory& mem);
     void enable();
     void disable();
 
-    void setLevel(int16_t level);
+    void setLevel(Gain_t level);
     void setLevelNonLinear(uint8_t level);
     void setWavetable(uint8_t table_id);
     void setCoarse(float coarse);
     void setFine(float fine_level);
     void setDetune(int8_t detune_cents);
 
-    // レベルテーブル (Level 0-99 → 線形スケール 0-1024)
+    // レベルテーブル (Level 0-99 → Q15スケール 0-32767)
     // AudioMath::levelToLinear() を使用してキャッシュ
-    static int16_t level_table[100];
+    static Gain_t level_table[100];
     static bool table_initialized;
     static void initTable() {
         if (table_initialized) return;
@@ -71,8 +72,8 @@ public:
         return level_raw;
     }
 
-    /** @brief 線形レベルを取得 (0-1024) */
-    inline int16_t getLevelLinear() const {
+    /** @brief 線形レベルを取得 (Q15: 0-32767) */
+    inline Gain_t getLevelLinear() const {
         return level;
     }
 
@@ -114,34 +115,30 @@ public:
     /**
      * @brief oscillatorのサンプルを取得
      *
+     * 波形出力のみを返す。レベル・ベロシティはエンベロープ側で適用。
+     *
      * @param mem オシレーターメモリ
-     * @param note_id ノートID
-     * @return int16_t オシレーター出力サンプル
+     * @param mod_input 変調入力 (Q23)
+     * @return Audio24_t オシレーター出力サンプル (Q23)
      */
-    FASTRUN inline int16_t getSample(Memory& mem, int32_t mod_input = 0) {
+    FASTRUN inline Audio24_t getSample(Memory& mem, Audio24_t mod_input = 0) {
         if(!enabled) return 0;
 
         // ローカル変数にキャッシュ
-        const int16_t local_vel_vol = mem.vel_vol;
-        const uint32_t local_phase = mem.phase;
+        const Phase_t local_phase = mem.phase;
 
         // キャリアのベース位相
-        uint32_t base_phase = local_phase;
+        Phase_t base_phase = local_phase;
 
         // モジュレーションの位相オフセット
-        // mod_input の範囲: ±32767程度（オペレーター出力）
-        // 位相の範囲: 0〜2^32 (1周期)
-        // スケーリング: mod_input を位相スケールに変換
-        //
-        // エイリアシング防止: 高音域で変調深度を自動的に減らす
-        // ノート60(C4)を基準として、それより高い音では変調を抑える
-        // ノート84(C6)以上では変調深度が1/4になる
-        const int32_t key_scale = AudioMath::MOD_KEY_SCALE_TABLE[mem.note];
-        const int32_t scaled_mod = (mod_input * key_scale) >> 10;
-        const int32_t mod_phase_offset = scaled_mod << MOD_PHASE_SHIFT;
+        // mod_inputをそのまま位相に加算
+        // 位相は2^32で1周期
+        // → mod_input (Q23) を 2^8 倍 (<<8) して位相スケールに合わせる
+        // Q23 << 8 = Q31 ≒ 2^32位相スケール
+        const int32_t mod_phase_offset = mod_input << MOD_PHASE_SHIFT;
 
         // 位相計算
-        uint32_t effective_phase = base_phase + static_cast<uint32_t>(mod_phase_offset);
+        Phase_t effective_phase = base_phase + static_cast<Phase_t>(mod_phase_offset);
 
         // 波形テーブルを線形補間で参照
         // bit_padding: 32 - log2(wavetable_size) で、上位ビットがインデックス
@@ -155,13 +152,13 @@ public:
         const uint32_t frac = (effective_phase & frac_mask) >> (bit_padding - 16);
 
         // 線形補間: y0 + (y1 - y0) * frac / 65536
-        const int32_t y0 = wavetable[index];
-        const int32_t y1 = wavetable[next_index];
-        const int32_t sample = y0 + (((y1 - y0) * static_cast<int32_t>(frac)) >> 16);
+        const Audio24_t y0 = wavetable[index];
+        const Audio24_t y1 = wavetable[next_index];
+        const Audio24_t sample = y0 + (((y1 - y0) * static_cast<int32_t>(frac)) >> 16);
 
-        // ベロシティレベルとオシレーターレベルを適用
-        const int32_t scaling = (static_cast<int32_t>(local_vel_vol) * static_cast<int32_t>(level)) >> 10;
-        return static_cast<int16_t>((sample * scaling) >> 10);
+        // 波形出力のみを返す
+        // レベル(Output Level)とベロシティはエンベロープ(outlevel)で適用される
+        return sample;
     }
 
 private:
@@ -169,10 +166,14 @@ private:
     static constexpr float PHASE_SCALE_FACTOR = static_cast<float>(1ULL << 32) / SAMPLE_RATE;
 
     // FM変調の位相シフト量
-    static constexpr int MOD_PHASE_SHIFT = 18;
+    // mod_input(Q23)を位相(2^32)スケールに変換
+    // 位相2^32で1周期
+    // → Q23 << 8 = Q31 ≒ 2^32スケール (実質2^31で半周期)
+    // 微調整: 変調深度を合わせるため << 9
+    static constexpr int MOD_PHASE_SHIFT = 9;
 
     struct WavetableInfo {
-        const int16_t* data;
+        const Audio24_t* data;
         size_t size;
     };
 
@@ -184,8 +185,8 @@ private:
     };
 
     // パラメータ検証
-    static inline int16_t clamp_level(int16_t value) {
-        return std::clamp<int16_t>(value, 0, 1024);
+    static inline Gain_t clamp_level(Gain_t value) {
+        return std::clamp<Gain_t>(value, 0, Q15_MAX);
     }
 
     static inline float clamp_coarse(float value) { // TODO 小数点以下無効
@@ -202,10 +203,10 @@ private:
 
     // OSC設定
     uint8_t bit_padding; // コンストラクタで初期化
-    const int16_t* wavetable = Wavetable::sine;
+    const Audio24_t* wavetable = Wavetable::sine;
     size_t wavetable_size = sizeof(Wavetable::sine) / sizeof(Wavetable::sine[0]);
     bool enabled = false;
-    int16_t level = 0;      // 線形スケール (0-1024)
+    Gain_t level = 0;       // Q15スケール (0-32767)
     uint8_t level_raw = 0;  // 非線形レベル (0-99)
 
     // ピッチ

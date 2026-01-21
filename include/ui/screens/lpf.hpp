@@ -27,7 +27,7 @@ private:
     const float CUTOFF_STEP_SMALL = 1.05f;  // 5%ずつ
     const float CUTOFF_STEP_LARGE = 1.2f;   // 20%ずつ
     const float RESONANCE_STEP = 0.1f;
-    const int16_t MIX_STEP = 32; // 1024段階の約3%
+    const Gain_t MIX_STEP = 1024; // Q15_MAXの約3%
 
 public:
     LPFScreen() = default;
@@ -80,8 +80,9 @@ public:
                 changed = true;
             }
             else if (cursor == C_MIX) {
-                int16_t mix = synth.getLpfMix() - MIX_STEP;
-                if (mix < 0) mix = 0;
+                Gain_t mix = synth.getLpfMix();
+                if (mix > MIX_STEP) mix -= MIX_STEP;
+                else mix = 0;
                 synth.getFilter().setLpfMix(mix);
                 changed = true;
             }
@@ -106,9 +107,9 @@ public:
                 changed = true;
             }
             else if (cursor == C_MIX) {
-                int16_t mix = synth.getLpfMix() + MIX_STEP;
-                if (mix > 1024) mix = 1024;
-                synth.getFilter().setLpfMix(mix);
+                int32_t mix = synth.getLpfMix() + MIX_STEP;
+                if (mix > Q15_MAX) mix = Q15_MAX;
+                synth.getFilter().setLpfMix(static_cast<Gain_t>(mix));
                 changed = true;
             }
         }
@@ -307,7 +308,7 @@ private:
     /**
      * @brief パーセントアイテムを描画
      */
-    void drawPercentItem(GFXcanvas16& canvas, const char* name, int16_t value, int index, bool selected) {
+    void drawPercentItem(GFXcanvas16& canvas, const char* name, Gain_t value, int index, bool selected) {
         int16_t y = HEADER_H + 2 + (index * ITEM_H);
 
         canvas.fillRect(0, y, SCREEN_WIDTH, ITEM_H, Color::BLACK);
@@ -324,7 +325,7 @@ private:
         canvas.setCursor(80, y + 4);
         canvas.setTextColor(Color::WHITE);
         char valStr[16];
-        sprintf(valStr, "%d%%", (value * 100) / 1024);
+        sprintf(valStr, "%d%%", (int)((int32_t)value * 100 / Q15_MAX));
         canvas.print(valStr);
 
         manager->transferPartial(0, y, SCREEN_WIDTH, ITEM_H);

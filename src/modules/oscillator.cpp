@@ -1,6 +1,6 @@
 #include "modules/oscillator.hpp"
 
-int16_t Oscillator::level_table[100] = {};
+Gain_t Oscillator::level_table[100] = {};
 bool Oscillator::table_initialized = false;
 
 /**
@@ -21,7 +21,7 @@ void Oscillator::setFrequency(Memory& mem, uint8_t note) {
         // RATIOモード: MIDIノートに対する比率で周波数を設定
         freq = AudioMath::ratioToFrequency(note, detune_cents, coarse, fine_level);
     }
-    mem.delta = static_cast<uint32_t>(freq * PHASE_SCALE_FACTOR);
+    mem.delta = static_cast<Phase_t>(freq * PHASE_SCALE_FACTOR);
 }
 
 /**
@@ -32,7 +32,7 @@ void Oscillator::setFrequency(Memory& mem, uint8_t note) {
  */
 void Oscillator::setVelocity(Memory& mem, uint8_t velocity) {
     const float vel = AudioMath::velocityToAmplitude(velocity);
-    mem.vel_vol = static_cast<int16_t>(vel * 1024.0f);
+    mem.vel_vol = static_cast<Gain_t>(vel * Q15_MAX);
 }
 
 /**
@@ -40,7 +40,7 @@ void Oscillator::setVelocity(Memory& mem, uint8_t velocity) {
  *
  * @param phase 位相
 */
-void Oscillator::setPhase(Memory& mem, uint32_t phase) {
+void Oscillator::setPhase(Memory& mem, Phase_t phase) {
     mem.phase = phase;
 }
 
@@ -65,9 +65,9 @@ void Oscillator::reset(Memory& mem) {
 /**
  * @brief オシレーターの音量を設定
  *
- * @param level 0~1024 (1.0)
+ * @param level Q15スケール (0-32767)
  */
-void Oscillator::setLevel(int16_t level) {
+void Oscillator::setLevel(Gain_t level) {
     this->level = clamp_level(level);
 }
 

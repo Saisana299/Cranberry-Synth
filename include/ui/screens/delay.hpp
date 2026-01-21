@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ui/ui.hpp"
+#include "modules/synth.hpp"
 
 class DelayScreen : public Screen {
 private:
@@ -24,9 +25,9 @@ private:
     int8_t cursor = C_ENABLED;
 
     // パラメータ調整の増分
-    const int32_t TIME_STEP = 5;      // 5ms
-    const int32_t LEVEL_STEP = 32;    // 1024段階の約3%
-    const int32_t FEEDBACK_STEP = 32;
+    const int32_t TIME_STEP = 5;                      // 5ms
+    const Gain_t LEVEL_STEP = Q15_MAX / 100;          // 1%刻み (約328)
+    const Gain_t FEEDBACK_STEP = Q15_MAX / 100;       // 1%刻み (約328)
 
 public:
     DelayScreen() = default;
@@ -67,19 +68,19 @@ public:
             else if (cursor == C_TIME) {
                 int32_t time = synth.getDelayTime() - TIME_STEP;
                 if (time < MIN_TIME) time = MIN_TIME;
-                synth.getDelay().setDelay(time, synth.getDelayLevel(), synth.getDelayFeedback());
+                synth.getDelay().setTime(time);
                 changed = true;
             }
             else if (cursor == C_LEVEL) {
-                int32_t level = synth.getDelayLevel() - LEVEL_STEP;
+                int32_t level = static_cast<int32_t>(synth.getDelayLevel()) - LEVEL_STEP;
                 if (level < MIN_LEVEL) level = MIN_LEVEL;
-                synth.getDelay().setDelay(synth.getDelayTime(), level, synth.getDelayFeedback());
+                synth.getDelay().setLevel(static_cast<Gain_t>(level));
                 changed = true;
             }
             else if (cursor == C_FEEDBACK) {
-                int32_t feedback = synth.getDelayFeedback() - FEEDBACK_STEP;
+                int32_t feedback = static_cast<int32_t>(synth.getDelayFeedback()) - FEEDBACK_STEP;
                 if (feedback < MIN_FEEDBACK) feedback = MIN_FEEDBACK;
-                synth.getDelay().setDelay(synth.getDelayTime(), synth.getDelayLevel(), feedback);
+                synth.getDelay().setFeedback(static_cast<Gain_t>(feedback));
                 changed = true;
             }
         }
@@ -91,19 +92,19 @@ public:
             else if (cursor == C_TIME) {
                 int32_t time = synth.getDelayTime() + TIME_STEP;
                 if (time > MAX_TIME) time = MAX_TIME;
-                synth.getDelay().setDelay(time, synth.getDelayLevel(), synth.getDelayFeedback());
+                synth.getDelay().setTime(time);
                 changed = true;
             }
             else if (cursor == C_LEVEL) {
-                int32_t level = synth.getDelayLevel() + LEVEL_STEP;
+                int32_t level = static_cast<int32_t>(synth.getDelayLevel()) + LEVEL_STEP;
                 if (level > MAX_LEVEL) level = MAX_LEVEL;
-                synth.getDelay().setDelay(synth.getDelayTime(), level, synth.getDelayLevel());
+                synth.getDelay().setLevel(static_cast<Gain_t>(level));
                 changed = true;
             }
             else if (cursor == C_FEEDBACK) {
-                int32_t feedback = synth.getDelayFeedback() + FEEDBACK_STEP;
+                int32_t feedback = static_cast<int32_t>(synth.getDelayFeedback()) + FEEDBACK_STEP;
                 if (feedback > MAX_FEEDBACK) feedback = MAX_FEEDBACK;
-                synth.getDelay().setDelay(synth.getDelayTime(), synth.getDelayLevel(), feedback);
+                synth.getDelay().setFeedback(static_cast<Gain_t>(feedback));
                 changed = true;
             }
         }
@@ -183,8 +184,8 @@ private:
         Synth& synth = Synth::getInstance();
         drawToggleItem(canvas, "ENABLED", synth.isDelayEnabled(), 0, cursor == C_ENABLED);
         drawParamItem(canvas, "TIME", synth.getDelayTime(), "ms", 1, cursor == C_TIME);
-        drawParamItem(canvas, "LEVEL", (synth.getDelayLevel() * 100) / 1024, "%", 2, cursor == C_LEVEL);
-        drawParamItem(canvas, "FEEDBACK", (synth.getDelayFeedback() * 100) / 1024, "%", 3, cursor == C_FEEDBACK);
+        drawParamItem(canvas, "LEVEL", (synth.getDelayLevel() * 100) / Q15_MAX, "%", 2, cursor == C_LEVEL);
+        drawParamItem(canvas, "FEEDBACK", (synth.getDelayFeedback() * 100) / Q15_MAX, "%", 3, cursor == C_FEEDBACK);
     }
 
     /**
@@ -209,10 +210,10 @@ private:
             drawParamItem(canvas, "TIME", synth.getDelayTime(), "ms", 1, isSelected);
         }
         else if (cursorPos == C_LEVEL) {
-            drawParamItem(canvas, "LEVEL", (synth.getDelayLevel() * 100) / 1024, "%", 2, isSelected);
+            drawParamItem(canvas, "LEVEL", (synth.getDelayLevel() * 100) / Q15_MAX, "%", 2, isSelected);
         }
         else if (cursorPos == C_FEEDBACK) {
-            drawParamItem(canvas, "FEEDBACK", (synth.getDelayFeedback() * 100) / 1024, "%", 3, isSelected);
+            drawParamItem(canvas, "FEEDBACK", (synth.getDelayFeedback() * 100) / Q15_MAX, "%", 3, isSelected);
         }
         else if (cursorPos == C_BACK) {
             drawBackButton(canvas, isSelected);

@@ -17,6 +17,11 @@ private:
     uint8_t lastPolyCount = 0;
     bool needsFullRedraw = false;
 
+    // CPU使用率表示用
+    float lastCpuUsage = 0.0f;
+    uint32_t lastCpuUpdateMs = 0;
+    static constexpr uint32_t CPU_UPDATE_INTERVAL = 500; // 500msごとに更新
+
     // カーソル位置
     enum CursorPos {
         C_PRESET = 0,
@@ -195,6 +200,9 @@ public:
             canvas.drawFastHLine(0, FOOTER_Y, SCREEN_WIDTH, Color::WHITE);
             drawFooterItems(canvas); // FX, MENU, POLY
 
+            // CPU使用率表示
+            drawCpuUsage(canvas);
+
             firstDraw = false;
             lastCursor = cursor;
             manager->triggerFullTransfer();
@@ -217,6 +225,16 @@ public:
         if (currentPoly != lastPolyCount) {
             lastPolyCount = currentPoly;
             updatePolyDisplay(canvas, currentPoly);
+        }
+
+        // --- 4. 定期更新 (CPU使用率) ---
+        float currentCpu = manager->getState().getCpuUsage();
+        // 1%以上の変化があった場合、または500ms経過した場合に更新
+        uint32_t now = millis();
+        if (abs(currentCpu - lastCpuUsage) >= 1.0f || (now - lastCpuUpdateMs >= CPU_UPDATE_INTERVAL)) {
+            lastCpuUsage = currentCpu;
+            lastCpuUpdateMs = now;
+            drawCpuUsage(canvas);
         }
     }
 
@@ -412,7 +430,7 @@ private:
         int16_t size = 14;
 
         canvas.fillRect(x, y, size, size, Color::BLACK);
-        
+
         if (selected) {
             canvas.fillRect(x, y, size, size, Color::WHITE);
             canvas.setTextColor(Color::BLACK);
@@ -420,11 +438,50 @@ private:
             canvas.drawRect(x, y, size, size, Color::MD_GRAY);
             canvas.setTextColor(Color::MD_GRAY);
         }
-        
+
         canvas.setCursor(x + 4, y + 3);
         canvas.print("M");
 
         manager->transferPartial(x, y, size, size);
+    }
+
+    /**
+     * @brief CPU使用率を画面右下（MENUの上）に描画
+     */
+    void drawCpuUsage(GFXcanvas16& canvas) {
+        // Stateから現在のCPU使用率を取得
+        float cpuUsage = manager->getState().getCpuUsage();
+        lastCpuUsage = cpuUsage;
+
+        // 表示文字列作成 (例: "DSP:12%")
+        char cpuStr[12];
+        sprintf(cpuStr, "DSP:%d%%", (int)cpuUsage);
+
+        int16_t strWidth = strlen(cpuStr) * 6;
+        int16_t x = SCREEN_WIDTH - strWidth - 4;  // 右寄せ
+        int16_t y = FOOTER_Y - 10;  // MENUの上
+
+        // 背景クリア範囲
+        int16_t clearW = 48;  // "CPU:100%" 分の幅を確保
+        int16_t clearX = SCREEN_WIDTH - clearW - 2;
+
+        canvas.fillRect(clearX, y - 1, clearW, 10, Color::BLACK);
+
+        // 使用率に応じて色を変更
+        uint16_t color;
+        if (cpuUsage >= 80.0f) {
+            color = Color::RED;      // 高負荷
+        } else if (cpuUsage >= 50.0f) {
+            color = Color::YELLOW;   // 中負荷
+        } else {
+            color = Color::MD_GRAY;  // 通常
+        }
+
+        canvas.setTextColor(color);
+        canvas.setCursor(x, y);
+        canvas.print(cpuStr);
+
+        manager->transferPartial(clearX, y - 1, clearW, 10);
     }
 
     /**

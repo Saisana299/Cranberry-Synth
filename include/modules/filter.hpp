@@ -1,6 +1,7 @@
 #pragma once
 
 #include "handlers/audio.hpp"
+#include "types.hpp"
 
 class Filter {
 public:
@@ -14,11 +15,10 @@ public:
 private:
     // 固定小数点
     static constexpr int COEF_SHIFT = 14;
-    static constexpr int MIX_SHIFT = 10;
     static constexpr float COEF_SCALE = (1 << COEF_SHIFT);
 
-    int16_t lpf_mix = 1024;
-    int16_t hpf_mix = 1024;
+    Gain_t lpf_mix = Q15_MAX;
+    Gain_t hpf_mix = Q15_MAX;
 
     // パラメータ保存用
     float lpf_cutoff = 20000.0f;
@@ -36,8 +36,8 @@ private:
 
     // 状態構造体
     struct State {
-        int16_t x1 = 0, x2 = 0; // Input history
-        int16_t y1 = 0, y2 = 0; // Output history
+        Sample16_t x1 = 0, x2 = 0; // Input history
+        Sample16_t y1 = 0, y2 = 0; // Output history
     };
     State lpf_state_L = {}, lpf_state_R = {};
     State hpf_state_L = {}, hpf_state_R = {};
@@ -58,9 +58,9 @@ private:
      * @param coefs フィルタ係数
      * @param in 入力サンプル
      * @param mix ミックス量
-     * @return int16_t 処理済みサンプル
+     * @return Sample16_t 処理済みサンプル
      */
-    inline int16_t process_biquad_core(const Coefs& c, State& s, int16_t in) const {
+    inline Sample16_t process_biquad_core(const Coefs& c, State& s, Sample16_t in) const {
         int64_t acc = 0;
 
         // Feedforward: b0*x0 + b1*x1 + b2*x2
@@ -76,36 +76,36 @@ private:
         // 固定小数点のシフトを戻す
         int32_t out = (int32_t)(acc >> COEF_SHIFT);
 
-        if (out > 32767) out = 32767;
-        else if (out < -32768) out = -32768;
+        if (out > SAMPLE16_MAX) out = SAMPLE16_MAX;
+        else if (out < SAMPLE16_MIN) out = SAMPLE16_MIN;
 
         // 履歴更新
         s.x2 = s.x1;
         s.x1 = in;
         s.y2 = s.y1;
-        s.y1 = (int16_t)out;
+        s.y1 = (Sample16_t)out;
 
-        return (int16_t)out;
+        return (Sample16_t)out;
     }
 
-    inline int16_t process_with_mix(const Coefs& c, State& s, int16_t in, int16_t mix) const {
+    inline Sample16_t process_with_mix(const Coefs& c, State& s, Sample16_t in, Gain_t mix) const {
         // Mixが0なら計算自体をスキップ (CPU負荷削減)
         if (mix <= 0) {
             return in;
         }
 
-        int16_t filtered = process_biquad_core(c, s, in);
+        Sample16_t filtered = process_biquad_core(c, s, in);
 
         // Mixが最大なら計算結果をそのまま返す
-        if (mix >= 1024) return filtered;
+        if (mix >= Q15_MAX) return filtered;
 
-        // Dry/Wet Mix
-        int32_t mixed = ((int32_t)(1024 - mix) * in + (int32_t)mix * filtered) >> MIX_SHIFT;
+        // Dry/Wet Mix (Q15)
+        int32_t mixed = ((int32_t)(Q15_MAX - mix) * in + (int32_t)mix * filtered) >> Q15_SHIFT;
 
         // 最終段の安全クリップ
-        if (mixed > 32767) return 32767;
-        if (mixed < -32768) return -32768;
-        return (int16_t)mixed;
+        if (mixed > SAMPLE16_MAX) return SAMPLE16_MAX;
+        if (mixed < SAMPLE16_MIN) return SAMPLE16_MIN;
+        return (Sample16_t)mixed;
     }
 
 public:
@@ -136,29 +136,29 @@ public:
     /**
      * @brief フィルタのドライ/ウェット混合比設定
      *
-     * @param mix ミックス量 [0-1024] (0=ドライ, 1024=ウェット)
+     * @param mix ミックス量 [0-Q15_MAX] (0=ドライ, Q15_MAX=ウェット)
      */
-    void setLpfMix(int16_t mix) { lpf_mix = std::clamp<int16_t>(mix, 0, 1024); }
-    void setHpfMix(int16_t mix) { hpf_mix = std::clamp<int16_t>(mix, 0, 1024); }
+    void setLpfMix(Gain_t mix) { lpf_mix = std::clamp<Gain_t>(mix, 0, Q15_MAX); }
+    void setHpfMix(Gain_t mix) { hpf_mix = std::clamp<Gain_t>(mix, 0, Q15_MAX); }
 
     /**
      * @brief フィルタ処理
      *
      * @param in 入力サンプル
-     * @return int16_t 処理済みサンプル
+     * @return Sample16_t 処理済みサンプル
      */
-    FASTRUN int16_t processLpfL(int16_t in) { return process_with_mix(lpf_coefs, lpf_state_L, in, lpf_mix);}
-    FASTRUN int16_t processLpfR(int16_t in) { return process_with_mix(lpf_coefs, lpf_state_R, in, lpf_mix); }
-    FASTRUN int16_t processHpfL(int16_t in) { return process_with_mix(hpf_coefs, hpf_state_L, in, hpf_mix); }
-    FASTRUN int16_t processHpfR(int16_t in) { return process_with_mix(hpf_coefs, hpf_state_R, in, hpf_mix); }
+    FASTRUN Sample16_t processLpfL(Sample16_t in) { return process_with_mix(lpf_coefs, lpf_state_L, in, lpf_mix);}
+    FASTRUN Sample16_t processLpfR(Sample16_t in) { return process_with_mix(lpf_coefs, lpf_state_R, in, lpf_mix); }
+    FASTRUN Sample16_t processHpfL(Sample16_t in) { return process_with_mix(hpf_coefs, hpf_state_L, in, hpf_mix); }
+    FASTRUN Sample16_t processHpfR(Sample16_t in) { return process_with_mix(hpf_coefs, hpf_state_R, in, hpf_mix); }
 
-    FASTRUN void processBlock(int16_t* bufL, int16_t* bufR, size_t size);
+    FASTRUN void processBlock(Sample16_t* bufL, Sample16_t* bufR, size_t size);
 
     // パラメータ取得
     float getLpfCutoff() const { return lpf_cutoff; }
     float getLpfResonance() const { return lpf_resonance; }
-    int16_t getLpfMix() const { return lpf_mix; }
+    Gain_t getLpfMix() const { return lpf_mix; }
     float getHpfCutoff() const { return hpf_cutoff; }
     float getHpfResonance() const { return hpf_resonance; }
-    int16_t getHpfMix() const { return hpf_mix; }
+    Gain_t getHpfMix() const { return hpf_mix; }
 };

@@ -125,9 +125,9 @@ private:
         Synth& synth = Synth::getInstance();
 
         // LEVEL (%)
-        int16_t level = synth.getMasterLevel();
+        Gain_t level = synth.getMasterLevel();
         char levelStr[8];
-        sprintf(levelStr, "%d%%", (level * 100) / 1024);
+        sprintf(levelStr, "%d%%", (int)((int32_t)level * 100 / Q15_MAX));
         drawTextItem(canvas, "LEVEL", levelStr, 0, cursor == C_LEVEL);
 
         // TRANSPOSE (-24 ～ +24)
@@ -157,9 +157,9 @@ private:
         bool isSelected = (cursor == cursorPos);
 
         if (cursorPos == C_LEVEL) {
-            int16_t level = synth.getMasterLevel();
+            Gain_t level = synth.getMasterLevel();
             char levelStr[8];
-            sprintf(levelStr, "%d%%", (level * 100) / 1024);
+            sprintf(levelStr, "%d%%", (int)((int32_t)level * 100 / Q15_MAX));
             drawTextItem(canvas, "LEVEL", levelStr, 0, isSelected);
         }
         else if (cursorPos == C_TRANSPOSE) {
@@ -228,10 +228,13 @@ private:
 
         switch (cursor) {
             case C_LEVEL: {
-                int16_t level = synth.getMasterLevel();
-                int16_t step = (direction == 1 || direction == -1) ? 10 : 50;
-                int16_t newLevel = level + (direction > 0 ? step : -step);
-                synth.setMasterLevel(newLevel);
+                int32_t level = static_cast<int32_t>(synth.getMasterLevel());
+                // 1%刻み (短押し) / 10%刻み (長押し)
+                int32_t step = (direction == 1 || direction == -1) ? (Q15_MAX / 100) : (Q15_MAX / 10);
+                int32_t newLevel = level + (direction > 0 ? step : -step);
+                if (newLevel < 0) newLevel = 0;
+                if (newLevel > Q15_MAX) newLevel = Q15_MAX;
+                synth.setMasterLevel(static_cast<Gain_t>(newLevel));
                 break;
             }
             case C_TRANSPOSE: {
