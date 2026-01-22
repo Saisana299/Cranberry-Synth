@@ -5,7 +5,7 @@
 #include "types.hpp"
 
 // プリセット最大数
-constexpr uint8_t MAX_PRESETS = 3;
+constexpr uint8_t MAX_PRESETS = 5;
 
 /**
  * @brief オペレータープリセット構造体
@@ -428,6 +428,139 @@ private:
                     0,      // level4
                     7,      // rate_scaling
                     48, 10, 11, 0, 0,  // KLS (disabled)
+                    true    // enabled
+                }
+            }},
+            {   // effects
+                false, 256, 307, 512,
+                false, 6000.0f, 0.70710678f, 1024,
+                false, 20.0f, 0.70710678f, 1024
+            }
+        },
+        // --- Preset 4: TUB BELLS ---
+        {
+            "TUB BELLS",    // name
+            4,              // algorithm_id
+            7,              // feedback
+            {{              // operators
+                // Operator 0
+                {
+                    0,      // wavetable_id (sine)
+                    95,     // level
+                    1.0f,   // coarse
+                    0.0f,   // fine
+                    2,      // detune
+                    false, // is_fixed
+                    95,     // rate1
+                    33,     // rate2
+                    71,     // rate3
+                    25,     // rate4
+                    99,     // level1
+                    0,     // level2
+                    32,      // level3
+                    0,      // level4
+                    2,      // rate_scaling
+                    4, 0, 0, 0, 0,  // KLS (disabled)
+                    true    // enabled
+                },
+                // Operator 1
+                {
+                    0,      // wavetable_id (sine)
+                    78,     // level
+                    2.0f,   // coarse
+                    75.0f,   // fine
+                    3,      // detune
+                    false, // is_fixed
+                    98,     // rate1
+                    12,     // rate2
+                    71,     // rate3
+                    28,     // rate4
+                    99,     // level1
+                    0,     // level2
+                    32,     // level3
+                    0,      // level4
+                    2,      // rate_scaling
+                    4, 0, 0, 0, 0,  // KLS (disabled)
+                    true    // enabled
+                },
+                // Operator 2
+                {
+                    0,      // wavetable_id (sine)
+                    99,     // level
+                    1.0f,   // coarse
+                    0.0f,   // fine
+                    -5,     // detune
+                    false, // is_fixed
+                    95,     // rate1
+                    33,     // rate2
+                    71,     // rate3
+                    25,     // rate4
+                    94,     // level1
+                    0,     // level2
+                    32,      // level3
+                    0,      // level4
+                    2,      // rate_scaling
+                    4, 0, 0, 0, 0,  // KLS (disabled)
+                    true    // enabled
+                },
+                // Operator 3
+                {
+                    0,      // wavetable_id (sine)
+                    75,     // level
+                    2.0f,   // coarse
+                    75.0f,   // fine
+                    -2,     // detune
+                    false, // is_fixed
+                    98,     // rate1
+                    12,     // rate2
+                    71,     // rate3
+                    28,     // rate4
+                    99,     // level1
+                    0,     // level2
+                    32,     // level3
+                    0,      // level4
+                    2,      // rate_scaling
+                    4, 0, 0, 0, 0,  // KLS (disabled)
+                    true    // enabled
+                },
+                // Operator 4
+                {
+                    0,      // wavetable_id (sine)
+                    99,     // level
+                    2.0f,  // coarse
+                    51.0f,   // fine
+                    0,     // detune
+                    true, // is_fixed
+                    76,     // rate1
+                    78,     // rate2
+                    71,     // rate3
+                    70,     // rate4
+                    99,     // level1
+                    0,     // level2
+                    0,      // level3
+                    0,      // level4
+                    2,      // rate_scaling
+                    4, 0, 0, 0, 0,  // KLS (disabled)
+                    true    // enabled
+                },
+                // Operator 5
+                {
+                    0,      // wavetable_id (sine)
+                    85,     // level
+                    2.0f,   // coarse
+                    0.0f,  // fine
+                    -7,      // detune
+                    false, // is_fixed
+                    98,     // rate1
+                    91,     // rate2
+                    0,     // rate3
+                    28,     // rate4
+                    99,     // level1
+                    0,     // level2
+                    0,      // level3
+                    0,      // level4
+                    2,      // rate_scaling
+                    4, 0, 0, 0, 0,  // KLS (disabled)
                     true    // enabled
                 }
             }},

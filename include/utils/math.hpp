@@ -136,18 +136,27 @@ public:
      * @brief 比率で周波数を計算
      *
      * @param note MIDIノート番号
-     * @param detune_cents デチューンするcent数
-     * @param coarse 0.5ならオク下、2ならオク上と比率を設定
-     * @param fine_level coarseの調整値 1.0 で coarseの2倍 coarseが2なら4になる
-     * @return float
+     * @param detune_cents デチューンするcent数 (-7 to 7)
+     * @param coarse 粗調整 (0-31、0の場合は0.5として扱う)
+     * @param fine_level 微調整 (0-99)
+     * @return float 周波数 (Hz)
+     *
+     * 計算式: ratio = coarse * (1 + fine / 100)
+     * coarse=0 の場合: ratio = 0.5 * (1 + fine / 100)
+     * 例: coarse=2, fine=75 → ratio = 2 * 1.75 = 3.5
      */
     static inline float ratioToFrequency(uint8_t note, int8_t detune_cents, float coarse, float fine_level) {
-        float pitch_mod = coarse * (1.0f + fine_level);
+        // coarse=0 は 0.5 として扱う
+        float coarse_value = (coarse == 0.0f) ? 0.5f : coarse;
+        // ratio = coarse * (1 + fine / 100)
+        float ratio = coarse_value * (1.0f + fine_level * 0.01f);
+
+        // デチューン: 約1.018セント/単位として計算
         float detune_factor = 1.0f;
-        if(detune_cents != 0) {
-            detune_factor = powf(2.0f, detune_cents * 0.00083333333f);
+        if (detune_cents != 0) {
+            detune_factor = powf(2.0f, detune_cents * 0.00084833f);
         }
-        return noteToFrequency(note) * pitch_mod * detune_factor;
+        return noteToFrequency(note) * ratio * detune_factor;
     }
 
     /**

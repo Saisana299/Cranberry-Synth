@@ -2,6 +2,8 @@
 /** Mini FM Synthesizer on Teensy 4.1 **/
 /** @author Saisana299 **/
 
+//TODO: velocity_sensitivity
+
 #include <Arduino.h>
 #include <Entropy.h>
 #include <Adafruit_GFX.h>
