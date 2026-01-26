@@ -97,6 +97,9 @@ private:
     // オペレーター出力レベル (クラスメンバー)
     EnvLevel_t outlevel_ = 0;
 
+    // ベロシティ感度 (0-7, 0=感度なし)
+    uint8_t velocity_sens_ = 7;
+
     // === 指数スケーリング用データテーブル ===
     // 33要素: group 0-32 に対応する指数カーブ値
     static constexpr uint8_t EXP_SCALE_DATA[33] = {
@@ -314,6 +317,10 @@ public:
     inline uint8_t getRightDepth() const { return kbd_right_depth; }
     inline KeyScaleCurve getLeftCurve() const { return kbd_left_curve; }
     inline KeyScaleCurve getRightCurve() const { return kbd_right_curve; }
+
+    // ベロシティ感度 設定/取得 (0-7)
+    void setVelocitySens(uint8_t sens);
+    inline uint8_t getVelocitySens() const { return velocity_sens_; }
 
     /**
      * @brief スケーリングカーブ計算

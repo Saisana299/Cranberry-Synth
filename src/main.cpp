@@ -2,7 +2,7 @@
 /** Mini FM Synthesizer on Teensy 4.1 **/
 /** @author Saisana299 **/
 
-//TODO: velocity_sensitivity
+// TODO: トラックが違うとリトリガーが正しく動かない問題を修正する（bitwigで確認済み）
 
 #include <Arduino.h>
 #include <Entropy.h>

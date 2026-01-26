@@ -251,6 +251,14 @@ void Envelope::setRateScaling(uint8_t sensitivity) {
 }
 
 /**
+ * @brief ベロシティ感度を設定
+ * @param sens 0-7 (0=感度なし, 7=最大感度)
+ */
+void Envelope::setVelocitySens(uint8_t sens) {
+    velocity_sens_ = (sens > 7) ? 7 : sens;
+}
+
+/**
  * @brief Rate Scaling計算
  *
  * @param midinote MIDIノート番号 (0-127)

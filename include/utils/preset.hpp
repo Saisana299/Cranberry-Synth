@@ -48,6 +48,9 @@ struct OperatorPreset {
     uint8_t kbd_left_curve = 0;     // 左側カーブ (0-3: -LN, -EX, +EX, +LN)
     uint8_t kbd_right_curve = 0;    // 右側カーブ (0-3: -LN, -EX, +EX, +LN)
 
+    // ベロシティ感度
+    uint8_t velocity_sens = 7;      // ベロシティ感度 (0-7, 0=感度なし, 7=最大感度)
+
     // オペレーター有効/無効
     bool enabled = false;
 };
@@ -132,37 +135,38 @@ private:
                     0,      // level4
                     0,      // rate_scaling
                     39, 0, 0, 0, 0,  // kbd_break_point, kbd_left_depth, kbd_right_depth, kbd_left_curve, kbd_right_curve
+                    7,      // velocity_sens
                     true    // enabled
                 },
                 // Operator 1 (無効)
                 {
                     0, 0, 1.0f, 0.0f, 0, false,
                     99, 99, 99, 99, 99, 99, 99, 0,
-                    0, 39, 0, 0, 0, 0, false
+                    0, 39, 0, 0, 0, 0, 7, false
                 },
                 // Operator 2 (無効)
                 {
                     0, 0, 1.0f, 0.0f, 0, false,
                     99, 99, 99, 99, 99, 99, 99, 0,
-                    0, 39, 0, 0, 0, 0, false
+                    0, 39, 0, 0, 0, 0, 7, false
                 },
                 // Operator 3 (無効)
                 {
                     0, 0, 1.0f, 0.0f, 0, false,
                     99, 99, 99, 99, 99, 99, 99, 0,
-                    0, 39, 0, 0, 0, 0, false
+                    0, 39, 0, 0, 0, 0, 7, false
                 },
                 // Operator 4 (無効)
                 {
                     0, 0, 1.0f, 0.0f, 0, false,
                     99, 99, 99, 99, 99, 99, 99, 0,
-                    0, 39, 0, 0, 0, 0, false
+                    0, 39, 0, 0, 0, 0, 7, false
                 },
                 // Operator 5 (無効)
                 {
                     0, 0, 1.0f, 0.0f, 0, false,
                     99, 99, 99, 99, 99, 99, 99, 0,
-                    0, 39, 0, 0, 0, 0, false
+                    0, 39, 0, 0, 0, 0, 7, false
                 }
             }},
             {   // effects
@@ -195,6 +199,7 @@ private:
                     0,      // level4
                     0,      // rate_scaling
                     39, 99, 40, 3, 0,  // KLS (disabled)
+                    7,      // velocity_sens
                     true    // enabled
                 },
                 // Operator 1
@@ -215,6 +220,7 @@ private:
                     0,      // level4
                     0,      // rate_scaling
                     39, 0, 10, 1, 2,  // KLS (disabled)
+                    7,      // velocity_sens
                     true    // enabled
                 },
                 // Operator 2
@@ -235,6 +241,7 @@ private:
                     0,      // level4
                     0,      // rate_scaling
                     39, 0, 16, 0, 0,  // KLS (disabled)
+                    7,      // velocity_sens
                     true    // enabled
                 },
                 // Operator 3
@@ -255,6 +262,7 @@ private:
                     0,      // level4
                     0,      // rate_scaling
                     39, 0, 6, 0, 0,  // KLS (disabled)
+                    7,      // velocity_sens
                     true    // enabled
                 },
                 // Operator 4
@@ -275,6 +283,7 @@ private:
                     0,      // level4
                     0,      // rate_scaling
                     39, 2, 8, 3, 0,  // KLS (disabled)
+                    7,      // velocity_sens
                     true    // enabled
                 },
                 // Operator 5
@@ -295,6 +304,7 @@ private:
                     0,      // level4
                     0,      // rate_scaling
                     39, 7, 0, 0, 0,  // KLS (disabled)
+                    7,      // velocity_sens
                     true    // enabled
                 }
             }},
@@ -328,6 +338,7 @@ private:
                     0,      // level4
                     3,      // rate_scaling
                     38, 0, 0, 3, 0,  // KLS (disabled)
+                    7,      // velocity_sens
                     true    // enabled
                 },
                 // Operator 1
@@ -348,6 +359,7 @@ private:
                     0,      // level4
                     4,      // rate_scaling
                     40, 0, 15, 3, 0,  // KLS (disabled)
+                    7,      // velocity_sens
                     true    // enabled
                 },
                 // Operator 2
@@ -368,6 +380,7 @@ private:
                     0,      // level4
                     7,      // rate_scaling
                     52, 10, 0, 0, 0,  // KLS (disabled)
+                    7,      // velocity_sens
                     true    // enabled
                 },
                 // Operator 3
@@ -388,6 +401,7 @@ private:
                     0,      // level4
                     3,      // rate_scaling
                     39, 0, 0, 3, 0,  // KLS (disabled)
+                    7,      // velocity_sens
                     true    // enabled
                 },
                 // Operator 4
@@ -408,6 +422,7 @@ private:
                     0,      // level4
                     4,      // rate_scaling
                     40, 0, 15, 3, 0,  // KLS (disabled)
+                    7,      // velocity_sens
                     true    // enabled
                 },
                 // Operator 5
@@ -428,6 +443,7 @@ private:
                     0,      // level4
                     7,      // rate_scaling
                     48, 10, 11, 0, 0,  // KLS (disabled)
+                    7,      // velocity_sens
                     true    // enabled
                 }
             }},
@@ -461,6 +477,7 @@ private:
                     0,      // level4
                     2,      // rate_scaling
                     4, 0, 0, 0, 0,  // KLS (disabled)
+                    7,      // velocity_sens
                     true    // enabled
                 },
                 // Operator 1
@@ -481,6 +498,7 @@ private:
                     0,      // level4
                     2,      // rate_scaling
                     4, 0, 0, 0, 0,  // KLS (disabled)
+                    7,      // velocity_sens
                     true    // enabled
                 },
                 // Operator 2
@@ -501,6 +519,7 @@ private:
                     0,      // level4
                     2,      // rate_scaling
                     4, 0, 0, 0, 0,  // KLS (disabled)
+                    7,      // velocity_sens
                     true    // enabled
                 },
                 // Operator 3
@@ -521,6 +540,7 @@ private:
                     0,      // level4
                     2,      // rate_scaling
                     4, 0, 0, 0, 0,  // KLS (disabled)
+                    7,      // velocity_sens
                     true    // enabled
                 },
                 // Operator 4
@@ -541,6 +561,7 @@ private:
                     0,      // level4
                     2,      // rate_scaling
                     4, 0, 0, 0, 0,  // KLS (disabled)
+                    7,      // velocity_sens
                     true    // enabled
                 },
                 // Operator 5
@@ -561,6 +582,146 @@ private:
                     0,      // level4
                     2,      // rate_scaling
                     4, 0, 0, 0, 0,  // KLS (disabled)
+                    7,      // velocity_sens
+                    true    // enabled
+                }
+            }},
+            {   // effects
+                false, 256, 307, 512,
+                false, 6000.0f, 0.70710678f, 1024,
+                false, 20.0f, 0.70710678f, 1024
+            }
+        },
+        // --- Preset 5: E.PIANO 1 ---
+        {
+            "E.PIANO 1",    // name
+            4,              // algorithm_id
+            6,              // feedback
+            {{              // operators
+                // Operator 0
+                {
+                    0,      // wavetable_id (sine)
+                    99,     // level
+                    1.0f,   // coarse
+                    0.0f,   // fine
+                    3,      // detune
+                    false, // is_fixed
+                    96,     // rate1
+                    25,     // rate2
+                    25,     // rate3
+                    67,     // rate4
+                    99,     // level1
+                    75,     // level2
+                    0,      // level3
+                    0,      // level4
+                    3,      // rate_scaling
+                    0, 0, 0, 0, 0,  // KLS (disabled)
+                    7,      // velocity_sens
+                    true    // enabled
+                },
+                // Operator 1
+                {
+                    0,      // wavetable_id (sine)
+                    58,     // level
+                    14.0f,   // coarse
+                    0.0f,   // fine
+                    0,      // detune
+                    false, // is_fixed
+                    95,     // rate1
+                    50,     // rate2
+                    35,     // rate3
+                    78,     // rate4
+                    99,     // level1
+                    75,     // level2
+                    0,     // level3
+                    0,      // level4
+                    3,      // rate_scaling
+                    0, 0, 0, 0, 0,  // KLS (disabled)
+                    7,      // velocity_sens
+                    true    // enabled
+                },
+                // Operator 2
+                {
+                    0,      // wavetable_id (sine)
+                    99,     // level
+                    1.0f,   // coarse
+                    0.0f,   // fine
+                    0,     // detune
+                    false, // is_fixed
+                    95,     // rate1
+                    20,     // rate2
+                    20,     // rate3
+                    50,     // rate4
+                    99,     // level1
+                    95,     // level2
+                    0,      // level3
+                    0,      // level4
+                    3,      // rate_scaling
+                    0, 0, 0, 0, 0,  // KLS (disabled)
+                    7,      // velocity_sens
+                    true    // enabled
+                },
+                // Operator 3
+                {
+                    0,      // wavetable_id (sine)
+                    89,     // level
+                    1.0f,   // coarse
+                    0.0f,   // fine
+                    0,     // detune
+                    false, // is_fixed
+                    96,     // rate1
+                    29,     // rate2
+                    20,     // rate3
+                    50,     // rate4
+                    99,     // level1
+                    95,     // level2
+                    0,     // level3
+                    0,      // level4
+                    3,      // rate_scaling
+                    0, 0, 0, 0, 0,  // KLS (disabled)
+                    7,      // velocity_sens
+                    true    // enabled
+                },
+                // Operator 4
+                {
+                    0,      // wavetable_id (sine)
+                    99,     // level
+                    1.0f,  // coarse
+                    0.0f,   // fine
+                    -7,     // detune
+                    false, // is_fixed
+                    95,     // rate1
+                    20,     // rate2
+                    20,     // rate3
+                    50,     // rate4
+                    99,     // level1
+                    95,     // level2
+                    0,      // level3
+                    0,      // level4
+                    3,      // rate_scaling
+                    0, 0, 0, 0, 0,  // KLS (disabled)
+                    7,      // velocity_sens
+                    true    // enabled
+                },
+                // Operator 5
+                {
+                    0,      // wavetable_id (sine)
+                    79,     // level
+                    1.0f,   // coarse
+                    0.0f,   // fine
+                    7,      // detune
+                    false, // is_fixed
+                    95,     // rate1
+                    29,     // rate2
+                    20,     // rate3
+                    50,     // rate4
+                    99,     // level1
+                    95,     // level2
+                    0,      // level3
+                    0,      // level4
+                    3,      // rate_scaling
+                    33, 0, 19, 0, 0,  // KLS (disabled)
+                    7,      // velocity_sens
                     true    // enabled
                 }
             }},
