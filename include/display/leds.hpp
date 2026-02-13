@@ -4,10 +4,10 @@
 
 #include "utils/state.hpp"
 
-constexpr uint8_t MIDI_LED_PIN = 34;
-constexpr uint8_t AUDIO_LED_PIN = 29;
-// constexpr uint8_t LED3_PIN = 28;
-// constexpr uint8_t LED4_PIN = 35;
+constexpr uint8_t MIDI_LED_PIN = 6;
+constexpr uint8_t AUDIO_LED_PIN = 9;
+constexpr uint8_t PWR_LED_PIN = 30;
+constexpr uint8_t ST_LED_PIN = 31;
 
 struct LedConfig {
     uint8_t pin;
@@ -27,9 +27,11 @@ private:
         bool audio = false;
     } led_state;
 
-    static constexpr LedConfig LED_CONFIGS[2] = {
-        {MIDI_LED_PIN, &CORE_PIN34_PORTSET, &CORE_PIN34_PORTCLEAR, static_cast<uint32_t>(CORE_PIN34_BITMASK)},
-        {AUDIO_LED_PIN, &CORE_PIN29_PORTSET, &CORE_PIN29_PORTCLEAR, static_cast<uint32_t>(CORE_PIN29_BITMASK)},
+    static constexpr LedConfig LED_CONFIGS[4] = {
+        {MIDI_LED_PIN, &CORE_PIN6_PORTSET, &CORE_PIN6_PORTCLEAR, static_cast<uint32_t>(CORE_PIN6_BITMASK)},
+        {AUDIO_LED_PIN, &CORE_PIN9_PORTSET, &CORE_PIN9_PORTCLEAR, static_cast<uint32_t>(CORE_PIN9_BITMASK)},
+        {PWR_LED_PIN, &CORE_PIN30_PORTSET, &CORE_PIN30_PORTCLEAR, static_cast<uint32_t>(CORE_PIN30_BITMASK)},
+        {ST_LED_PIN, &CORE_PIN31_PORTSET, &CORE_PIN31_PORTCLEAR, static_cast<uint32_t>(CORE_PIN31_BITMASK)},
     };
 
     static inline void setLed(const LedConfig& config, bool on) {

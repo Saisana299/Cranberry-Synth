@@ -12,7 +12,7 @@ constexpr uint8_t MIDI_MAX_VELOCITY = 127;
 class MIDIHandler {
 private:
     // MIDI
-    MIDI_NAMESPACE::SerialMIDI<HardwareSerial> serialMIDI = Serial1;
+    MIDI_NAMESPACE::SerialMIDI<HardwareSerial> serialMIDI = Serial7;
     MIDI_NAMESPACE::MidiInterface<MIDI_NAMESPACE::SerialMIDI<HardwareSerial>> MIDI = serialMIDI;
 
     // Callback

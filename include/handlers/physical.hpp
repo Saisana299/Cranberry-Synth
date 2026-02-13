@@ -11,12 +11,12 @@ constexpr uint8_t ENC_A_PIN = 15; // GPIO6_IO19
 constexpr uint8_t ENC_B_PIN = 17; // GPIO6_IO22
 
 // タクトスイッチのピン
-constexpr uint8_t SW_UP_PIN  = 3; // GPIO9_IO5
-constexpr uint8_t SW_DN_PIN  = 4; // GPIO9_IO6
-constexpr uint8_t SW_L_PIN   = 5; // GPIO9_IO8
-constexpr uint8_t SW_R_PIN   = 2; // GPIO9_IO4
-constexpr uint8_t SW_ENT_PIN = 19; // GPIO6_IO16
-constexpr uint8_t SW_CXL_PIN = 18; // GPIO6_IO17
+constexpr uint8_t SW_UP_PIN  = 37; // GPIO7_IO19
+constexpr uint8_t SW_DN_PIN  = 36; // GPIO7_IO18
+constexpr uint8_t SW_L_PIN   = 35; // GPIO7_IO28
+constexpr uint8_t SW_R_PIN   = 34; // GPIO7_IO29
+constexpr uint8_t SW_ENT_PIN = 22; // GPIO6_IO24
+constexpr uint8_t SW_CXL_PIN = 14; // GPIO6_IO18
 constexpr uint8_t SW_ENC_PIN = 16; // GPIO6_IO23
 
 // 押下判定までの時間
@@ -35,6 +35,7 @@ struct ButtonConfig {
     const uint8_t id_long;
     const bool active_high;
     const uint32_t pin_mask;
+    volatile uint32_t* const gpio_psr;  // GPIO Port Status Register
 };
 
 struct ButtonState {
@@ -59,15 +60,7 @@ private:
     static void updateEncoderISR();
 
     /** @brief ボタンの状態を保持 */
-    static constexpr ButtonConfig BUTTON_CONFIGS[7] = {
-        {SW_UP_PIN,  BTN_UP,  BTN_UP_LONG,  false, 1UL << 5},
-        {SW_DN_PIN,  BTN_DN,  BTN_DN_LONG,  false, 1UL << 6},
-        {SW_L_PIN,   BTN_L,   BTN_L_LONG,   false, 1UL << 8},
-        {SW_R_PIN,   BTN_R,   BTN_R_LONG,   false, 1UL << 4},
-        {SW_ENT_PIN, BTN_ET,  BTN_ET_LONG,  false, 1UL << 16},
-        {SW_CXL_PIN, BTN_CXL, BTN_CXL_LONG, false, 1UL << 17},
-        {SW_ENC_PIN, BTN_ET,  BTN_ET_LONG,  true,  1UL << 23}  // エンコーダークリック = 決定ボタン
-    };
+    static const ButtonConfig BUTTON_CONFIGS[7];
 
     ButtonState button_states[7] = {};
     uint32_t last_encoder_debounce_time = 0;

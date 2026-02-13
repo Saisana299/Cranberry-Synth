@@ -3,6 +3,16 @@
 volatile std::atomic<int32_t> PhysicalHandler::encoder_raw_value = 0;
 volatile std::atomic<uint8_t> PhysicalHandler::encoder_last_encoded = 0;
 
+const ButtonConfig PhysicalHandler::BUTTON_CONFIGS[7] = {
+    {SW_UP_PIN,  BTN_UP,  BTN_UP_LONG,  false, 1UL << 19, &GPIO7_PSR},
+    {SW_DN_PIN,  BTN_DN,  BTN_DN_LONG,  false, 1UL << 18, &GPIO7_PSR},
+    {SW_L_PIN,   BTN_L,   BTN_L_LONG,   false, 1UL << 28, &GPIO7_PSR},
+    {SW_R_PIN,   BTN_R,   BTN_R_LONG,   false, 1UL << 29, &GPIO7_PSR},
+    {SW_ENT_PIN, BTN_ET,  BTN_ET_LONG,  false, 1UL << 24, &GPIO6_PSR},
+    {SW_CXL_PIN, BTN_CXL, BTN_CXL_LONG, false, 1UL << 18, &GPIO6_PSR},
+    {SW_ENC_PIN, BTN_ET,  BTN_ET_LONG,  true,  1UL << 23, &GPIO6_PSR}  // エンコーダークリック = 決定ボタン
+};
+
 void PhysicalHandler::updateEncoderISR() {
     // 高速ピン読み込み
     uint32_t gpio_state = GPIO6_PSR;
@@ -51,8 +61,8 @@ void PhysicalHandler::process_button(size_t btn_idx, uint32_t now) {
     const auto& cfg = BUTTON_CONFIGS[btn_idx];
     auto& state = button_states[btn_idx];
 
-    // 高速ピン読み込み
-    uint32_t gpio_state = GPIO6_PSR | GPIO7_PSR | GPIO9_PSR;
+    // 高速ピン読み込み（各ボタンの正しいGPIOレジスタを参照）
+    uint32_t gpio_state = *(cfg.gpio_psr);
     bool is_active = ((gpio_state & cfg.pin_mask) != 0) == cfg.active_high;
 
     if(is_active) {

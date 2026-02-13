@@ -3,8 +3,9 @@
 void Leds::init() {
     pinMode(MIDI_LED_PIN, OUTPUT);
     pinMode(AUDIO_LED_PIN, OUTPUT);
-    // pinMode(LED3_PIN, OUTPUT);
-    // pinMode(LED4_PIN, OUTPUT);
+    pinMode(PWR_LED_PIN, OUTPUT);
+    pinMode(ST_LED_PIN, OUTPUT);
+    setLed(LED_CONFIGS[2], true);
 }
 
 void Leds::process() {
