@@ -25,6 +25,7 @@ private:
     struct {
         bool midi = false;
         bool audio = false;
+        bool status = false;
     } led_state;
 
     static constexpr LedConfig LED_CONFIGS[4] = {

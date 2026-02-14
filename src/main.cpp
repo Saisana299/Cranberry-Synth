@@ -17,6 +17,7 @@
 #include "display/leds.hpp"
 /* Modules */
 #include "modules/synth.hpp"
+#include "modules/passthrough.hpp"
 /* UI */
 #include "ui/ui.hpp"
 #include "ui/screens/title.hpp"
@@ -37,11 +38,16 @@ Leds leds(state);
 UIManager ui(state);
 
 Synth& synth = Synth::getInstance();
+Passthrough passthrough(audio_hdl);
 
 // SPI転送中のオーディオ処理コールバック
 AudioCallback gfxAudioCallback = nullptr;
 
 void audioProcessCallback() {
+    if (state.getModeState() == MODE_PASSTHROUGH) {
+        passthrough.process();
+        return;
+    }
     // 優先度の高い処理をSPI転送中も実行
     synth.update();        // サウンド生成
     audio_hdl.process();   // 音声信号処理
@@ -85,15 +91,30 @@ void loop() {
     auto mode_state = state.getModeState();
 
     if (mode_state != last_mode) {
-        // SYNTHになったらMIDI入力を開始
+        // --- パススルーに入る ---
+        if (mode_state == MODE_PASSTHROUGH) {
+            midi_hdl.stop();       // MIDI受信を停止
+            synth.reset();         // 発音中ノートをすべてリセット
+            passthrough.begin();   // パススルー開始
+        }
+        // --- パススルーから抜ける ---
+        if (last_mode == MODE_PASSTHROUGH && mode_state != MODE_PASSTHROUGH) {
+            passthrough.end();     // パススルー停止 (バッファもフラッシュ)
+        }
+        // --- シンセモードに入る ---
         if (mode_state == MODE_SYNTH) {
-            midi_hdl.begin();
+            midi_hdl.begin();      // MIDI受信を再開
         }
         last_mode = mode_state;
     }
 
     // 優先度0: サウンド生成関連処理
     switch(mode_state) {
+        case MODE_PASSTHROUGH: {
+            // パススルーモード: 入力をそのまま出力
+            passthrough.process();
+            break;
+        }
         case MODE_SYNTH: {
             // CPU使用率計測開始
             uint32_t t0 = ARM_DWT_CYCCNT;
@@ -126,10 +147,14 @@ void loop() {
     }
 
     // 優先度:1 音声信号処理(AD/DA)
-    audio_hdl.process();
+    if (mode_state != MODE_PASSTHROUGH) {
+        audio_hdl.process();
+    }
 
     // 優先度:2 MIDI入力検知
-    midi_hdl.process();
+    if (mode_state != MODE_PASSTHROUGH) {
+        midi_hdl.process();
+    }
 
     // 優先度:3 物理ボタン処理
     physical.process();

@@ -34,4 +34,11 @@ void Leds::process() {
             setLed(LED_CONFIGS[1], false);
         }
     }
+
+    // STATUS LED: パススルーモード中は常時点灯
+    bool passthrough = (state_.getModeState() == MODE_PASSTHROUGH);
+    if (passthrough != led_state.status) {
+        led_state.status = passthrough;
+        setLed(LED_CONFIGS[3], passthrough);
+    }
 }

@@ -4,6 +4,7 @@
 #include "ui/screens/fx.hpp"
 #include "ui/screens/operator.hpp"
 #include "ui/screens/master.hpp"
+#include "ui/screens/menu.hpp"
 
 class PresetScreen : public Screen {
 private:
@@ -149,10 +150,11 @@ public:
                 manager->pushScreen(new OperatorScreen(opIndex));
                 return;
             }
-            // TODO: 以下は後で実装
-            // else if (cursor == C_MENU) {
-            //     // メニュー画面へ
-            // }
+            else if (cursor == C_MENU) {
+                // メニュー画面へ
+                manager->pushScreen(new MenuScreen());
+                return;
+            }
         }
 
         // CANCELボタン

@@ -72,4 +72,13 @@ public:
 
     /** @brief 録音終了 */
     void endRecord();
+
+    // --- パススルーモード用アクセサ ---
+    AudioRecordQueue& getRecL()  { return rec_L; }
+    AudioRecordQueue& getRecR()  { return rec_R; }
+    AudioPlayQueue&   getQueueL()  { return queue_L; }
+    AudioPlayQueue&   getQueueR()  { return queue_R; }
+    AudioPlayQueue&   getQueueLM() { return queue_LM; }
+    AudioPlayQueue&   getQueueRM() { return queue_RM; }
+    State&            getState()   { return state_; }
 };
