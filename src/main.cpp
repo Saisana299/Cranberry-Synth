@@ -57,6 +57,17 @@ void audioProcessCallback() {
 void setup() {
     pinMode(LED_BUILTIN, OUTPUT);
 
+    // CrashReport: 前回クラッシュした場合、シリアル経由でレポートを出力
+    if (CrashReport) {
+        // シリアルが準備できるまで短時間待機
+        Serial.begin(115200);
+        delay(500);
+        Serial.println("=== CRASH REPORT ===");
+        Serial.print(CrashReport);
+        Serial.println("====================");
+        CrashReport.clear();
+    }
+
     for(int i = 0; i < 3; i++) {
         digitalWrite(LED_BUILTIN, HIGH);
         delay(100);

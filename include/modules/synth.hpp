@@ -8,6 +8,7 @@
 #include "modules/oscillator.hpp"
 #include "modules/delay.hpp"
 #include "modules/filter.hpp"
+#include "modules/lfo.hpp"
 #include "utils/algorithm.hpp"
 #include "utils/state.hpp"
 #include "utils/math.hpp"
@@ -49,6 +50,10 @@ private:
     Filter filter = Filter{};
     bool lpf_enabled = false;
     bool hpf_enabled = false;
+
+    Lfo lfo_;
+    bool osc_key_sync_ = true;
+    Gain_t op_ams_gain_[MAX_OPERATORS] = {};  // オペレーター単位 AMS Q15スケール
 
     uint8_t order_max = 0;
     uint8_t last_index = 0;
@@ -146,6 +151,25 @@ public:
     // Delay/Filter オブジェクトへの直接アクセス（設定用）
     Delay& getDelay() { return delay; }
     Filter& getFilter() { return filter; }
+
+    // LFO
+    Lfo& getLfo() { return lfo_; }
+    const Lfo& getLfo() const { return lfo_; }
+    bool getOscKeySync() const { return osc_key_sync_; }
+    void setOscKeySync(bool sync) { osc_key_sync_ = sync; }
+
+    // オペレーター単位 AMS (0-3)
+    uint8_t getOperatorAms(uint8_t op) const {
+        if (op >= MAX_OPERATORS) return 0;
+        for (uint8_t i = 0; i < 4; ++i) {
+            if (op_ams_gain_[op] == Lfo::AMS_TAB[i]) return i;
+        }
+        return 0;
+    }
+    void setOperatorAms(uint8_t op, uint8_t ams) {
+        if (op < MAX_OPERATORS)
+            op_ams_gain_[op] = Lfo::AMS_TAB[ams & 3];
+    }
 
     // マスター設定
     Gain_t getMasterLevel() const { return master_volume; }

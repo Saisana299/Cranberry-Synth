@@ -8,6 +8,7 @@ void Synth::init() {
         midi_note_to_index[i] = -1;
     }
     Oscillator::initTable();
+    lfo_.init();
     loadPreset(0);
 }
 
@@ -15,6 +16,9 @@ void Synth::init() {
 FASTRUN void Synth::generate() {
     if(samples_ready_flags != false) return;
     if(current_algo == nullptr) return;
+
+    // LFOを1バッファ分進める（generate内でバッファ1回保証）
+    lfo_.advance(BUFFER_SIZE);
 
     // 定数キャッシュ
     const uint8_t* exec_order = current_algo->exec_order;
@@ -47,6 +51,10 @@ FASTRUN void Synth::generate() {
     // 出力バッファをクリア
     Audio24_t mix_buffer_L[BUFFER_SIZE] = {0};
     Audio24_t mix_buffer_R[BUFFER_SIZE] = {0};
+
+    // LFO変調値キャッシュ（バッファ単位で一定）
+    const int32_t lfo_pitch_mod = lfo_.getPitchMod();   // 符号付き Q15
+    const Gain_t  lfo_amp_mod   = lfo_.getAmpMod();     // [0, Q15_MAX]
 
     // リセット待ちのノートを記録
     uint8_t notes_to_reset[MAX_NOTES];
@@ -118,15 +126,33 @@ FASTRUN void Synth::generate() {
                 // 3. 発音（補間されたゲインを使用）
                 Audio24_t raw_wave = op_obj.osc.getSample(osc_mem, mod_input);
                 Audio24_t output = Q23_mul_EnvGain(raw_wave, static_cast<EnvGain_t>(gain));
+
+                // 4. LFO 振幅モジュレーション（オペレーター単位）
+                if (lfo_amp_mod != 0 && op_ams_gain_[op_idx] != 0) {
+                    Gain_t am_amt = static_cast<Gain_t>(
+                        (static_cast<int32_t>(lfo_amp_mod) * op_ams_gain_[op_idx]) >> Q15_SHIFT
+                    );
+                    output -= static_cast<Audio24_t>(
+                        (static_cast<int64_t>(output) * am_amt) >> Q15_SHIFT
+                    );
+                }
+
                 op_buffer[op_idx][i] = output;
 
-                // 4. FB履歴更新
+                // 5. FB履歴更新
                 if (is_fb_source) {
                     fb_h1 = fb_h0;
                     fb_h0 = output;
                 }
 
                 op_obj.osc.update(osc_mem);
+
+                // 6. LFO ピッチモジュレーション（位相オフセット追加）
+                if (lfo_pitch_mod != 0) {
+                    osc_mem.phase += static_cast<Phase_t>(
+                        (static_cast<int64_t>(osc_mem.delta) * lfo_pitch_mod) >> Q15_SHIFT
+                    );
+                }
             }
 
             // --- 後半64サンプル ---
@@ -160,15 +186,33 @@ FASTRUN void Synth::generate() {
                 // 3. 発音（補間されたゲインを使用）
                 Audio24_t raw_wave = op_obj.osc.getSample(osc_mem, mod_input);
                 Audio24_t output = Q23_mul_EnvGain(raw_wave, static_cast<EnvGain_t>(gain));
+
+                // 4. LFO 振幅モジュレーション（オペレーター単位）
+                if (lfo_amp_mod != 0 && op_ams_gain_[op_idx] != 0) {
+                    Gain_t am_amt = static_cast<Gain_t>(
+                        (static_cast<int32_t>(lfo_amp_mod) * op_ams_gain_[op_idx]) >> Q15_SHIFT
+                    );
+                    output -= static_cast<Audio24_t>(
+                        (static_cast<int64_t>(output) * am_amt) >> Q15_SHIFT
+                    );
+                }
+
                 op_buffer[op_idx][i] = output;
 
-                // 4. FB履歴更新
+                // 5. FB履歴更新
                 if (is_fb_source) {
                     fb_h1 = fb_h0;
                     fb_h0 = output;
                 }
 
                 op_obj.osc.update(osc_mem);
+
+                // 6. LFO ピッチモジュレーション（位相オフセット追加）
+                if (lfo_pitch_mod != 0) {
+                    osc_mem.phase += static_cast<Phase_t>(
+                        (static_cast<int64_t>(osc_mem.delta) * lfo_pitch_mod) >> Q15_SHIFT
+                    );
+                }
             }
 
             // キャリアのみでノートアクティブ判定（モジュレーターは無視）
@@ -191,6 +235,9 @@ FASTRUN void Synth::generate() {
                     sum += op_buffer[k][i];
                 }
             }
+
+            // NOTE: LFO AMはオペレーター単位で適用済み
+
             mix_buffer_L[i] += sum;
             mix_buffer_R[i] += sum;
 
@@ -319,6 +366,9 @@ void Synth::updateOrder(uint8_t removed) {
  * @param channel MIDIチャンネル
  */
 void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
+    // LFO KEY SYNC——ノートオン毎にディレイカウンターをリセット（key_sync_ trueなら位相も）
+    lfo_.keyOn();
+
     // トランスポーズを適用
     int16_t transposed_note = note + transpose;
     if (transposed_note < 0) transposed_note = 0;
@@ -409,7 +459,9 @@ void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
                 auto& osc_mem = ope_states[op].osc_mems[i];
                 auto& env_mem = ope_states[op].env_mems[i];
                 operators[op].osc.setFrequency(osc_mem, actual_note);
-                operators[op].osc.setPhase(osc_mem, 0);
+                if (osc_key_sync_) {
+                    operators[op].osc.setPhase(osc_mem, 0);
+                }
                 // Output Level + Velocity + Keyboard Level Scaling をエンベロープのoutlevelとして設定
                 uint8_t op_level = operators[op].osc.getLevel();
                 operators[op].env.setOutlevel(op_level, velocity, actual_note, operators[op].env.getVelocitySens());
@@ -535,6 +587,9 @@ void Synth::loadPreset(uint8_t preset_id) {
             // ベロシティ感度設定
             operators[i].env.setVelocitySens(op_preset.velocity_sens);
 
+            // AMS感度設定 (0-3)
+            op_ams_gain_[i] = Lfo::AMS_TAB[op_preset.amp_mod_sens & 3];
+
             // キャリアの数をカウント
             if (current_algo && (current_algo->output_mask & (1 << i))) {
                 active_carriers++;
@@ -542,6 +597,7 @@ void Synth::loadPreset(uint8_t preset_id) {
         } else {
             // オペレーター無効化
             operators[i].osc.disable();
+            op_ams_gain_[i] = 0;
         }
     }
 
@@ -561,6 +617,18 @@ void Synth::loadPreset(uint8_t preset_id) {
     hpf_enabled = fx.hpf_enabled;
     filter.setHighPass(fx.hpf_cutoff, fx.hpf_resonance);
     filter.setHpfMix(fx.hpf_mix);
+
+    // LFO設定を適用
+    const LfoPreset& lfo_p = preset.lfo;
+    lfo_.setWave(lfo_p.wave);
+    lfo_.setSpeed(lfo_p.speed);
+    lfo_.setDelay(lfo_p.delay);
+    lfo_.setPmDepth(lfo_p.pm_depth);
+    lfo_.setAmDepth(lfo_p.am_depth);
+    lfo_.setPitchModSens(lfo_p.pitch_mod_sens);
+    lfo_.setKeySync(lfo_p.key_sync);
+    osc_key_sync_ = lfo_p.osc_key_sync;
+    lfo_.reset();
 
     // マスタースケールを調整
     if (active_carriers == 0) active_carriers = 1; // 0除算防止

@@ -657,6 +657,7 @@ private:
         C_ENABLED = 0,
         C_WAVE,
         C_LEVEL,
+        C_AMS,     // AMP MOD SENS (0-3)
         C_PITCH,   // ピッチ設定サブメニュー
         C_ENV,     // エンベロープ設定
         C_BACK,
@@ -811,11 +812,16 @@ private:
         sprintf(levelStr, "%d", osc.getLevel());
         drawTextItem(canvas, "LEVEL", levelStr, 2, cursor == C_LEVEL);
 
+        // AMS表示 (0-3)
+        char amsStr[8];
+        sprintf(amsStr, "%d", synth.getOperatorAms(operatorIndex));
+        drawTextItem(canvas, "AMS", amsStr, 3, cursor == C_AMS);
+
         // PITCH表示 (サブメニュー)
-        drawMenuItemWithArrow(canvas, "PITCH", 3, cursor == C_PITCH);
+        drawMenuItemWithArrow(canvas, "PITCH", 4, cursor == C_PITCH);
 
         // ENV表示 (サブメニュー)
-        drawMenuItemWithArrow(canvas, "ENV", 4, cursor == C_ENV);
+        drawMenuItemWithArrow(canvas, "ENV", 5, cursor == C_ENV);
     }
 
     /**
@@ -847,11 +853,16 @@ private:
             sprintf(levelStr, "%d", osc.getLevel());
             drawTextItem(canvas, "LEVEL", levelStr, 2, isSelected);
         }
+        else if (cursorPos == C_AMS) {
+            char amsStr[8];
+            sprintf(amsStr, "%d", synth.getOperatorAms(operatorIndex));
+            drawTextItem(canvas, "AMS", amsStr, 3, isSelected);
+        }
         else if (cursorPos == C_PITCH) {
-            drawMenuItemWithArrow(canvas, "PITCH", 3, isSelected);
+            drawMenuItemWithArrow(canvas, "PITCH", 4, isSelected);
         }
         else if (cursorPos == C_ENV) {
-            drawMenuItemWithArrow(canvas, "ENV", 4, isSelected);
+            drawMenuItemWithArrow(canvas, "ENV", 5, isSelected);
         }
         else if (cursorPos == C_BACK) {
             drawBackButton(canvas, isSelected);
@@ -954,6 +965,15 @@ private:
                 if (newLevel < 0) newLevel = 0;
                 if (newLevel > 99) newLevel = 99;
                 osc.setLevelNonLinear(static_cast<uint8_t>(newLevel));
+                break;
+            }
+            case C_AMS: {
+                // AMP MOD SENS を変更 (0-3)
+                int8_t currentAms = static_cast<int8_t>(synth.getOperatorAms(operatorIndex));
+                int8_t newAms = currentAms + (direction > 0 ? 1 : -1);
+                if (newAms < 0) newAms = 0;
+                if (newAms > 3) newAms = 3;
+                synth.setOperatorAms(operatorIndex, static_cast<uint8_t>(newAms));
                 break;
             }
             case C_PITCH:

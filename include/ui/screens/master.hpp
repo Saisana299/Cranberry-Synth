@@ -2,6 +2,7 @@
 
 #include "ui/ui.hpp"
 #include "modules/synth.hpp"
+#include "ui/screens/lfo.hpp"
 
 class MasterScreen : public Screen {
 private:
@@ -15,6 +16,7 @@ private:
         C_LEVEL = 0,
         C_TRANSPOSE,
         C_FEEDBACK,
+        C_LFO,
         C_BACK,
         C_MAX
     };
@@ -62,9 +64,13 @@ public:
             changed = true;
         }
 
-        // ENTERボタン or CANCELボタン：戻る
+        // ENTERボタン
         else if (button == BTN_ET) {
-            if (cursor == C_BACK) {
+            if (cursor == C_LFO) {
+                manager->pushScreen(new LFOScreen());
+                return;
+            }
+            else if (cursor == C_BACK) {
                 manager->popScreen();
                 return;
             }
@@ -145,6 +151,9 @@ private:
         char fbStr[8];
         sprintf(fbStr, "%d", fb);
         drawTextItem(canvas, "FEEDBACK", fbStr, 2, cursor == C_FEEDBACK);
+
+        // LFO (サブメニュー)
+        drawNavItem(canvas, "LFO", 3, cursor == C_LFO);
     }
 
     void drawFooter(GFXcanvas16& canvas) {
@@ -178,6 +187,9 @@ private:
             sprintf(fbStr, "%d", fb);
             drawTextItem(canvas, "FEEDBACK", fbStr, 2, isSelected);
         }
+        else if (cursorPos == C_LFO) {
+            drawNavItem(canvas, "LFO", 3, isSelected);
+        }
         else if (cursorPos == C_BACK) {
             drawBackButton(canvas, isSelected);
         }
@@ -200,6 +212,28 @@ private:
         canvas.setCursor(80, y + 4);
         canvas.setTextColor(Color::WHITE);
         canvas.print(value);
+
+        manager->transferPartial(0, y, SCREEN_WIDTH, ITEM_H);
+    }
+
+    void drawNavItem(GFXcanvas16& canvas, const char* name, int index, bool selected) {
+        int16_t y = HEADER_H + 2 + (index * ITEM_H);
+
+        canvas.fillRect(0, y, SCREEN_WIDTH, ITEM_H, Color::BLACK);
+        canvas.setTextSize(1);
+
+        if (selected) {
+            canvas.fillRect(2, y + 2, 3, 8, Color::WHITE);
+        }
+
+        canvas.setTextColor(selected ? Color::WHITE : Color::MD_GRAY);
+        canvas.setCursor(10, y + 4);
+        canvas.print(name);
+
+        // 右矢印でサブメニューを示す
+        canvas.setCursor(110, y + 4);
+        canvas.setTextColor(Color::MD_GRAY);
+        canvas.print(">");
 
         manager->transferPartial(0, y, SCREEN_WIDTH, ITEM_H);
     }

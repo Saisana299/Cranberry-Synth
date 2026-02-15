@@ -53,6 +53,9 @@ struct OperatorPreset {
 
     // オペレーター有効/無効
     bool enabled = false;
+
+    // LFO AM感度 (AMS) — enabled の後に配置（既存プリセット初期化との互換性維持）
+    uint8_t amp_mod_sens = 0;       // Amp Mod Sensitivity (0-3, 0=OFF, 3=最大)
 };
 
 // エフェクトプリセット構造体
