@@ -71,9 +71,30 @@ struct EffectPreset {
 
     // ハイパスフィルタ設定
     bool hpf_enabled = false;
-    float hpf_cutoff = 20.0f;          // カットオフ周波数 (20-20000 Hz)
+    float hpf_cutoff = 120.0f;          // カットオフ周波数 (20-20000 Hz)
     float hpf_resonance = 0.70710678f; // Q値 (0.1-10.0)
     Gain_t hpf_mix = Q15_MAX;          // ミックス量 (0-Q15_MAX)
+};
+
+/**
+ * @brief LFOプリセット構造体
+ *
+ * LFO波形:
+ *   0=Triangle, 1=SawDown, 2=SawUp, 3=Square, 4=Sine, 5=Sample&Hold
+ *
+ * Pitch Mod Sensitivity (P MODE SENS): 0-7
+ *   オペレーター全体にかかるピッチモジュレーション感度
+ *   0=OFF, 7=最大
+ */
+struct LfoPreset {
+    uint8_t wave = 0;             // LFO WAVE (0-5)
+    uint8_t speed = 35;           // LFO SPEED (0-99)
+    uint8_t delay = 0;            // LFO DELAY (0-99)
+    uint8_t pm_depth = 0;         // LFO PM DEPTH (0-99)
+    uint8_t am_depth = 0;         // LFO AM DEPTH (0-99)
+    uint8_t pitch_mod_sens = 3;   // P MODE SENS (0-7)
+    bool key_sync = true;         // LFO KEY SYNC (true=ON)
+    bool osc_key_sync = true;     // OSC KEY SYNC (true=ON)
 };
 
 // シンセサイザープリセット構造体
@@ -83,6 +104,7 @@ struct SynthPreset {
     uint8_t feedback = 0;                    // フィードバック量 (0-7)
     std::array<OperatorPreset, 6> operators; // 6つのオペレーター設定
     EffectPreset effects;                    // エフェクト設定
+    LfoPreset lfo;                           // LFO設定
 };
 
 // デフォルトプリセット管理クラス
@@ -125,55 +147,21 @@ private:
                     0.0f,   // fine
                     0,      // detune
                     false,  // is_fixed
-                    99,     // rate1
-                    99,     // rate2
-                    99,     // rate3
-                    50,     // rate4
-                    99,     // level1
-                    99,     // level2
-                    99,     // level3
-                    0,      // level4
+                    99, 99, 99, 50, // rate1,2,3,4
+                    99, 99, 99, 0, // level1,2,3,4
                     0,      // rate_scaling
                     39, 0, 0, 0, 0,  // kbd_break_point, kbd_left_depth, kbd_right_depth, kbd_left_curve, kbd_right_curve
                     7,      // velocity_sens
                     true    // enabled
                 },
-                // Operator 1 (無効)
-                {
-                    0, 0, 1.0f, 0.0f, 0, false,
-                    99, 99, 99, 99, 99, 99, 99, 0,
-                    0, 39, 0, 0, 0, 0, 7, false
-                },
-                // Operator 2 (無効)
-                {
-                    0, 0, 1.0f, 0.0f, 0, false,
-                    99, 99, 99, 99, 99, 99, 99, 0,
-                    0, 39, 0, 0, 0, 0, 7, false
-                },
-                // Operator 3 (無効)
-                {
-                    0, 0, 1.0f, 0.0f, 0, false,
-                    99, 99, 99, 99, 99, 99, 99, 0,
-                    0, 39, 0, 0, 0, 0, 7, false
-                },
-                // Operator 4 (無効)
-                {
-                    0, 0, 1.0f, 0.0f, 0, false,
-                    99, 99, 99, 99, 99, 99, 99, 0,
-                    0, 39, 0, 0, 0, 0, 7, false
-                },
-                // Operator 5 (無効)
-                {
-                    0, 0, 1.0f, 0.0f, 0, false,
-                    99, 99, 99, 99, 99, 99, 99, 0,
-                    0, 39, 0, 0, 0, 0, 7, false
-                }
+                {},  // Operator 1 (無効・デフォルト値)
+                {},  // Operator 2 (無効・デフォルト値)
+                {},  // Operator 3 (無効・デフォルト値)
+                {},  // Operator 4 (無効・デフォルト値)
+                {}   // Operator 5 (無効・デフォルト値)
             }},
-            {   // effects
-                false, 256, 307, 512,
-                false, 20000.0f, 0.70710678f, 1024,
-                false, 20.0f, 0.70710678f, 1024
-            }
+            {}, // effects (default)
+            {}  // lfo (default)
         },
         // --- Preset 2: Melodrama ---
         {
@@ -189,14 +177,8 @@ private:
                     0.0f,   // fine
                     7,      // detune
                     false, // is_fixed
-                    99,     // rate1
-                    32,     // rate2
-                    12,     // rate3
-                    42,     // rate4
-                    98,     // level1
-                    75,     // level2
-                    0,      // level3
-                    0,      // level4
+                    99, 32, 12, 42, // rate1,2,3,4
+                    98, 75, 0, 0, // level1,2,3,4
                     0,      // rate_scaling
                     39, 99, 40, 3, 0,  // KLS (disabled)
                     7,      // velocity_sens
@@ -210,14 +192,8 @@ private:
                     0.0f,   // fine
                     7,      // detune
                     false, // is_fixed
-                    99,     // rate1
-                    48,     // rate2
-                    10,     // rate3
-                    13,     // rate4
-                    99,     // level1
-                    81,     // level2
-                    59,     // level3
-                    0,      // level4
+                    99, 48, 10, 13, // rate1,2,3,4
+                    99, 81, 59, 0, // level1,2,3,4
                     0,      // rate_scaling
                     39, 0, 10, 1, 2,  // KLS (disabled)
                     7,      // velocity_sens
@@ -231,14 +207,8 @@ private:
                     0.0f,   // fine
                     -7,     // detune
                     false, // is_fixed
-                    99,     // rate1
-                    40,     // rate2
-                    10,     // rate3
-                    40,     // rate4
-                    99,     // level1
-                    27,     // level2
-                    0,      // level3
-                    0,      // level4
+                    99, 40, 10, 40, // rate1,2,3,4
+                    99, 27, 0, 0, // level1,2,3,4
                     0,      // rate_scaling
                     39, 0, 16, 0, 0,  // KLS (disabled)
                     7,      // velocity_sens
@@ -252,14 +222,8 @@ private:
                     0.0f,   // fine
                     -7,     // detune
                     false, // is_fixed
-                    84,     // rate1
-                    24,     // rate2
-                    10,     // rate3
-                    29,     // rate4
-                    98,     // level1
-                    98,     // level2
-                    36,     // level3
-                    0,      // level4
+                    84, 24, 10, 29, // rate1,2,3,4
+                    98, 98, 36, 0, // level1,2,3,4
                     0,      // rate_scaling
                     39, 0, 6, 0, 0,  // KLS (disabled)
                     7,      // velocity_sens
@@ -273,14 +237,8 @@ private:
                     0.0f,   // fine
                     -7,     // detune
                     false, // is_fixed
-                    82,     // rate1
-                    26,     // rate2
-                    10,     // rate3
-                    27,     // rate4
-                    99,     // level1
-                    91,     // level2
-                    0,      // level3
-                    0,      // level4
+                    82, 26, 10, 27, // rate1,2,3,4
+                    99, 91, 0, 0, // level1,2,3,4
                     0,      // rate_scaling
                     39, 2, 8, 3, 0,  // KLS (disabled)
                     7,      // velocity_sens
@@ -294,25 +252,16 @@ private:
                     65.0f,  // fine
                     0,      // detune
                     true, // is_fixed
-                    96,     // rate1
-                    76,     // rate2
-                    10,     // rate3
-                    31,     // rate4
-                    99,     // level1
-                    92,     // level2
-                    0,      // level3
-                    0,      // level4
+                    96, 76, 10, 31, // rate1,2,3,4
+                    99, 92, 0, 0, // level1,2,3,4
                     0,      // rate_scaling
                     39, 7, 0, 0, 0,  // KLS (disabled)
                     7,      // velocity_sens
                     true    // enabled
                 }
             }},
-            {   // effects
-                false, 256, 307, 512,
-                false, 6000.0f, 0.70710678f, 1024,
-                false, 20.0f, 0.70710678f, 1024
-            }
+            {}, // effects (default)
+            {}  // lfo (default)
         },
         // --- Preset 3: KinzkHarp ---
         {
@@ -328,14 +277,8 @@ private:
                     0.0f,   // fine
                     0,      // detune
                     false, // is_fixed
-                    99,     // rate1
-                    99,     // rate2
-                    23,     // rate3
-                    39,     // rate4
-                    99,     // level1
-                    99,     // level2
-                    0,      // level3
-                    0,      // level4
+                    99, 99, 23, 39, // rate1,2,3,4
+                    99, 99, 0, 0, // level1,2,3,4
                     3,      // rate_scaling
                     38, 0, 0, 3, 0,  // KLS (disabled)
                     7,      // velocity_sens
@@ -349,14 +292,8 @@ private:
                     0.0f,   // fine
                     -2,      // detune
                     false, // is_fixed
-                    95,     // rate1
-                    35,     // rate2
-                    23,     // rate3
-                    28,     // rate4
-                    99,     // level1
-                    70,     // level2
-                    0,     // level3
-                    0,      // level4
+                    95, 35, 23, 28, // rate1,2,3,4
+                    99, 70, 0, 0, // level1,2,3,4
                     4,      // rate_scaling
                     40, 0, 15, 3, 0,  // KLS (disabled)
                     7,      // velocity_sens
@@ -370,14 +307,8 @@ private:
                     0.0f,   // fine
                     -6,     // detune
                     false, // is_fixed
-                    95,     // rate1
-                    48,     // rate2
-                    28,     // rate3
-                    24,     // rate4
-                    94,     // level1
-                    79,     // level2
-                    0,      // level3
-                    0,      // level4
+                    95, 48, 28, 24, // rate1,2,3,4
+                    94, 79, 0, 0, // level1,2,3,4
                     7,      // rate_scaling
                     52, 10, 0, 0, 0,  // KLS (disabled)
                     7,      // velocity_sens
@@ -391,14 +322,8 @@ private:
                     0.0f,   // fine
                     -7,     // detune
                     false, // is_fixed
-                    59,     // rate1
-                    99,     // rate2
-                    23,     // rate3
-                    39,     // rate4
-                    66,     // level1
-                    99,     // level2
-                    0,     // level3
-                    0,      // level4
+                    59, 99, 23, 39, // rate1,2,3,4
+                    66, 99, 0, 0, // level1,2,3,4
                     3,      // rate_scaling
                     39, 0, 0, 3, 0,  // KLS (disabled)
                     7,      // velocity_sens
@@ -412,14 +337,8 @@ private:
                     0.0f,   // fine
                     4,     // detune
                     false, // is_fixed
-                    95,     // rate1
-                    35,     // rate2
-                    23,     // rate3
-                    28,     // rate4
-                    99,     // level1
-                    70,     // level2
-                    0,      // level3
-                    0,      // level4
+                    95, 35, 23, 28, // rate1,2,3,4
+                    99, 70, 0, 0, // level1,2,3,4
                     4,      // rate_scaling
                     40, 0, 15, 3, 0,  // KLS (disabled)
                     7,      // velocity_sens
@@ -433,25 +352,16 @@ private:
                     0.0f,  // fine
                     1,      // detune
                     false, // is_fixed
-                    95,     // rate1
-                    48,     // rate2
-                    28,     // rate3
-                    24,     // rate4
-                    93,     // level1
-                    78,     // level2
-                    0,      // level3
-                    0,      // level4
+                    95, 48, 28, 24, // rate1,2,3,4
+                    93, 78, 0, 0, // level1,2,3,4
                     7,      // rate_scaling
                     48, 10, 11, 0, 0,  // KLS (disabled)
                     7,      // velocity_sens
                     true    // enabled
                 }
             }},
-            {   // effects
-                false, 256, 307, 512,
-                false, 6000.0f, 0.70710678f, 1024,
-                false, 20.0f, 0.70710678f, 1024
-            }
+            {}, // effects (default)
+            {}  // lfo (default)
         },
         // --- Preset 4: TUB BELLS ---
         {
@@ -467,14 +377,8 @@ private:
                     0.0f,   // fine
                     2,      // detune
                     false, // is_fixed
-                    95,     // rate1
-                    33,     // rate2
-                    71,     // rate3
-                    25,     // rate4
-                    99,     // level1
-                    0,     // level2
-                    32,      // level3
-                    0,      // level4
+                    95, 33, 71, 25, // rate1,2,3,4
+                    99, 0, 32, 0, // level1,2,3,4
                     2,      // rate_scaling
                     4, 0, 0, 0, 0,  // KLS (disabled)
                     7,      // velocity_sens
@@ -488,14 +392,8 @@ private:
                     75.0f,   // fine
                     3,      // detune
                     false, // is_fixed
-                    98,     // rate1
-                    12,     // rate2
-                    71,     // rate3
-                    28,     // rate4
-                    99,     // level1
-                    0,     // level2
-                    32,     // level3
-                    0,      // level4
+                    98, 12, 71, 28, // rate1,2,3,4
+                    99, 0, 32, 0, // level1,2,3,4
                     2,      // rate_scaling
                     4, 0, 0, 0, 0,  // KLS (disabled)
                     7,      // velocity_sens
@@ -509,14 +407,8 @@ private:
                     0.0f,   // fine
                     -5,     // detune
                     false, // is_fixed
-                    95,     // rate1
-                    33,     // rate2
-                    71,     // rate3
-                    25,     // rate4
-                    94,     // level1
-                    0,     // level2
-                    32,      // level3
-                    0,      // level4
+                    95, 33, 71, 25, // rate1,2,3,4
+                    94, 0, 32, 0, // level1,2,3,4
                     2,      // rate_scaling
                     4, 0, 0, 0, 0,  // KLS (disabled)
                     7,      // velocity_sens
@@ -530,14 +422,8 @@ private:
                     75.0f,   // fine
                     -2,     // detune
                     false, // is_fixed
-                    98,     // rate1
-                    12,     // rate2
-                    71,     // rate3
-                    28,     // rate4
-                    99,     // level1
-                    0,     // level2
-                    32,     // level3
-                    0,      // level4
+                    98, 12, 71, 28, // rate1,2,3,4
+                    99, 0, 32, 0, // level1,2,3,4
                     2,      // rate_scaling
                     4, 0, 0, 0, 0,  // KLS (disabled)
                     7,      // velocity_sens
@@ -551,14 +437,8 @@ private:
                     51.0f,   // fine
                     0,     // detune
                     true, // is_fixed
-                    76,     // rate1
-                    78,     // rate2
-                    71,     // rate3
-                    70,     // rate4
-                    99,     // level1
-                    0,     // level2
-                    0,      // level3
-                    0,      // level4
+                    76, 78, 71, 70, // rate1,2,3,4
+                    99, 0, 0, 0, // level1,2,3,4
                     2,      // rate_scaling
                     4, 0, 0, 0, 0,  // KLS (disabled)
                     7,      // velocity_sens
@@ -572,25 +452,16 @@ private:
                     0.0f,  // fine
                     -7,      // detune
                     false, // is_fixed
-                    98,     // rate1
-                    91,     // rate2
-                    0,     // rate3
-                    28,     // rate4
-                    99,     // level1
-                    0,     // level2
-                    0,      // level3
-                    0,      // level4
+                    98, 91, 0, 28, // rate1,2,3,4
+                    99, 0, 0, 0, // level1,2,3,4
                     2,      // rate_scaling
                     4, 0, 0, 0, 0,  // KLS (disabled)
                     7,      // velocity_sens
                     true    // enabled
                 }
             }},
-            {   // effects
-                false, 256, 307, 512,
-                false, 6000.0f, 0.70710678f, 1024,
-                false, 20.0f, 0.70710678f, 1024
-            }
+            {}, // effects (default)
+            {}  // lfo (default)
         },
         // --- Preset 5: E.PIANO 1 ---
         {
@@ -606,14 +477,8 @@ private:
                     0.0f,   // fine
                     3,      // detune
                     false, // is_fixed
-                    96,     // rate1
-                    25,     // rate2
-                    25,     // rate3
-                    67,     // rate4
-                    99,     // level1
-                    75,     // level2
-                    0,      // level3
-                    0,      // level4
+                    96, 25, 25, 67, // rate1,2,3,4
+                    99, 75, 0, 0, // level1,2,3,4
                     3,      // rate_scaling
                     0, 0, 0, 0, 0,  // KLS (disabled)
                     7,      // velocity_sens
@@ -627,14 +492,8 @@ private:
                     0.0f,   // fine
                     0,      // detune
                     false, // is_fixed
-                    95,     // rate1
-                    50,     // rate2
-                    35,     // rate3
-                    78,     // rate4
-                    99,     // level1
-                    75,     // level2
-                    0,     // level3
-                    0,      // level4
+                    95, 50, 35, 78, // rate1,2,3,4
+                    99, 75, 0, 0, // level1,2,3,4
                     3,      // rate_scaling
                     0, 0, 0, 0, 0,  // KLS (disabled)
                     7,      // velocity_sens
@@ -648,14 +507,8 @@ private:
                     0.0f,   // fine
                     0,     // detune
                     false, // is_fixed
-                    95,     // rate1
-                    20,     // rate2
-                    20,     // rate3
-                    50,     // rate4
-                    99,     // level1
-                    95,     // level2
-                    0,      // level3
-                    0,      // level4
+                    95, 20, 20, 50, // rate1,2,3,4
+                    99, 95, 0, 0, // level1,2,3,4
                     3,      // rate_scaling
                     0, 0, 0, 0, 0,  // KLS (disabled)
                     7,      // velocity_sens
@@ -669,14 +522,8 @@ private:
                     0.0f,   // fine
                     0,     // detune
                     false, // is_fixed
-                    96,     // rate1
-                    29,     // rate2
-                    20,     // rate3
-                    50,     // rate4
-                    99,     // level1
-                    95,     // level2
-                    0,     // level3
-                    0,      // level4
+                    96, 29, 20, 50, // rate1,2,3,4
+                    99, 95, 0, 0, // level1,2,3,4
                     3,      // rate_scaling
                     0, 0, 0, 0, 0,  // KLS (disabled)
                     7,      // velocity_sens
@@ -690,14 +537,8 @@ private:
                     0.0f,   // fine
                     -7,     // detune
                     false, // is_fixed
-                    95,     // rate1
-                    20,     // rate2
-                    20,     // rate3
-                    50,     // rate4
-                    99,     // level1
-                    95,     // level2
-                    0,      // level3
-                    0,      // level4
+                    95, 20, 20, 50, // rate1,2,3,4
+                    99, 95, 0, 0, // level1,2,3,4
                     3,      // rate_scaling
                     0, 0, 0, 0, 0,  // KLS (disabled)
                     7,      // velocity_sens
@@ -711,25 +552,16 @@ private:
                     0.0f,   // fine
                     7,      // detune
                     false, // is_fixed
-                    95,     // rate1
-                    29,     // rate2
-                    20,     // rate3
-                    50,     // rate4
-                    99,     // level1
-                    95,     // level2
-                    0,      // level3
-                    0,      // level4
+                    95, 29, 20, 50, // rate1,2,3,4
+                    99, 95, 0, 0, // level1,2,3,4
                     3,      // rate_scaling
                     33, 0, 19, 0, 0,  // KLS (disabled)
                     7,      // velocity_sens
                     true    // enabled
                 }
             }},
-            {   // effects
-                false, 256, 307, 512,
-                false, 6000.0f, 0.70710678f, 1024,
-                false, 20.0f, 0.70710678f, 1024
-            }
+            {}, // effects (default)
+            {}  // lfo (default)
         },
     };
 };

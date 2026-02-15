@@ -550,23 +550,17 @@ void Synth::loadPreset(uint8_t preset_id) {
 
     // ディレイ設定
     delay_enabled = fx.delay_enabled;
-    if (fx.delay_enabled) {
-        delay.setDelay(fx.delay_time, fx.delay_level, fx.delay_feedback);
-    }
+    delay.setDelay(fx.delay_time, fx.delay_level, fx.delay_feedback);
 
     // ローパスフィルタ設定
     lpf_enabled = fx.lpf_enabled;
-    if (fx.lpf_enabled) {
-        filter.setLowPass(fx.lpf_cutoff, fx.lpf_resonance);
-        filter.setLpfMix(fx.lpf_mix);
-    }
+    filter.setLowPass(fx.lpf_cutoff, fx.lpf_resonance);
+    filter.setLpfMix(fx.lpf_mix);
 
     // ハイパスフィルタ設定
     hpf_enabled = fx.hpf_enabled;
-    if (fx.hpf_enabled) {
-        filter.setHighPass(fx.hpf_cutoff, fx.hpf_resonance);
-        filter.setHpfMix(fx.hpf_mix);
-    }
+    filter.setHighPass(fx.hpf_cutoff, fx.hpf_resonance);
+    filter.setHpfMix(fx.hpf_mix);
 
     // マスタースケールを調整
     if (active_carriers == 0) active_carriers = 1; // 0除算防止
