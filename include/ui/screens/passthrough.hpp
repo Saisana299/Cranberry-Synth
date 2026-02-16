@@ -12,7 +12,7 @@ private:
     const int16_t HEADER_H = 14;
     const int16_t FLOW_Y = 26;       // 信号フロー表示の Y 開始位置
     const int16_t FX_Y = 58;         // エフェクト項目の Y 開始位置
-    const int16_t FX_ITEM_H = 16;    // エフェクト項目の高さ
+    const int16_t FX_ITEM_H = 13;    // エフェクト項目の高さ
     const int16_t FOOTER_Y = SCREEN_HEIGHT - 14;
 
     bool needsFullRedraw = false;
@@ -27,6 +27,7 @@ private:
         C_LPF = 0,
         C_HPF,
         C_DELAY,
+        C_CHORUS,
         C_MAX
     };
     int8_t cursor = C_LPF;
@@ -93,6 +94,9 @@ public:
                     return;
                 case C_DELAY:
                     manager->pushScreen(new PassthroughDelayScreen());
+                    return;
+                case C_CHORUS:
+                    manager->pushScreen(new PassthroughChorusScreen());
                     return;
             }
             pushingSubscreen_ = false;
@@ -240,6 +244,10 @@ private:
             case C_DELAY:
                 label = "DELAY";
                 enabled = passthrough.isDelayEnabled();
+                break;
+            case C_CHORUS:
+                label = "CHORUS";
+                enabled = passthrough.isChorusEnabled();
                 break;
         }
         if (!label) return;

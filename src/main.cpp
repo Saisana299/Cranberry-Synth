@@ -18,6 +18,8 @@
 /* Modules */
 #include "modules/synth.hpp"
 #include "modules/passthrough.hpp"
+#include "modules/delay.hpp"
+#include "modules/filter.hpp"
 /* UI */
 #include "ui/ui.hpp"
 #include "ui/screens/title.hpp"
@@ -38,7 +40,14 @@ Leds leds(state);
 UIManager ui(state);
 
 Synth& synth = Synth::getInstance();
-Passthrough passthrough(audio_hdl);
+
+// Synth / Passthrough 共有エフェクトインスタンス
+// 両モードは同時に動作しないため、メモリ節約のため共有
+Delay shared_delay;
+Filter shared_filter;
+Chorus shared_chorus;
+
+Passthrough passthrough(audio_hdl, shared_filter, shared_delay, shared_chorus);
 
 // SPI転送中のオーディオ処理コールバック
 AudioCallback gfxAudioCallback = nullptr;
@@ -84,7 +93,8 @@ void setup() {
     gfx.begin();
     ui.pushScreen(new TitleScreen());
 
-    synth.init();
+    midi_player.init();  // SD.begin() はsetup()内で安全に呼ぶ
+    synth.init(shared_delay, shared_filter, shared_chorus);
     audio_hdl.init();
     physical.init();
     leds.init();

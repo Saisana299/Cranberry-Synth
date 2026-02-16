@@ -16,6 +16,7 @@ void Passthrough::begin() {
     // エフェクトの状態をリセット
     filter_.reset();
     delay_.reset();
+    chorus_.reset();
 
     active_ = true;
 }
@@ -102,6 +103,13 @@ void Passthrough::process() {
             for (size_t i = 0; i < BUFFER_SIZE; i++) {
                 samples_L[i] = delay_.processL(samples_L[i]);
                 samples_R[i] = delay_.processR(samples_R[i]);
+            }
+        }
+
+        // 4. Chorus
+        if (chorus_enabled_) {
+            for (size_t i = 0; i < BUFFER_SIZE; i++) {
+                chorus_.process(samples_L[i], samples_R[i]);
             }
         }
 

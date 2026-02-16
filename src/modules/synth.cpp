@@ -1,7 +1,10 @@
 #include "modules/synth.hpp"
 
 /** @brief シンセ初期化 */
-void Synth::init() {
+void Synth::init(Delay& shared_delay, Filter& shared_filter, Chorus& shared_chorus) {
+    delay_ptr_ = &shared_delay;
+    filter_ptr_ = &shared_filter;
+    chorus_ptr_ = &shared_chorus;
 
     // ノート情報クリア
     for (int i = 0; i < 128; ++i) {
@@ -296,22 +299,22 @@ FASTRUN void Synth::generate() {
         // エフェクト処理 (16bit)
         // Low-pass filter
         if(enable_lpf) {
-            left_16 = filter.processLpfL(left_16);
-            right_16 = filter.processLpfR(right_16);
+            left_16 = filter_ptr_->processLpfL(left_16);
+            right_16 = filter_ptr_->processLpfR(right_16);
         }
         // High-pass filter
         if(enable_hpf) {
-            left_16 = filter.processHpfL(left_16);
-            right_16 = filter.processHpfR(right_16);
+            left_16 = filter_ptr_->processHpfL(left_16);
+            right_16 = filter_ptr_->processHpfR(right_16);
         }
         // Delay
         if(enable_delay) {
-            left_16 = delay.processL(left_16);
-            right_16 = delay.processR(right_16);
+            left_16 = delay_ptr_->processL(left_16);
+            right_16 = delay_ptr_->processR(right_16);
         }
         // Chorus
         if(enable_chorus) {
-            chorus.process(left_16, right_16);
+            chorus_ptr_->process(left_16, right_16);
         }
 
         // 出力バッファへ
@@ -332,15 +335,18 @@ FASTRUN void Synth::generate() {
 /** @brief シンセ更新 */
 FASTRUN void Synth::update() {
     // 有効なノートが存在すれば生成
-    // エフェクト系追加したら処理内容変更？
     if(order_max > 0) {
-        delay_remain = delay.getDelayLength();
+        // アクティブノートがある間はエフェクトテールを更新し続ける
+        fx_tail_remain = calcFxTail();
         generate();
     }
-    // ディレイが残っている時の処理
-    else if(delay_enabled && delay_remain > 0) {
-        if(delay_remain <= BUFFER_SIZE) delay_remain = 0;
-        else delay_remain -= BUFFER_SIZE;
+    // ノートが全終了してもエフェクトテールが残っていれば継続
+    // ※ samples_ready_flags チェック: update() はループから高頻度で呼ばれるが
+    //   generate() は前ブロック消費後にしか実行されない。
+    //   デクリメントも generate() 実行時のみ行うことで正確なテール時間を維持する。
+    else if(fx_tail_remain > 0 && !samples_ready_flags) {
+        if(fx_tail_remain <= BUFFER_SIZE) fx_tail_remain = 0;
+        else fx_tail_remain -= BUFFER_SIZE;
         generate();
     }
 }
@@ -611,23 +617,23 @@ void Synth::loadPreset(uint8_t preset_id) {
 
     // ディレイ設定
     delay_enabled = fx.delay_enabled;
-    delay.setDelay(fx.delay_time, fx.delay_level, fx.delay_feedback);
+    delay_ptr_->setDelay(fx.delay_time, fx.delay_level, fx.delay_feedback);
 
     // ローパスフィルタ設定
     lpf_enabled = fx.lpf_enabled;
-    filter.setLowPass(fx.lpf_cutoff, fx.lpf_resonance);
-    filter.setLpfMix(fx.lpf_mix);
+    filter_ptr_->setLowPass(fx.lpf_cutoff, fx.lpf_resonance);
+    filter_ptr_->setLpfMix(fx.lpf_mix);
 
     // ハイパスフィルタ設定
     hpf_enabled = fx.hpf_enabled;
-    filter.setHighPass(fx.hpf_cutoff, fx.hpf_resonance);
-    filter.setHpfMix(fx.hpf_mix);
+    filter_ptr_->setHighPass(fx.hpf_cutoff, fx.hpf_resonance);
+    filter_ptr_->setHpfMix(fx.hpf_mix);
 
     // コーラス設定
     chorus_enabled = fx.chorus_enabled;
-    chorus.setRate(fx.chorus_rate);
-    chorus.setDepth(fx.chorus_depth);
-    chorus.setMix(fx.chorus_mix);
+    chorus_ptr_->setRate(fx.chorus_rate);
+    chorus_ptr_->setDepth(fx.chorus_depth);
+    chorus_ptr_->setMix(fx.chorus_mix);
 
     // LFO設定を適用
     const LfoPreset& lfo_p = preset.lfo;

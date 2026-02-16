@@ -759,3 +759,255 @@ private:
         manager->transferPartial(x, y, w, h);
     }
 };
+
+// ============================================================
+// PassthroughChorusScreen — パススルーモード用コーラス設定
+// ============================================================
+class PassthroughChorusScreen : public Screen {
+private:
+    const int16_t HEADER_H = 14;
+    const int16_t ITEM_H = 16;
+    const int16_t FOOTER_Y = SCREEN_HEIGHT - 14;
+    bool needsFullRedraw = false;
+
+    enum CursorPos {
+        C_ENABLED = 0,
+        C_RATE,
+        C_DEPTH,
+        C_MIX,
+        C_BACK,
+        C_MAX
+    };
+    int8_t cursor = C_ENABLED;
+
+    const uint8_t RATE_STEP = 1;
+    const uint8_t DEPTH_STEP = 1;
+    const Gain_t MIX_STEP = 1024;
+
+public:
+    PassthroughChorusScreen() = default;
+
+    void onEnter(UIManager* manager) override {
+        this->manager = manager;
+        cursor = C_ENABLED;
+        needsFullRedraw = true;
+        manager->invalidate();
+        manager->triggerFullTransfer();
+    }
+
+    bool isAnimated() const override { return false; }
+
+    void handleInput(uint8_t button) override {
+        bool moved = false;
+        bool changed = false;
+        Chorus& chorus = passthrough.getChorus();
+
+        if (button == BTN_DN || button == BTN_DN_LONG) {
+            cursor++;
+            if (cursor >= C_MAX) cursor = 0;
+            moved = true;
+        }
+        else if (button == BTN_UP || button == BTN_UP_LONG) {
+            cursor--;
+            if (cursor < 0) cursor = C_MAX - 1;
+            moved = true;
+        }
+        else if (button == BTN_L || button == BTN_L_LONG) {
+            if (cursor == C_ENABLED) {
+                passthrough.setChorusEnabled(!passthrough.isChorusEnabled());
+                changed = true;
+            }
+            else if (cursor == C_RATE) {
+                uint8_t r = chorus.getRate();
+                uint8_t step = (button == BTN_L_LONG) ? 5 : RATE_STEP;
+                if (r > CHORUS_RATE_MIN + step) r -= step;
+                else r = CHORUS_RATE_MIN;
+                chorus.setRate(r);
+                changed = true;
+            }
+            else if (cursor == C_DEPTH) {
+                uint8_t d = chorus.getDepth();
+                uint8_t step = (button == BTN_L_LONG) ? 5 : DEPTH_STEP;
+                if (d > CHORUS_DEPTH_MIN + step) d -= step;
+                else d = CHORUS_DEPTH_MIN;
+                chorus.setDepth(d);
+                changed = true;
+            }
+            else if (cursor == C_MIX) {
+                Gain_t m = chorus.getMix();
+                if (m > MIX_STEP) m -= MIX_STEP;
+                else m = 0;
+                chorus.setMix(m);
+                changed = true;
+            }
+        }
+        else if (button == BTN_R || button == BTN_R_LONG) {
+            if (cursor == C_ENABLED) {
+                passthrough.setChorusEnabled(!passthrough.isChorusEnabled());
+                changed = true;
+            }
+            else if (cursor == C_RATE) {
+                uint8_t r = chorus.getRate();
+                uint8_t step = (button == BTN_R_LONG) ? 5 : RATE_STEP;
+                if (r + step <= CHORUS_RATE_MAX) r += step;
+                else r = CHORUS_RATE_MAX;
+                chorus.setRate(r);
+                changed = true;
+            }
+            else if (cursor == C_DEPTH) {
+                uint8_t d = chorus.getDepth();
+                uint8_t step = (button == BTN_R_LONG) ? 5 : DEPTH_STEP;
+                if (d + step <= CHORUS_DEPTH_MAX) d += step;
+                else d = CHORUS_DEPTH_MAX;
+                chorus.setDepth(d);
+                changed = true;
+            }
+            else if (cursor == C_MIX) {
+                int32_t m = chorus.getMix() + MIX_STEP;
+                if (m > Q15_MAX) m = Q15_MAX;
+                chorus.setMix(static_cast<Gain_t>(m));
+                changed = true;
+            }
+        }
+        else if (button == BTN_ET) {
+            if (cursor == C_ENABLED) {
+                passthrough.setChorusEnabled(!passthrough.isChorusEnabled());
+                changed = true;
+            }
+            else if (cursor == C_BACK) {
+                manager->popScreen();
+                return;
+            }
+        }
+        else if (button == BTN_CXL) {
+            manager->popScreen();
+            return;
+        }
+
+        if (moved || changed) {
+            if (changed) needsFullRedraw = true;
+            manager->invalidate();
+        }
+    }
+
+    void draw(GFXcanvas16& canvas) override {
+        static bool firstDraw = true;
+        static int8_t lastCursor = -1;
+
+        if (needsFullRedraw) {
+            firstDraw = true;
+            lastCursor = -1;
+            needsFullRedraw = false;
+        }
+
+        if (firstDraw) {
+            canvas.fillScreen(Color::BLACK);
+            drawHeader(canvas);
+            drawAllItems(canvas);
+            drawFooter(canvas);
+            firstDraw = false;
+            lastCursor = cursor;
+            manager->triggerFullTransfer();
+        }
+
+        if (cursor != lastCursor) {
+            updateCursorElement(canvas, lastCursor);
+            updateCursorElement(canvas, cursor);
+            lastCursor = cursor;
+        }
+    }
+
+private:
+    void drawHeader(GFXcanvas16& canvas) {
+        canvas.fillRect(0, 0, SCREEN_WIDTH, HEADER_H, Color::BLACK);
+        canvas.setTextSize(1);
+        canvas.setTextColor(Color::WHITE);
+        canvas.setCursor(2, 2);
+        canvas.print("CHORUS");
+        canvas.drawFastHLine(0, HEADER_H, SCREEN_WIDTH, Color::WHITE);
+        manager->transferPartial(0, 0, SCREEN_WIDTH, HEADER_H + 1);
+    }
+
+    void drawAllItems(GFXcanvas16& canvas) {
+        Chorus& chorus = passthrough.getChorus();
+        drawToggleItem(canvas, "ENABLED", passthrough.isChorusEnabled(), 0, cursor == C_ENABLED);
+        drawParamItem(canvas, "RATE", chorus.getRate(), "", 1, cursor == C_RATE);
+        drawParamItem(canvas, "DEPTH", chorus.getDepth(), "", 2, cursor == C_DEPTH);
+        drawPercentItem(canvas, "MIX", chorus.getMix(), 3, cursor == C_MIX);
+    }
+
+    void drawFooter(GFXcanvas16& canvas) {
+        canvas.drawFastHLine(0, FOOTER_Y, SCREEN_WIDTH, Color::WHITE);
+        drawBackButton(canvas, cursor == C_BACK);
+    }
+
+    void updateCursorElement(GFXcanvas16& canvas, int8_t cursorPos) {
+        Chorus& chorus = passthrough.getChorus();
+        bool isSelected = (cursor == cursorPos);
+
+        if (cursorPos == C_ENABLED) drawToggleItem(canvas, "ENABLED", passthrough.isChorusEnabled(), 0, isSelected);
+        else if (cursorPos == C_RATE) drawParamItem(canvas, "RATE", chorus.getRate(), "", 1, isSelected);
+        else if (cursorPos == C_DEPTH) drawParamItem(canvas, "DEPTH", chorus.getDepth(), "", 2, isSelected);
+        else if (cursorPos == C_MIX) drawPercentItem(canvas, "MIX", chorus.getMix(), 3, isSelected);
+        else if (cursorPos == C_BACK) drawBackButton(canvas, isSelected);
+    }
+
+    void drawToggleItem(GFXcanvas16& canvas, const char* name, bool value, int index, bool selected) {
+        int16_t y = HEADER_H + 2 + (index * ITEM_H);
+        canvas.fillRect(0, y, SCREEN_WIDTH, ITEM_H, Color::BLACK);
+        canvas.setTextSize(1);
+        if (selected) canvas.fillRect(2, y + 2, 3, 8, Color::WHITE);
+        canvas.setTextColor(selected ? Color::WHITE : Color::MD_GRAY);
+        canvas.setCursor(10, y + 4);
+        canvas.print(name);
+        canvas.setCursor(80, y + 4);
+        canvas.setTextColor(value ? Color::CYAN : Color::MD_GRAY);
+        canvas.print(value ? "ON" : "OFF");
+        manager->transferPartial(0, y, SCREEN_WIDTH, ITEM_H);
+    }
+
+    void drawParamItem(GFXcanvas16& canvas, const char* name, int32_t value, const char* unit, int index, bool selected) {
+        int16_t y = HEADER_H + 2 + (index * ITEM_H);
+        canvas.fillRect(0, y, SCREEN_WIDTH, ITEM_H, Color::BLACK);
+        canvas.setTextSize(1);
+        if (selected) canvas.fillRect(2, y + 2, 3, 8, Color::WHITE);
+        canvas.setTextColor(selected ? Color::WHITE : Color::MD_GRAY);
+        canvas.setCursor(10, y + 4);
+        canvas.print(name);
+        canvas.setCursor(80, y + 4);
+        canvas.setTextColor(Color::WHITE);
+        char valStr[16];
+        sprintf(valStr, "%ld%s", value, unit);
+        canvas.print(valStr);
+        manager->transferPartial(0, y, SCREEN_WIDTH, ITEM_H);
+    }
+
+    void drawPercentItem(GFXcanvas16& canvas, const char* name, Gain_t value, int index, bool selected) {
+        int16_t y = HEADER_H + 2 + (index * ITEM_H);
+        canvas.fillRect(0, y, SCREEN_WIDTH, ITEM_H, Color::BLACK);
+        canvas.setTextSize(1);
+        if (selected) canvas.fillRect(2, y + 2, 3, 8, Color::WHITE);
+        canvas.setTextColor(selected ? Color::WHITE : Color::MD_GRAY);
+        canvas.setCursor(10, y + 4);
+        canvas.print(name);
+        canvas.setCursor(80, y + 4);
+        canvas.setTextColor(Color::WHITE);
+        char valStr[16];
+        sprintf(valStr, "%d%%", (int)((int32_t)value * 100 / Q15_MAX));
+        canvas.print(valStr);
+        manager->transferPartial(0, y, SCREEN_WIDTH, ITEM_H);
+    }
+
+    void drawBackButton(GFXcanvas16& canvas, bool selected) {
+        int16_t x = 2;
+        int16_t y = FOOTER_Y + 2;
+        int16_t w = 24;
+        int16_t h = 10;
+        canvas.fillRect(x, y, w, h, Color::BLACK);
+        if (selected) canvas.drawRect(x, y, w, h, Color::WHITE);
+        canvas.setTextColor(selected ? Color::WHITE : Color::MD_GRAY);
+        canvas.setCursor(x + 2, y + 1);
+        canvas.print("<");
+        manager->transferPartial(x, y, w, h);
+    }
+};

@@ -44,15 +44,15 @@ private:
     };
     Operator operators[MAX_OPERATORS] = {};
 
-    Delay delay = Delay{};
-    uint32_t delay_remain = 0;
+    Delay* delay_ptr_ = nullptr;    // 共有インスタンス (main.cpp で生成)
+    uint32_t fx_tail_remain = 0;     // エフェクトテール残りサンプル数
     bool delay_enabled = false;
 
-    Filter filter = Filter{};
+    Filter* filter_ptr_ = nullptr;  // 共有インスタンス (main.cpp で生成)
     bool lpf_enabled = false;
     bool hpf_enabled = false;
 
-    Chorus chorus = Chorus{};
+    Chorus* chorus_ptr_ = nullptr;  // 共有インスタンス (main.cpp で生成)
     bool chorus_enabled = false;
 
     Lfo lfo_;
@@ -83,6 +83,39 @@ private:
     void updateOrder(uint8_t removed);
     void noteReset(uint8_t index);
 
+    /**
+     * @brief エフェクトテール長を計算
+     * Delay (フィードバック減衰考慮) + Chorus バッファ長
+     * フィードバックレベルが -60dB (0.001) 以下になるまでの繰り返し回数で算出
+     */
+    uint32_t calcFxTail() const {
+        uint32_t tail = 0;
+        if (delay_enabled && delay_ptr_) {
+            // delay_length (getTotalSamples) は既にフィードバック考慮済みの総テール長
+            // reset() で 0 になる場合があるので、直接パラメータから計算する
+            int32_t time_ms = delay_ptr_->getTime();
+            Gain_t fb = delay_ptr_->getFeedback();
+            if (time_ms > 0 && fb > 0) {
+                float fb_ratio = static_cast<float>(fb) / Q15_MAX;
+                // -60dB (0.001) まで減衰するエコー回数
+                float repeats_f = (fb_ratio > 0.001f)
+                    ? (logf(0.001f) / logf(fb_ratio))
+                    : 1.0f;
+                if (repeats_f < 1.0f) repeats_f = 1.0f;
+                if (repeats_f > 500.0f) repeats_f = 500.0f;
+                uint32_t total_ms = static_cast<uint32_t>(repeats_f * time_ms);
+                tail = (total_ms * SAMPLE_RATE) / 1000;
+                // 上限 30秒 (テール中はノート合成なし、エフェクトチェーンのみで低CPU負荷)
+                constexpr uint32_t MAX_TAIL = SAMPLE_RATE * 30;
+                if (tail > MAX_TAIL) tail = MAX_TAIL;
+            }
+        }
+        if (chorus_enabled && chorus_ptr_) {
+            tail = std::max(tail, static_cast<uint32_t>(CHORUS_BUFFER_SIZE));
+        }
+        return tail;
+    }
+
     Synth() {}
 
 public:
@@ -94,7 +127,7 @@ public:
         return instance;
     };
 
-    void init();
+    void init(Delay& shared_delay, Filter& shared_filter, Chorus& shared_chorus);
     FASTRUN void update();
     void noteOn(uint8_t note, uint8_t velocity, uint8_t channel);
     void noteOff(uint8_t note, uint8_t channel);
@@ -138,31 +171,43 @@ public:
     bool isChorusEnabled() const { return chorus_enabled; }
 
     // エフェクトパラメータ取得
-    int32_t getDelayTime() const { return delay.getTime(); }
-    Gain_t getDelayLevel() const { return delay.getLevel(); }
-    Gain_t getDelayFeedback() const { return delay.getFeedback(); }
-    float getLpfCutoff() const { return filter.getLpfCutoff(); }
-    float getLpfResonance() const { return filter.getLpfResonance(); }
-    Gain_t getLpfMix() const { return filter.getLpfMix(); }
-    float getHpfCutoff() const { return filter.getHpfCutoff(); }
-    float getHpfResonance() const { return filter.getHpfResonance(); }
-    Gain_t getHpfMix() const { return filter.getHpfMix(); }
+    int32_t getDelayTime() const { return delay_ptr_->getTime(); }
+    Gain_t getDelayLevel() const { return delay_ptr_->getLevel(); }
+    Gain_t getDelayFeedback() const { return delay_ptr_->getFeedback(); }
+    float getLpfCutoff() const { return filter_ptr_->getLpfCutoff(); }
+    float getLpfResonance() const { return filter_ptr_->getLpfResonance(); }
+    Gain_t getLpfMix() const { return filter_ptr_->getLpfMix(); }
+    float getHpfCutoff() const { return filter_ptr_->getHpfCutoff(); }
+    float getHpfResonance() const { return filter_ptr_->getHpfResonance(); }
+    Gain_t getHpfMix() const { return filter_ptr_->getHpfMix(); }
 
     // エフェクト設定
-    void setDelayEnabled(bool enabled) { delay_enabled = enabled; }
-    void setLpfEnabled(bool enabled) { lpf_enabled = enabled; }
-    void setHpfEnabled(bool enabled) { hpf_enabled = enabled; }
-    void setChorusEnabled(bool enabled) { chorus_enabled = enabled; }
+    void setDelayEnabled(bool enabled) {
+        if (!delay_enabled && enabled) delay_ptr_->reset();
+        delay_enabled = enabled;
+    }
+    void setLpfEnabled(bool enabled) {
+        if (!lpf_enabled && enabled) filter_ptr_->reset();
+        lpf_enabled = enabled;
+    }
+    void setHpfEnabled(bool enabled) {
+        if (!hpf_enabled && enabled) filter_ptr_->reset();
+        hpf_enabled = enabled;
+    }
+    void setChorusEnabled(bool enabled) {
+        if (!chorus_enabled && enabled) chorus_ptr_->reset();
+        chorus_enabled = enabled;
+    }
 
     // Delay/Filter/Chorus オブジェクトへの直接アクセス（設定用）
-    Delay& getDelay() { return delay; }
-    Filter& getFilter() { return filter; }
-    Chorus& getChorus() { return chorus; }
+    Delay& getDelay() { return *delay_ptr_; }
+    Filter& getFilter() { return *filter_ptr_; }
+    Chorus& getChorus() { return *chorus_ptr_; }
 
     // コーラスパラメータ取得
-    uint8_t getChorusRate() const { return chorus.getRate(); }
-    uint8_t getChorusDepth() const { return chorus.getDepth(); }
-    Gain_t getChorusMix() const { return chorus.getMix(); }
+    uint8_t getChorusRate() const { return chorus_ptr_->getRate(); }
+    uint8_t getChorusDepth() const { return chorus_ptr_->getDepth(); }
+    Gain_t getChorusMix() const { return chorus_ptr_->getMix(); }
 
     // LFO
     Lfo& getLfo() { return lfo_; }

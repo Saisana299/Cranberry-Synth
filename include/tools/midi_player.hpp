@@ -23,15 +23,17 @@ private:
     State& state_;
     Synth& synth_;
 
-    void init();
     void midiCallback(midi_event *pev);
 
 public:
+    void init();
+
     MIDIPlayer(State& state) : state_(state), synth_(Synth::getInstance()) {
         if (instance == nullptr) {
             instance = this;
         }
-        init();
+        // init() は setup() 内で明示的に呼ぶこと
+        // グローバル初期化中に SD.begin() を呼ぶとハングする
     }
     ~MIDIPlayer() {
         if (instance == this) instance = nullptr;
