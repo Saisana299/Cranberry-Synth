@@ -2,6 +2,7 @@
 
 #include "ui/ui.hpp"
 #include "ui/screens/delay.hpp"
+#include "ui/screens/chorus.hpp"
 #include "ui/screens/hpf.hpp"
 #include "ui/screens/lpf.hpp"
 
@@ -18,6 +19,7 @@ private:
     // --- カーソル管理 ---
     enum CursorPos {
         C_DELAY = 0,
+        C_CHORUS,
         C_HPF,
         C_LPF,
         C_BACK,
@@ -57,6 +59,10 @@ public:
         else if (button == BTN_ET) {
             if (cursor == C_DELAY) {
                 manager->pushScreen(new DelayScreen());
+                return;
+            }
+            else if (cursor == C_CHORUS) {
+                manager->pushScreen(new ChorusScreen());
                 return;
             }
             else if (cursor == C_HPF) {
@@ -134,8 +140,9 @@ private:
      */
     void drawAllFXItems(GFXcanvas16& canvas) {
         drawFXItem(canvas, "DELAY", 0, cursor == C_DELAY);
-        drawFXItem(canvas, "HPF", 1, cursor == C_HPF);
-        drawFXItem(canvas, "LPF", 2, cursor == C_LPF);
+        drawFXItem(canvas, "CHORUS", 1, cursor == C_CHORUS);
+        drawFXItem(canvas, "HPF", 2, cursor == C_HPF);
+        drawFXItem(canvas, "LPF", 3, cursor == C_LPF);
     }
 
     /**
@@ -155,11 +162,14 @@ private:
         if (cursorPos == C_DELAY) {
             drawFXItem(canvas, "DELAY", 0, isSelected);
         }
+        else if (cursorPos == C_CHORUS) {
+            drawFXItem(canvas, "CHORUS", 1, isSelected);
+        }
         else if (cursorPos == C_HPF) {
-            drawFXItem(canvas, "HPF", 1, isSelected);
+            drawFXItem(canvas, "HPF", 2, isSelected);
         }
         else if (cursorPos == C_LPF) {
-            drawFXItem(canvas, "LPF", 2, isSelected);
+            drawFXItem(canvas, "LPF", 3, isSelected);
         }
         else if (cursorPos == C_BACK) {
             drawBackButton(canvas, isSelected);
@@ -176,8 +186,9 @@ private:
         // 有効状態を取得
         bool isEnabled = false;
         if (index == 0) isEnabled = synth.isDelayEnabled();
-        else if (index == 1) isEnabled = synth.isHpfEnabled();
-        else if (index == 2) isEnabled = synth.isLpfEnabled();
+        else if (index == 1) isEnabled = synth.isChorusEnabled();
+        else if (index == 2) isEnabled = synth.isHpfEnabled();
+        else if (index == 3) isEnabled = synth.isLpfEnabled();
 
         // 背景クリア（行全体）
         canvas.fillRect(0, y, SCREEN_WIDTH, ITEM_H, Color::BLACK);

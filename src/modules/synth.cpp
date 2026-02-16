@@ -276,6 +276,7 @@ FASTRUN void Synth::generate() {
     const bool enable_lpf = lpf_enabled;
     const bool enable_hpf = hpf_enabled;
     const bool enable_delay = delay_enabled;
+    const bool enable_chorus = chorus_enabled;
     // const int32_t pan_gain_l = AudioMath::PAN_COS_TABLE[master_pan];
     // const int32_t pan_gain_r = AudioMath::PAN_SIN_TABLE[master_pan];
 
@@ -307,6 +308,10 @@ FASTRUN void Synth::generate() {
         if(enable_delay) {
             left_16 = delay.processL(left_16);
             right_16 = delay.processR(right_16);
+        }
+        // Chorus
+        if(enable_chorus) {
+            chorus.process(left_16, right_16);
         }
 
         // 出力バッファへ
@@ -617,6 +622,12 @@ void Synth::loadPreset(uint8_t preset_id) {
     hpf_enabled = fx.hpf_enabled;
     filter.setHighPass(fx.hpf_cutoff, fx.hpf_resonance);
     filter.setHpfMix(fx.hpf_mix);
+
+    // コーラス設定
+    chorus_enabled = fx.chorus_enabled;
+    chorus.setRate(fx.chorus_rate);
+    chorus.setDepth(fx.chorus_depth);
+    chorus.setMix(fx.chorus_mix);
 
     // LFO設定を適用
     const LfoPreset& lfo_p = preset.lfo;

@@ -8,6 +8,7 @@
 #include "modules/oscillator.hpp"
 #include "modules/delay.hpp"
 #include "modules/filter.hpp"
+#include "modules/chorus.hpp"
 #include "modules/lfo.hpp"
 #include "utils/algorithm.hpp"
 #include "utils/state.hpp"
@@ -50,6 +51,9 @@ private:
     Filter filter = Filter{};
     bool lpf_enabled = false;
     bool hpf_enabled = false;
+
+    Chorus chorus = Chorus{};
+    bool chorus_enabled = false;
 
     Lfo lfo_;
     bool osc_key_sync_ = true;
@@ -131,6 +135,7 @@ public:
     bool isDelayEnabled() const { return delay_enabled; }
     bool isLpfEnabled() const { return lpf_enabled; }
     bool isHpfEnabled() const { return hpf_enabled; }
+    bool isChorusEnabled() const { return chorus_enabled; }
 
     // エフェクトパラメータ取得
     int32_t getDelayTime() const { return delay.getTime(); }
@@ -147,10 +152,17 @@ public:
     void setDelayEnabled(bool enabled) { delay_enabled = enabled; }
     void setLpfEnabled(bool enabled) { lpf_enabled = enabled; }
     void setHpfEnabled(bool enabled) { hpf_enabled = enabled; }
+    void setChorusEnabled(bool enabled) { chorus_enabled = enabled; }
 
-    // Delay/Filter オブジェクトへの直接アクセス（設定用）
+    // Delay/Filter/Chorus オブジェクトへの直接アクセス（設定用）
     Delay& getDelay() { return delay; }
     Filter& getFilter() { return filter; }
+    Chorus& getChorus() { return chorus; }
+
+    // コーラスパラメータ取得
+    uint8_t getChorusRate() const { return chorus.getRate(); }
+    uint8_t getChorusDepth() const { return chorus.getDepth(); }
+    Gain_t getChorusMix() const { return chorus.getMix(); }
 
     // LFO
     Lfo& getLfo() { return lfo_; }

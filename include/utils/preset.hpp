@@ -77,6 +77,12 @@ struct EffectPreset {
     float hpf_cutoff = 120.0f;          // カットオフ周波数 (20-20000 Hz)
     float hpf_resonance = 0.70710678f; // Q値 (0.1-10.0)
     Gain_t hpf_mix = Q15_MAX;          // ミックス量 (0-Q15_MAX)
+
+    // コーラス設定
+    bool chorus_enabled = false;
+    uint8_t chorus_rate = 20;           // LFO速度 (1-99 → 0.1-10Hz)
+    uint8_t chorus_depth = 50;          // 変調深さ (0-99)
+    Gain_t chorus_mix = 16384;          // ウェットミックス (Q15: 50% = 16384)
 };
 
 /**
