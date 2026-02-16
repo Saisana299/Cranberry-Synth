@@ -73,8 +73,12 @@ private:
         acc -= (int64_t)c.a1 * s.y1;
         acc -= (int64_t)c.a2 * s.y2;
 
-        // 固定小数点のシフトを戻す
-        int32_t out = (int32_t)(acc >> COEF_SHIFT);
+        // 固定小数点のシフトを戻す（ゼロ方向丸め: truncation toward zero）
+        // 通常の >> は負の数を負の無限大方向に丸める（floor）ため、
+        // フィードバックに系統的な負方向バイアスが蓄積しDCオフセットが発生する。
+        // ゼロ方向丸めにすることで正負対称になりDC蓄積を防止する。
+        // 負の場合のみ (2^COEF_SHIFT - 1) を加算してから右シフト = ceil = ゼロ方向丸め
+        int32_t out = (int32_t)((acc + ((acc >> 63) & ((1LL << COEF_SHIFT) - 1))) >> COEF_SHIFT);
 
         if (out > SAMPLE16_MAX) out = SAMPLE16_MAX;
         else if (out < SAMPLE16_MIN) out = SAMPLE16_MIN;
