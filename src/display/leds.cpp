@@ -35,10 +35,25 @@ void Leds::process() {
         }
     }
 
-    // STATUS LED: パススルーモード中は常時点灯
+    // STATUS LED: パススルーモード中は常時点灯、MIDI Player再生中はMIDIアクティビティで点滅
     bool passthrough = (state_.getModeState() == MODE_PASSTHROUGH);
-    if (passthrough != led_state.status) {
-        led_state.status = passthrough;
-        setLed(LED_CONFIGS[3], passthrough);
+    if (passthrough) {
+        if (!led_state.status) {
+            led_state.status = true;
+            setLed(LED_CONFIGS[3], true);
+        }
+    } else if (state_.getLedStatus()) {
+        // MIDIアクティビティで点灯
+        if (!led_state.status) {
+            led_state.status = true;
+            setLed(LED_CONFIGS[3], true);
+        }
+        status_led_off_timer = millis() + 30;
+        state_.setLedStatus(false);
+    } else {
+        if (led_state.status && millis() > status_led_off_timer) {
+            led_state.status = false;
+            setLed(LED_CONFIGS[3], false);
+        }
     }
 }

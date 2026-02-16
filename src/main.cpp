@@ -52,6 +52,7 @@ void audioProcessCallback() {
     synth.update();        // サウンド生成
     audio_hdl.process();   // 音声信号処理
     midi_hdl.process();    // MIDI入力検知
+    midi_player.process(); // MIDI Player 処理
 }
 
 void setup() {

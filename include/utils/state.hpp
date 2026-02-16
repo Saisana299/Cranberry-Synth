@@ -36,6 +36,10 @@ public:
     bool getLedAudio() const { return led_audio; }
     void setLedAudio(bool value) { led_audio = value; }
 
+    // STATUS LED (MIDI Player再生中のMIDIアクティビティ)
+    bool getLedStatus() const { return led_status; }
+    void setLedStatus(bool value) { led_status = value; }
+
     // モードステータス
     uint8_t getModeState() const { return mode_state; }
     void setModeState(uint8_t value) { mode_state = value; }
@@ -51,6 +55,7 @@ public:
 private:
     bool led_midi = false;
     bool led_audio = false;
+    bool led_status = false;
     uint8_t mode_state = MODE_TITLE;
     uint8_t btn_state = BTN_NONE;
     float cpu_usage = 0.0f;

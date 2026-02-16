@@ -7,12 +7,12 @@
  * @brief LFOパラメータ編集画面
  *
  * MasterScreen から遷移。8パラメータ + BACKボタン。
- * 128x128 OLED に収めるため ITEM_H=13px。
+ * 128x128 OLED に収めるため ITEM_H=12px。
  */
 class LFOScreen : public Screen {
 private:
     const int16_t HEADER_H = 12;
-    const int16_t ITEM_H = 13;
+    const int16_t ITEM_H = 12;
     const int16_t FOOTER_Y = SCREEN_HEIGHT - 12;
 
     bool needsFullRedraw = false;
@@ -230,7 +230,7 @@ private:
         canvas.setCursor(8, y + 3);
         canvas.print(name);
 
-        canvas.setCursor(80, y + 3);
+        canvas.setCursor(90, y + 3);
         canvas.setTextColor(Color::WHITE);
         canvas.print(value);
 
@@ -296,7 +296,7 @@ private:
         }
 
         canvas.setTextColor(selected ? Color::WHITE : Color::MD_GRAY);
-        canvas.setCursor(x + 2, y + 1);
+        canvas.setCursor(x + 2, y + 2);
         canvas.print("<");
 
         manager->transferPartial(x, y, w, h);

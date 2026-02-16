@@ -19,7 +19,9 @@ void MIDIPlayer::midiCallback(midi_event *pev) {
     uint8_t channel = pev->data[0] & 0x0F;
     uint8_t note = pev->data[1];
     uint8_t velocity = pev->data[2];
-    //bool temp = false;//TODO demo
+
+    // 全MIDIイベントでSTATUS LEDを点灯
+    state_.setLedStatus(true);
 
     AudioNoInterrupts();
 
@@ -30,18 +32,14 @@ void MIDIPlayer::midiCallback(midi_event *pev) {
             } else {
                 synth_.noteOff(note, channel+1);
             }
-            //temp = true;//TODO demo
             break;
 
         case 0x80:
             synth_.noteOff(note, channel+1);
-            //temp = false;//TODO demo
             break;
     }
 
     AudioInterrupts();
-
-    //state_.setLedMidi(temp);//TODO demo
 }
 
 void MIDIPlayer::midiCallbackStatic(midi_event *pev) {
@@ -59,11 +57,18 @@ void MIDIPlayer::play(const char* path) {
     int err = instance->SMF.load(path);
     if (err != MD_MIDIFile::E_OK) {
         Serial.printf("SMF Load Error: %d\n", err);
+        instance->is_playing = false;
+        instance->current_filename.clear();
+    } else {
+        instance->is_playing = true;
+        instance->current_filename = path;
     }
 }
 
 void MIDIPlayer::stop() {
     if (instance && instance->is_initialized) {
+        instance->is_playing = false;
+        instance->current_filename.clear();
         instance->SMF.close();
 
         AudioNoInterrupts();
@@ -74,7 +79,7 @@ void MIDIPlayer::stop() {
 
 void MIDIPlayer::process() {
     // 初期化されていなければ処理しない
-    if (!is_initialized) return;
+    if (!is_initialized || !is_playing) return;
 
     if (!SMF.isEOF()) {
         SMF.getNextEvent();

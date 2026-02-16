@@ -21,6 +21,7 @@ private:
     State& state_;
 
     uint32_t audio_led_off_timer = 0;
+    uint32_t status_led_off_timer = 0;
 
     struct {
         bool midi = false;

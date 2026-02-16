@@ -2,17 +2,20 @@
 
 #include "ui/ui.hpp"
 #include "ui/screens/passthrough.hpp"
+#include "ui/screens/midi_player_screen.hpp"
 
 class MenuScreen : public Screen {
 private:
-    const int16_t HEADER_H = 14;
+    const int16_t HEADER_H = 12;
     const int16_t ITEM_H = 16;
-    const int16_t FOOTER_Y = SCREEN_HEIGHT - 14;
+    const int16_t FOOTER_Y = SCREEN_HEIGHT - 12;
 
     bool needsFullRedraw = false;
 
     enum CursorPos {
         C_PASSTHROUGH = 0,
+        C_MIDI_PLAYER,
+        C_BACK,
         C_MAX
     };
     int8_t cursor = C_PASSTHROUGH;
@@ -48,6 +51,14 @@ public:
         else if (button == BTN_ET) {
             if (cursor == C_PASSTHROUGH) {
                 manager->pushScreen(new PassthroughScreen());
+                return;
+            }
+            else if (cursor == C_MIDI_PLAYER) {
+                manager->pushScreen(new MIDIPlayerScreen());
+                return;
+            }
+            else if (cursor == C_BACK) {
+                manager->popScreen();
                 return;
             }
         }
@@ -87,8 +98,8 @@ public:
 
         // --- カーソル移動時の部分更新 ---
         if (cursor != lastCursor) {
-            drawItem(canvas, lastCursor, false);
-            drawItem(canvas, cursor, true);
+            updateCursorElement(canvas, lastCursor);
+            updateCursorElement(canvas, cursor);
             lastCursor = cursor;
         }
     }
@@ -98,68 +109,68 @@ private:
         canvas.fillRect(0, 0, SCREEN_WIDTH, HEADER_H, Color::BLACK);
         canvas.setTextSize(1);
         canvas.setTextColor(Color::WHITE);
-        canvas.setCursor(2, 3);
+        canvas.setCursor(2, 2);
         canvas.print("MENU");
         canvas.drawFastHLine(0, HEADER_H, SCREEN_WIDTH, Color::WHITE);
     }
 
     void drawAllItems(GFXcanvas16& canvas) {
-        for (int i = 0; i < C_MAX; i++) {
-            drawItem(canvas, i, (cursor == i));
-        }
-    }
-
-    void drawItem(GFXcanvas16& canvas, int8_t idx, bool selected) {
-        if (idx < 0 || idx >= C_MAX) return;
-
-        int16_t y = HEADER_H + 4 + idx * ITEM_H;
-        int16_t x = 6;
-        int16_t w = SCREEN_WIDTH - 12;
-        int16_t h = ITEM_H - 2;
-
-        // 背景クリア
-        canvas.fillRect(x - 2, y - 1, w + 4, h + 2, Color::BLACK);
-
-        const char* label = nullptr;
-        const char* desc  = nullptr;
-
-        switch (idx) {
-            case C_PASSTHROUGH:
-                label = "PASSTHROUGH";
-                desc  = "ADC -> DAC Direct";
-                break;
-        }
-
-        if (label == nullptr) return;
-
-        canvas.setTextSize(1);
-
-        if (selected) {
-            // 選択中: 白背景に黒文字
-            canvas.fillRect(x - 2, y - 1, w + 4, h + 2, Color::WHITE);
-            canvas.setTextColor(Color::BLACK);
-            canvas.setCursor(x + 2, y + 2);
-            canvas.print(label);
-        } else {
-            // 非選択: 黒背景に白文字
-            canvas.setTextColor(Color::WHITE);
-            canvas.setCursor(x + 2, y + 2);
-            canvas.print(label);
-            // 説明テキスト
-            if (desc) {
-                canvas.setTextColor(Color::MD_GRAY);
-                canvas.setCursor(x + 4, y + 2 + 8);  // ラベルの下に小さく
-            }
-        }
-
-        manager->transferPartial(x - 2, y - 1, w + 4, h + 2);
+        drawNavItem(canvas, "PASSTHROUGH", 0, cursor == C_PASSTHROUGH);
+        drawNavItem(canvas, "MIDI PLAYER", 1, cursor == C_MIDI_PLAYER);
     }
 
     void drawFooter(GFXcanvas16& canvas) {
         canvas.drawFastHLine(0, FOOTER_Y, SCREEN_WIDTH, Color::WHITE);
+        drawBackButton(canvas, cursor == C_BACK);
+    }
+
+    void updateCursorElement(GFXcanvas16& canvas, int8_t pos) {
+        bool sel = (cursor == pos);
+        switch (pos) {
+            case C_PASSTHROUGH: drawNavItem(canvas, "PASSTHROUGH", 0, sel); break;
+            case C_MIDI_PLAYER: drawNavItem(canvas, "MIDI PLAYER", 1, sel); break;
+            case C_BACK:        drawBackButton(canvas, sel); break;
+        }
+    }
+
+    void drawNavItem(GFXcanvas16& canvas, const char* name, int index, bool selected) {
+        int16_t y = HEADER_H + 2 + (index * ITEM_H);
+
+        canvas.fillRect(0, y, SCREEN_WIDTH, ITEM_H, Color::BLACK);
         canvas.setTextSize(1);
+
+        if (selected) {
+            canvas.fillRect(2, y + 2, 3, 8, Color::WHITE);
+        }
+
+        canvas.setTextColor(selected ? Color::WHITE : Color::MD_GRAY);
+        canvas.setCursor(10, y + 4);
+        canvas.print(name);
+
+        // 右矢印でサブメニューを示す
+        canvas.setCursor(110, y + 4);
         canvas.setTextColor(Color::MD_GRAY);
-        canvas.setCursor(4, FOOTER_Y + 4);
-        canvas.print("CANCEL: BACK");
+        canvas.print(">");
+
+        manager->transferPartial(0, y, SCREEN_WIDTH, ITEM_H);
+    }
+
+    void drawBackButton(GFXcanvas16& canvas, bool selected) {
+        int16_t x = 2;
+        int16_t y = FOOTER_Y + 2;
+        int16_t w = 24;
+        int16_t h = 10;
+
+        canvas.fillRect(x, y, w, h, Color::BLACK);
+
+        if (selected) {
+            canvas.drawRect(x, y, w, h, Color::WHITE);
+        }
+
+        canvas.setTextColor(selected ? Color::WHITE : Color::MD_GRAY);
+        canvas.setCursor(x + 2, y + 1);
+        canvas.print("<");
+
+        manager->transferPartial(x, y, w, h);
     }
 };
