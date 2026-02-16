@@ -641,6 +641,321 @@ private:
     }
 };
 
+// ===== 感度設定画面 (AMS/VEL SENS/RATE SCL/KLS) =====
+class OperatorSensScreen : public Screen {
+private:
+    static constexpr int16_t HEADER_H = 12;
+    static constexpr int16_t ITEM_H = 12;
+    static constexpr int16_t FOOTER_Y = SCREEN_HEIGHT - 12;
+
+    bool needsFullRedraw = false;
+    uint8_t operatorIndex = 0;
+
+    enum CursorPos {
+        C_AMS = 0,      // AMP MOD SENS (0-3)
+        C_VEL_SENS,     // VELOCITY SENS (0-7)
+        C_RATE_SCL,     // RATE SCALING (0-7)
+        C_BREAK_PT,     // BREAK POINT (0-99)
+        C_L_DEPTH,      // LEFT DEPTH (0-99)
+        C_R_DEPTH,      // RIGHT DEPTH (0-99)
+        C_L_CURVE,      // LEFT CURVE (0-3)
+        C_R_CURVE,      // RIGHT CURVE (0-3)
+        C_BACK,
+        C_MAX
+    };
+    int8_t cursor = C_AMS;
+
+    static constexpr const char* CURVE_NAMES[] = {"-LN", "-EX", "+EX", "+LN"};
+
+    // ブレークポイント値からノート名を計算 (0=A-1, 39=C3, 99=C8)
+    static void breakPointToNote(uint8_t bp, char* buf) {
+        static constexpr const char* NOTE_NAMES[] = {"C","C#","D","D#","E","F","F#","G","G#","A","A#","B"};
+        // bp=0 → A-1, bp=3 → C0, bp=15 → C1, ..., bp=99 → C8
+        int note = (bp + 9) % 12;        // ノート名のインデックス (C始まり)
+        int octave = ((bp + 9) / 12) - 1; // オクターブ (-1 ~ 8)
+        sprintf(buf, "%s%d", NOTE_NAMES[note], octave);
+    }
+
+public:
+    OperatorSensScreen(uint8_t opIndex = 0) : operatorIndex(opIndex) {
+        if (operatorIndex >= 6) operatorIndex = 0;
+    }
+
+    void onEnter(UIManager* manager) override {
+        this->manager = manager;
+        needsFullRedraw = true;
+        manager->invalidate();
+        manager->triggerFullTransfer();
+    }
+
+    bool isAnimated() const override { return false; }
+
+    void handleInput(uint8_t button) override {
+        bool moved = false;
+        bool changed = false;
+
+        if (button == BTN_DN || button == BTN_DN_LONG) {
+            cursor++;
+            if (cursor >= C_MAX) cursor = 0;
+            moved = true;
+        }
+        else if (button == BTN_UP || button == BTN_UP_LONG) {
+            cursor--;
+            if (cursor < 0) cursor = C_MAX - 1;
+            moved = true;
+        }
+        else if (button == BTN_L || button == BTN_L_LONG) {
+            int8_t dir = -1;
+            if (button == BTN_L_LONG) dir = -5;
+            adjustParameter(dir);
+            changed = true;
+        }
+        else if (button == BTN_R || button == BTN_R_LONG) {
+            int8_t dir = 1;
+            if (button == BTN_R_LONG) dir = 5;
+            adjustParameter(dir);
+            changed = true;
+        }
+        else if (button == BTN_ET || button == BTN_CXL) {
+            if (cursor == C_BACK || button == BTN_CXL) {
+                manager->popScreen();
+                return;
+            }
+        }
+
+        if (moved || changed) {
+            if (changed) needsFullRedraw = true;
+            manager->invalidate();
+        }
+    }
+
+    void draw(GFXcanvas16& canvas) override {
+        static bool firstDraw = true;
+        static int8_t lastCursor = -1;
+
+        if (needsFullRedraw) {
+            firstDraw = true;
+            lastCursor = -1;
+            needsFullRedraw = false;
+        }
+
+        if (firstDraw) {
+            canvas.fillScreen(Color::BLACK);
+            drawHeader(canvas);
+            drawAllItems(canvas);
+            drawFooter(canvas);
+            firstDraw = false;
+            lastCursor = cursor;
+            manager->triggerFullTransfer();
+        }
+
+        if (cursor != lastCursor) {
+            updateCursorElement(canvas, lastCursor);
+            updateCursorElement(canvas, cursor);
+            lastCursor = cursor;
+        }
+    }
+
+private:
+    void drawHeader(GFXcanvas16& canvas) {
+        canvas.fillRect(0, 0, SCREEN_WIDTH, HEADER_H, Color::BLACK);
+        canvas.setTextSize(1);
+        canvas.setTextColor(Color::WHITE);
+        canvas.setCursor(2, 2);
+        char headerStr[20];
+        sprintf(headerStr, "OP%d SENS", operatorIndex + 1);
+        canvas.print(headerStr);
+        canvas.drawFastHLine(0, HEADER_H, SCREEN_WIDTH, Color::WHITE);
+        manager->transferPartial(0, 0, SCREEN_WIDTH, HEADER_H + 1);
+    }
+
+    void drawAllItems(GFXcanvas16& canvas) {
+        Synth& synth = Synth::getInstance();
+        const Envelope& env = synth.getOperatorEnv(operatorIndex);
+        char val[12];
+
+        sprintf(val, "%d", synth.getOperatorAms(operatorIndex));
+        drawItem(canvas, "AMS", val, 0, cursor == C_AMS);
+
+        sprintf(val, "%d", env.getVelocitySens());
+        drawItem(canvas, "VEL SENS", val, 1, cursor == C_VEL_SENS);
+
+        sprintf(val, "%d", env.getRateScaling());
+        drawItem(canvas, "RATE SCL", val, 2, cursor == C_RATE_SCL);
+
+        char noteStr[8];
+        breakPointToNote(env.getBreakPoint(), noteStr);
+        sprintf(val, "%s", noteStr);
+        drawItem(canvas, "BP", val, 3, cursor == C_BREAK_PT);
+
+        sprintf(val, "%d", env.getLeftDepth());
+        drawItem(canvas, "L DEPTH", val, 4, cursor == C_L_DEPTH);
+
+        sprintf(val, "%d", env.getRightDepth());
+        drawItem(canvas, "R DEPTH", val, 5, cursor == C_R_DEPTH);
+
+        sprintf(val, "%s", CURVE_NAMES[static_cast<uint8_t>(env.getLeftCurve())]);
+        drawItem(canvas, "L CURVE", val, 6, cursor == C_L_CURVE);
+
+        sprintf(val, "%s", CURVE_NAMES[static_cast<uint8_t>(env.getRightCurve())]);
+        drawItem(canvas, "R CURVE", val, 7, cursor == C_R_CURVE);
+    }
+
+    void drawFooter(GFXcanvas16& canvas) {
+        canvas.drawFastHLine(0, FOOTER_Y, SCREEN_WIDTH, Color::WHITE);
+        drawBackButton(canvas, cursor == C_BACK);
+    }
+
+    void updateCursorElement(GFXcanvas16& canvas, int8_t pos) {
+        Synth& synth = Synth::getInstance();
+        const Envelope& env = synth.getOperatorEnv(operatorIndex);
+        bool sel = (cursor == pos);
+        char val[12];
+
+        switch (pos) {
+            case C_AMS:
+                sprintf(val, "%d", synth.getOperatorAms(operatorIndex));
+                drawItem(canvas, "AMS", val, 0, sel);
+                break;
+            case C_VEL_SENS:
+                sprintf(val, "%d", env.getVelocitySens());
+                drawItem(canvas, "VEL SENS", val, 1, sel);
+                break;
+            case C_RATE_SCL:
+                sprintf(val, "%d", env.getRateScaling());
+                drawItem(canvas, "RATE SCL", val, 2, sel);
+                break;
+            case C_BREAK_PT: {
+                char noteStr[8];
+                breakPointToNote(env.getBreakPoint(), noteStr);
+                sprintf(val, "%s", noteStr);
+                drawItem(canvas, "BP", val, 3, sel);
+                break;
+            }
+            case C_L_DEPTH:
+                sprintf(val, "%d", env.getLeftDepth());
+                drawItem(canvas, "L DEPTH", val, 4, sel);
+                break;
+            case C_R_DEPTH:
+                sprintf(val, "%d", env.getRightDepth());
+                drawItem(canvas, "R DEPTH", val, 5, sel);
+                break;
+            case C_L_CURVE:
+                sprintf(val, "%s", CURVE_NAMES[static_cast<uint8_t>(env.getLeftCurve())]);
+                drawItem(canvas, "L CURVE", val, 6, sel);
+                break;
+            case C_R_CURVE:
+                sprintf(val, "%s", CURVE_NAMES[static_cast<uint8_t>(env.getRightCurve())]);
+                drawItem(canvas, "R CURVE", val, 7, sel);
+                break;
+            case C_BACK:
+                drawBackButton(canvas, sel);
+                break;
+        }
+    }
+
+    void drawItem(GFXcanvas16& canvas, const char* name, const char* value, int index, bool selected) {
+        int16_t y = HEADER_H + 2 + (index * ITEM_H);
+
+        canvas.fillRect(0, y, SCREEN_WIDTH, ITEM_H, Color::BLACK);
+        canvas.setTextSize(1);
+
+        if (selected) {
+            canvas.fillRect(2, y + 2, 3, 8, Color::WHITE);
+        }
+
+        canvas.setTextColor(selected ? Color::WHITE : Color::MD_GRAY);
+        canvas.setCursor(8, y + 2);
+        canvas.print(name);
+
+        canvas.setCursor(80, y + 2);
+        canvas.setTextColor(Color::WHITE);
+        canvas.print(value);
+
+        manager->transferPartial(0, y, SCREEN_WIDTH, ITEM_H);
+    }
+
+    void drawBackButton(GFXcanvas16& canvas, bool selected) {
+        int16_t x = 2;
+        int16_t y = FOOTER_Y + 2;
+        int16_t w = 24;
+        int16_t h = 10;
+
+        canvas.fillRect(x, y, w, h, Color::BLACK);
+
+        if (selected) {
+            canvas.drawRect(x, y, w, h, Color::WHITE);
+        }
+
+        canvas.setTextColor(selected ? Color::WHITE : Color::MD_GRAY);
+        canvas.setCursor(x + 2, y + 1);
+        canvas.print("<");
+
+        manager->transferPartial(x, y, w, h);
+    }
+
+    void adjustParameter(int8_t direction) {
+        Synth& synth = Synth::getInstance();
+        Envelope& env = const_cast<Envelope&>(synth.getOperatorEnv(operatorIndex));
+
+        auto clamp = [](int16_t val, int16_t lo, int16_t hi) -> uint8_t {
+            if (val < lo) val = lo;
+            if (val > hi) val = hi;
+            return static_cast<uint8_t>(val);
+        };
+
+        switch (cursor) {
+            case C_AMS: {
+                int8_t v = static_cast<int8_t>(synth.getOperatorAms(operatorIndex)) + (direction > 0 ? 1 : -1);
+                synth.setOperatorAms(operatorIndex, clamp(v, 0, 3));
+                break;
+            }
+            case C_VEL_SENS: {
+                int8_t v = env.getVelocitySens() + (direction > 0 ? 1 : -1);
+                env.setVelocitySens(clamp(v, 0, 7));
+                break;
+            }
+            case C_RATE_SCL: {
+                int8_t v = env.getRateScaling() + (direction > 0 ? 1 : -1);
+                env.setRateScaling(clamp(v, 0, 7));
+                break;
+            }
+            case C_BREAK_PT: {
+                int16_t step = (direction == 1 || direction == -1) ? 1 : 5;
+                int16_t v = env.getBreakPoint() + (direction > 0 ? step : -step);
+                env.setBreakPoint(clamp(v, 0, 99));
+                break;
+            }
+            case C_L_DEPTH: {
+                int16_t step = (direction == 1 || direction == -1) ? 1 : 5;
+                int16_t v = env.getLeftDepth() + (direction > 0 ? step : -step);
+                env.setLeftDepth(clamp(v, 0, 99));
+                break;
+            }
+            case C_R_DEPTH: {
+                int16_t step = (direction == 1 || direction == -1) ? 1 : 5;
+                int16_t v = env.getRightDepth() + (direction > 0 ? step : -step);
+                env.setRightDepth(clamp(v, 0, 99));
+                break;
+            }
+            case C_L_CURVE: {
+                int8_t v = static_cast<uint8_t>(env.getLeftCurve()) + (direction > 0 ? 1 : -1);
+                if (v < 0) v = 3;
+                if (v > 3) v = 0;
+                env.setLeftCurve(static_cast<uint8_t>(v));
+                break;
+            }
+            case C_R_CURVE: {
+                int8_t v = static_cast<uint8_t>(env.getRightCurve()) + (direction > 0 ? 1 : -1);
+                if (v < 0) v = 3;
+                if (v > 3) v = 0;
+                env.setRightCurve(static_cast<uint8_t>(v));
+                break;
+            }
+        }
+    }
+};
+
 class OperatorScreen : public Screen {
 private:
     // 定数
@@ -657,9 +972,9 @@ private:
         C_ENABLED = 0,
         C_WAVE,
         C_LEVEL,
-        C_AMS,     // AMP MOD SENS (0-3)
         C_PITCH,   // ピッチ設定サブメニュー
         C_ENV,     // エンベロープ設定
+        C_SENS,    // 感度設定 (AMS/VEL/KLS/RATE SCL)
         C_BACK,
         C_MAX
     };
@@ -728,6 +1043,10 @@ public:
             }
             else if (cursor == C_ENV) {
                 manager->pushScreen(new OperatorEnvelopeScreen(operatorIndex));
+                return;
+            }
+            else if (cursor == C_SENS) {
+                manager->pushScreen(new OperatorSensScreen(operatorIndex));
                 return;
             }
             else if (cursor == C_BACK) {
@@ -812,16 +1131,14 @@ private:
         sprintf(levelStr, "%d", osc.getLevel());
         drawTextItem(canvas, "LEVEL", levelStr, 2, cursor == C_LEVEL);
 
-        // AMS表示 (0-3)
-        char amsStr[8];
-        sprintf(amsStr, "%d", synth.getOperatorAms(operatorIndex));
-        drawTextItem(canvas, "AMS", amsStr, 3, cursor == C_AMS);
-
         // PITCH表示 (サブメニュー)
-        drawMenuItemWithArrow(canvas, "PITCH", 4, cursor == C_PITCH);
+        drawMenuItemWithArrow(canvas, "PITCH", 3, cursor == C_PITCH);
 
         // ENV表示 (サブメニュー)
-        drawMenuItemWithArrow(canvas, "ENV", 5, cursor == C_ENV);
+        drawMenuItemWithArrow(canvas, "ENV", 4, cursor == C_ENV);
+
+        // SENS表示 (サブメニュー)
+        drawMenuItemWithArrow(canvas, "SENS", 5, cursor == C_SENS);
     }
 
     /**
@@ -853,16 +1170,14 @@ private:
             sprintf(levelStr, "%d", osc.getLevel());
             drawTextItem(canvas, "LEVEL", levelStr, 2, isSelected);
         }
-        else if (cursorPos == C_AMS) {
-            char amsStr[8];
-            sprintf(amsStr, "%d", synth.getOperatorAms(operatorIndex));
-            drawTextItem(canvas, "AMS", amsStr, 3, isSelected);
-        }
         else if (cursorPos == C_PITCH) {
-            drawMenuItemWithArrow(canvas, "PITCH", 4, isSelected);
+            drawMenuItemWithArrow(canvas, "PITCH", 3, isSelected);
         }
         else if (cursorPos == C_ENV) {
-            drawMenuItemWithArrow(canvas, "ENV", 5, isSelected);
+            drawMenuItemWithArrow(canvas, "ENV", 4, isSelected);
+        }
+        else if (cursorPos == C_SENS) {
+            drawMenuItemWithArrow(canvas, "SENS", 5, isSelected);
         }
         else if (cursorPos == C_BACK) {
             drawBackButton(canvas, isSelected);
@@ -967,17 +1282,9 @@ private:
                 osc.setLevelNonLinear(static_cast<uint8_t>(newLevel));
                 break;
             }
-            case C_AMS: {
-                // AMP MOD SENS を変更 (0-3)
-                int8_t currentAms = static_cast<int8_t>(synth.getOperatorAms(operatorIndex));
-                int8_t newAms = currentAms + (direction > 0 ? 1 : -1);
-                if (newAms < 0) newAms = 0;
-                if (newAms > 3) newAms = 3;
-                synth.setOperatorAms(operatorIndex, static_cast<uint8_t>(newAms));
-                break;
-            }
             case C_PITCH:
             case C_ENV:
+            case C_SENS:
                 // サブメニューなのでここでは何もしない
                 break;
         }

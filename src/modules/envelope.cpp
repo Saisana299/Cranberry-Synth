@@ -398,9 +398,9 @@ int Envelope::scaleCurve(int group, int depth, KeyScaleCurve curve) {
  */
 int Envelope::scaleLevel(int midinote, int break_pt, int left_depth, int right_depth,
                         KeyScaleCurve left_curve, KeyScaleCurve right_curve) {
-    // offset = midinote - break_pt - 17
-    // break_pt=39 が C4 (MIDI note 60) に対応
-    int offset = midinote - break_pt - 17;
+    // offset = midinote - break_pt - 21
+    // break_pt=0 が A-1 (MIDI note 21)、break_pt=39 が C3 (MIDI note 60) に対応
+    int offset = midinote - break_pt - 21;
 
     if (offset >= 0) {
         // ブレークポイントより高いノート → 右側スケーリング
