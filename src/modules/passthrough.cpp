@@ -113,6 +113,16 @@ void Passthrough::process() {
             }
         }
 
+        // 5. Volume (音量調整)
+        if (volume_ < Q15_MAX) {
+            for (size_t i = 0; i < BUFFER_SIZE; i++) {
+                samples_L[i] = static_cast<Sample16_t>(
+                    (static_cast<int32_t>(samples_L[i]) * volume_) >> Q15_SHIFT);
+                samples_R[i] = static_cast<Sample16_t>(
+                    (static_cast<int32_t>(samples_R[i]) * volume_) >> Q15_SHIFT);
+            }
+        }
+
         // --- 無音判定 + 差動出力生成 ---
         int16_t peak = 0;
         for (size_t i = 0; i < BUFFER_SIZE; i++) {

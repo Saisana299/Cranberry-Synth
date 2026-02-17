@@ -1,5 +1,7 @@
 <h1 align="center">Cranberry Synth</h1>
 
+<img src="https://storage.googleapis.com/zenn-user-upload/c3e1dd264522-20260217.jpg">
+
 <p align="center">
   <strong>6-Operator FM Synthesizer on Teensy 4.1</strong>
 </p>

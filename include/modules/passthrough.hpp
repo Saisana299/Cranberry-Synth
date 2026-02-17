@@ -50,6 +50,14 @@ public:
     bool isDelayEnabled() const { return delay_enabled_; }
     bool isChorusEnabled() const { return chorus_enabled_; }
 
+    // --- 音量制御 ---
+    void setVolume(Gain_t vol) {
+        if (vol < Q15_ZERO) vol = Q15_ZERO;
+        if (vol > Q15_MAX)  vol = Q15_MAX;
+        volume_ = vol;
+    }
+    Gain_t getVolume() const { return volume_; }
+
     Filter& getFilter() { return filter_; }
     Delay&  getDelay()  { return delay_; }
     Chorus& getChorus() { return chorus_; }
@@ -62,6 +70,7 @@ private:
     Filter& filter_;
     Delay&  delay_;
     Chorus& chorus_;
+    Gain_t volume_       = Q15_MAX;  // 音量 (Q15: 0=無音, 32767=100%)
     bool lpf_enabled_   = false;
     bool hpf_enabled_   = false;
     bool delay_enabled_ = false;

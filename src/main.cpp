@@ -3,6 +3,8 @@
 /** @author Saisana299 **/
 
 // TODO: トラックが違うとリトリガーが正しく動かない問題を修正する（bitwigで確認済み）
+// TODO: Delay, Chorusの処理見直し
+// TODO: クラッシュレポートを生成する機能
 
 #include <Arduino.h>
 #include <Entropy.h>

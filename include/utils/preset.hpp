@@ -5,7 +5,7 @@
 #include "types.hpp"
 
 // プリセット最大数
-constexpr uint8_t MAX_PRESETS = 5;
+constexpr uint8_t MAX_PRESETS = 6;
 
 /**
  * @brief オペレータープリセット構造体
@@ -571,6 +571,122 @@ private:
             }},
             {}, // effects (default)
             {}  // lfo (default)
+        },
+        // --- Preset 6: KinzkHarp ---
+        {
+            "KinzkHarp EF",    // name
+            2,              // algorithm_id
+            7,              // feedback
+            {{              // operators
+                // Operator 0
+                {
+                    0,      // wavetable_id (sine)
+                    94,     // level
+                    2.0f,   // coarse
+                    0.0f,   // fine
+                    0,      // detune
+                    false, // is_fixed
+                    99, 99, 23, 39, // rate1,2,3,4
+                    99, 99, 0, 0, // level1,2,3,4
+                    3,      // rate_scaling
+                    38, 0, 0, 3, 0,  // KLS (disabled)
+                    7,      // velocity_sens
+                    true    // enabled
+                },
+                // Operator 1
+                {
+                    0,      // wavetable_id (sine)
+                    73,     // level
+                    6.0f,   // coarse
+                    0.0f,   // fine
+                    -2,      // detune
+                    false, // is_fixed
+                    95, 35, 23, 28, // rate1,2,3,4
+                    99, 70, 0, 0, // level1,2,3,4
+                    4,      // rate_scaling
+                    40, 0, 15, 3, 0,  // KLS (disabled)
+                    7,      // velocity_sens
+                    true    // enabled
+                },
+                // Operator 2
+                {
+                    0,      // wavetable_id (sine)
+                    91,     // level
+                    16.0f,   // coarse
+                    0.0f,   // fine
+                    -6,     // detune
+                    false, // is_fixed
+                    95, 48, 28, 24, // rate1,2,3,4
+                    94, 79, 0, 0, // level1,2,3,4
+                    7,      // rate_scaling
+                    52, 10, 0, 0, 0,  // KLS (disabled)
+                    7,      // velocity_sens
+                    true    // enabled
+                },
+                // Operator 3
+                {
+                    0,      // wavetable_id (sine)
+                    99,     // level
+                    2.0f,   // coarse
+                    0.0f,   // fine
+                    -7,     // detune
+                    false, // is_fixed
+                    59, 99, 23, 39, // rate1,2,3,4
+                    66, 99, 0, 0, // level1,2,3,4
+                    3,      // rate_scaling
+                    39, 0, 0, 3, 0,  // KLS (disabled)
+                    7,      // velocity_sens
+                    true    // enabled
+                },
+                // Operator 4
+                {
+                    0,      // wavetable_id (sine)
+                    75,     // level
+                    6.0f,  // coarse
+                    0.0f,   // fine
+                    4,     // detune
+                    false, // is_fixed
+                    95, 35, 23, 28, // rate1,2,3,4
+                    99, 70, 0, 0, // level1,2,3,4
+                    4,      // rate_scaling
+                    40, 0, 15, 3, 0,  // KLS (disabled)
+                    7,      // velocity_sens
+                    true    // enabled
+                },
+                // Operator 5
+                {
+                    0,      // wavetable_id (sine)
+                    99,     // level
+                    14.0f,   // coarse
+                    0.0f,  // fine
+                    1,      // detune
+                    false, // is_fixed
+                    95, 48, 28, 24, // rate1,2,3,4
+                    93, 78, 0, 0, // level1,2,3,4
+                    7,      // rate_scaling
+                    48, 10, 11, 0, 0,  // KLS (disabled)
+                    7,      // velocity_sens
+                    true    // enabled
+                }
+            }},
+            {
+                // ディレイ設定
+                true, 45, 6881, 10158,
+                // ローパスフィルタ設定
+                true, 10100.0f, 0.91f, 32767,
+                // ハイパスフィルタ設定 (default)
+                false, 120.0f, 0.70710678f, 32767,
+                // コーラス設定
+                true, 25, 50, 32767
+            }, // effects
+            {
+                4,      // wave (Sine)
+                55,     // speed
+                20,     // delay
+                12,     // pm_depth
+                0,      // am_depth
+                2       // pitch_mod_sens
+            }  // lfo
         },
     };
 };
