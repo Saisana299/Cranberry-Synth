@@ -3,6 +3,7 @@
 #include "ui/ui.hpp"
 #include "ui/screens/delay.hpp"
 #include "ui/screens/chorus.hpp"
+#include "ui/screens/reverb.hpp"
 #include "ui/screens/hpf.hpp"
 #include "ui/screens/lpf.hpp"
 
@@ -20,6 +21,7 @@ private:
     enum CursorPos {
         C_DELAY = 0,
         C_CHORUS,
+        C_REVERB,
         C_HPF,
         C_LPF,
         C_BACK,
@@ -63,6 +65,10 @@ public:
             }
             else if (cursor == C_CHORUS) {
                 manager->pushScreen(new ChorusScreen());
+                return;
+            }
+            else if (cursor == C_REVERB) {
+                manager->pushScreen(new ReverbScreen());
                 return;
             }
             else if (cursor == C_HPF) {
@@ -141,8 +147,9 @@ private:
     void drawAllFXItems(GFXcanvas16& canvas) {
         drawFXItem(canvas, "DELAY", 0, cursor == C_DELAY);
         drawFXItem(canvas, "CHORUS", 1, cursor == C_CHORUS);
-        drawFXItem(canvas, "HPF", 2, cursor == C_HPF);
-        drawFXItem(canvas, "LPF", 3, cursor == C_LPF);
+        drawFXItem(canvas, "REVERB", 2, cursor == C_REVERB);
+        drawFXItem(canvas, "HPF", 3, cursor == C_HPF);
+        drawFXItem(canvas, "LPF", 4, cursor == C_LPF);
     }
 
     /**
@@ -165,11 +172,14 @@ private:
         else if (cursorPos == C_CHORUS) {
             drawFXItem(canvas, "CHORUS", 1, isSelected);
         }
+        else if (cursorPos == C_REVERB) {
+            drawFXItem(canvas, "REVERB", 2, isSelected);
+        }
         else if (cursorPos == C_HPF) {
-            drawFXItem(canvas, "HPF", 2, isSelected);
+            drawFXItem(canvas, "HPF", 3, isSelected);
         }
         else if (cursorPos == C_LPF) {
-            drawFXItem(canvas, "LPF", 3, isSelected);
+            drawFXItem(canvas, "LPF", 4, isSelected);
         }
         else if (cursorPos == C_BACK) {
             drawBackButton(canvas, isSelected);
@@ -187,8 +197,9 @@ private:
         bool isEnabled = false;
         if (index == 0) isEnabled = synth.isDelayEnabled();
         else if (index == 1) isEnabled = synth.isChorusEnabled();
-        else if (index == 2) isEnabled = synth.isHpfEnabled();
-        else if (index == 3) isEnabled = synth.isLpfEnabled();
+        else if (index == 2) isEnabled = synth.isReverbEnabled();
+        else if (index == 3) isEnabled = synth.isHpfEnabled();
+        else if (index == 4) isEnabled = synth.isLpfEnabled();
 
         // 背景クリア（行全体）
         canvas.fillRect(0, y, SCREEN_WIDTH, ITEM_H, Color::BLACK);

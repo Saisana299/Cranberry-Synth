@@ -4,6 +4,7 @@
 #include "modules/filter.hpp"
 #include "modules/delay.hpp"
 #include "modules/chorus.hpp"
+#include "modules/reverb.hpp"
 
 /**
  * @brief PCM1802 パススルーモジュール
@@ -14,8 +15,8 @@
  */
 class Passthrough {
 public:
-    Passthrough(AudioHandler& audio, Filter& filter, Delay& delay, Chorus& chorus)
-        : audio_(audio), filter_(filter), delay_(delay), chorus_(chorus) {}
+    Passthrough(AudioHandler& audio, Filter& filter, Delay& delay, Chorus& chorus, Reverb& reverb)
+        : audio_(audio), filter_(filter), delay_(delay), chorus_(chorus), reverb_(reverb) {}
 
     /** @brief パススルーモード開始 (RecordQueue を有効化) */
     void begin();
@@ -45,10 +46,15 @@ public:
         if (!chorus_enabled_ && enabled) chorus_.reset();
         chorus_enabled_ = enabled;
     }
+    void setReverbEnabled(bool enabled) {
+        if (!reverb_enabled_ && enabled) reverb_.reset();
+        reverb_enabled_ = enabled;
+    }
     bool isLpfEnabled() const { return lpf_enabled_; }
     bool isHpfEnabled() const { return hpf_enabled_; }
     bool isDelayEnabled() const { return delay_enabled_; }
     bool isChorusEnabled() const { return chorus_enabled_; }
+    bool isReverbEnabled() const { return reverb_enabled_; }
 
     // --- 音量制御 ---
     void setVolume(Gain_t vol) {
@@ -61,6 +67,7 @@ public:
     Filter& getFilter() { return filter_; }
     Delay&  getDelay()  { return delay_; }
     Chorus& getChorus() { return chorus_; }
+    Reverb& getReverb() { return reverb_; }
 
 private:
     AudioHandler& audio_;
@@ -70,11 +77,13 @@ private:
     Filter& filter_;
     Delay&  delay_;
     Chorus& chorus_;
+    Reverb& reverb_;
     Gain_t volume_       = Q15_MAX;  // 音量 (Q15: 0=無音, 32767=100%)
     bool lpf_enabled_   = false;
     bool hpf_enabled_   = false;
     bool delay_enabled_ = false;
     bool chorus_enabled_ = false;
+    bool reverb_enabled_ = false;
 
     /** @brief 符号反転 (INT16_MIN のオーバーフロー対策付き) */
     static inline Sample16_t negation(Sample16_t value) {

@@ -3,7 +3,6 @@
 /** @author Saisana299 **/
 
 // TODO: トラックが違うとリトリガーが正しく動かない問題を修正する（bitwigで確認済み）
-// TODO: Delay, Chorusの処理見直し
 // TODO: クラッシュレポートを生成する機能
 
 #include <Arduino.h>
@@ -22,6 +21,7 @@
 #include "modules/passthrough.hpp"
 #include "modules/delay.hpp"
 #include "modules/filter.hpp"
+#include "modules/reverb.hpp"
 /* UI */
 #include "ui/ui.hpp"
 #include "ui/screens/title.hpp"
@@ -48,8 +48,9 @@ Synth& synth = Synth::getInstance();
 Delay shared_delay;
 Filter shared_filter;
 Chorus shared_chorus;
+Reverb shared_reverb;
 
-Passthrough passthrough(audio_hdl, shared_filter, shared_delay, shared_chorus);
+Passthrough passthrough(audio_hdl, shared_filter, shared_delay, shared_chorus, shared_reverb);
 
 // SPI転送中のオーディオ処理コールバック
 AudioCallback gfxAudioCallback = nullptr;
@@ -85,7 +86,7 @@ void setup() {
     ui.pushScreen(new TitleScreen());
 
     midi_player.init();  // SD.begin() はsetup()内で安全に呼ぶ
-    synth.init(shared_delay, shared_filter, shared_chorus);
+    synth.init(shared_delay, shared_filter, shared_chorus, shared_reverb);
     audio_hdl.init();
     physical.init();
     leds.init();

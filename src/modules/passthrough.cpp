@@ -17,6 +17,7 @@ void Passthrough::begin() {
     filter_.reset();
     delay_.reset();
     chorus_.reset();
+    reverb_.reset();
 
     active_ = true;
 }
@@ -113,7 +114,14 @@ void Passthrough::process() {
             }
         }
 
-        // 5. Volume (音量調整)
+        // 5. Reverb
+        if (reverb_enabled_) {
+            for (size_t i = 0; i < BUFFER_SIZE; i++) {
+                reverb_.process(samples_L[i], samples_R[i]);
+            }
+        }
+
+        // 6. Volume (音量調整)
         if (volume_ < Q15_MAX) {
             for (size_t i = 0; i < BUFFER_SIZE; i++) {
                 samples_L[i] = static_cast<Sample16_t>(

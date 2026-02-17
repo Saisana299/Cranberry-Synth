@@ -24,6 +24,7 @@ private:
         C_HPF,
         C_DELAY,
         C_CHORUS,
+        C_REVERB,
         C_MAX
     };
     int8_t cursor = C_LPF;
@@ -73,6 +74,9 @@ public:
                     return;
                 case C_CHORUS:
                     manager->pushScreen(new PassthroughChorusScreen());
+                    return;
+                case C_REVERB:
+                    manager->pushScreen(new PassthroughReverbScreen());
                     return;
             }
         }
@@ -156,6 +160,10 @@ private:
             case C_CHORUS:
                 label = "CHORUS";
                 enabled = passthrough.isChorusEnabled();
+                break;
+            case C_REVERB:
+                label = "REVERB";
+                enabled = passthrough.isReverbEnabled();
                 break;
         }
         if (!label) return;

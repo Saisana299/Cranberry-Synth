@@ -1,10 +1,11 @@
 #include "modules/synth.hpp"
 
 /** @brief シンセ初期化 */
-void Synth::init(Delay& shared_delay, Filter& shared_filter, Chorus& shared_chorus) {
+void Synth::init(Delay& shared_delay, Filter& shared_filter, Chorus& shared_chorus, Reverb& shared_reverb) {
     delay_ptr_ = &shared_delay;
     filter_ptr_ = &shared_filter;
     chorus_ptr_ = &shared_chorus;
+    reverb_ptr_ = &shared_reverb;
 
     // ノート情報クリア
     for (int i = 0; i < 128; ++i) {
@@ -280,6 +281,7 @@ FASTRUN void Synth::generate() {
     const bool enable_hpf = hpf_enabled;
     const bool enable_delay = delay_enabled;
     const bool enable_chorus = chorus_enabled;
+    const bool enable_reverb = reverb_enabled;
     // const int32_t pan_gain_l = AudioMath::PAN_COS_TABLE[master_pan];
     // const int32_t pan_gain_r = AudioMath::PAN_SIN_TABLE[master_pan];
 
@@ -315,6 +317,10 @@ FASTRUN void Synth::generate() {
         // Chorus
         if(enable_chorus) {
             chorus_ptr_->process(left_16, right_16);
+        }
+        // Reverb
+        if(enable_reverb) {
+            reverb_ptr_->process(left_16, right_16);
         }
 
         // 出力バッファへ
@@ -560,7 +566,7 @@ void Synth::loadPreset(uint8_t preset_id) {
 
     // アルゴリズムとフィードバックを設定
     setAlgorithm(preset.algorithm_id);
-    setFeedback(preset.feedback);
+    setFeedback(preset.master.feedback);
 
     // 各オペレーターの設定を適用
     active_carriers = 0; // メンバ変数をリセット
@@ -635,6 +641,12 @@ void Synth::loadPreset(uint8_t preset_id) {
     chorus_ptr_->setDepth(fx.chorus_depth);
     chorus_ptr_->setMix(fx.chorus_mix);
 
+    // リバーブ設定
+    reverb_enabled = fx.reverb_enabled;
+    reverb_ptr_->setRoomSize(fx.reverb_room_size);
+    reverb_ptr_->setDamping(fx.reverb_damping);
+    reverb_ptr_->setMix(fx.reverb_mix);
+
     // LFO設定を適用
     const LfoPreset& lfo_p = preset.lfo;
     lfo_.setWave(lfo_p.wave);
@@ -646,6 +658,11 @@ void Synth::loadPreset(uint8_t preset_id) {
     lfo_.setKeySync(lfo_p.key_sync);
     osc_key_sync_ = lfo_p.osc_key_sync;
     lfo_.reset();
+
+    // マスター設定を適用
+    const MasterPreset& master_p = preset.master;
+    transpose = std::clamp<int8_t>(master_p.transpose, -24, 24);
+    master_volume = std::clamp<Gain_t>(master_p.level, 0, Q15_MAX);
 
     // マスタースケールを調整
     if (active_carriers == 0) active_carriers = 1; // 0除算防止

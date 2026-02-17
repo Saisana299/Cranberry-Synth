@@ -1011,3 +1011,209 @@ private:
         manager->transferPartial(x, y, w, h);
     }
 };
+
+// ============================================================
+// PassthroughReverbScreen — パススルーモード用リバーブ設定
+// ============================================================
+class PassthroughReverbScreen : public Screen {
+private:
+    const int16_t HEADER_H = 14;
+    const int16_t ITEM_H = 16;
+    const int16_t FOOTER_Y = SCREEN_HEIGHT - 14;
+    bool needsFullRedraw = false;
+
+    enum CursorPos {
+        C_ENABLED = 0,
+        C_ROOM_SIZE,
+        C_DAMPING,
+        C_MIX,
+        C_BACK,
+        C_MAX
+    };
+    int8_t cursor = C_ENABLED;
+
+    const uint8_t ROOM_STEP = 1;
+    const uint8_t DAMP_STEP = 1;
+    const Gain_t MIX_STEP = 1024;
+
+public:
+    PassthroughReverbScreen() = default;
+
+    void onEnter(UIManager* manager) override {
+        this->manager = manager;
+        cursor = C_ENABLED;
+        needsFullRedraw = true;
+        manager->invalidate();
+        manager->triggerFullTransfer();
+    }
+
+    bool isAnimated() const override { return false; }
+
+    void handleInput(uint8_t button) override {
+        bool moved = false;
+        bool changed = false;
+        Reverb& reverb = passthrough.getReverb();
+
+        if (button == BTN_DN || button == BTN_DN_LONG) {
+            cursor++;
+            if (cursor >= C_MAX) cursor = 0;
+            moved = true;
+        }
+        else if (button == BTN_UP || button == BTN_UP_LONG) {
+            cursor--;
+            if (cursor < 0) cursor = C_MAX - 1;
+            moved = true;
+        }
+        else if (button == BTN_ET) {
+            if (cursor == C_ENABLED) {
+                passthrough.setReverbEnabled(!passthrough.isReverbEnabled());
+                changed = true;
+            }
+            else if (cursor == C_BACK) {
+                manager->popScreen();
+                return;
+            }
+        }
+        else if (button == BTN_CXL) {
+            manager->popScreen();
+            return;
+        }
+        else if (button == BTN_R || button == BTN_R_LONG) {
+            uint8_t step_mul = (button == BTN_R_LONG) ? 5 : 1;
+            if (cursor == C_ROOM_SIZE) {
+                uint8_t val = reverb.getRoomSize();
+                val = min((int)val + ROOM_STEP * step_mul, 99);
+                reverb.setRoomSize(val);
+                changed = true;
+            }
+            else if (cursor == C_DAMPING) {
+                uint8_t val = reverb.getDamping();
+                val = min((int)val + DAMP_STEP * step_mul, 99);
+                reverb.setDamping(val);
+                changed = true;
+            }
+            else if (cursor == C_MIX) {
+                Gain_t val = reverb.getMix();
+                val = min((int32_t)val + MIX_STEP, (int32_t)Q15_MAX);
+                reverb.setMix(val);
+                changed = true;
+            }
+        }
+        else if (button == BTN_L || button == BTN_L_LONG) {
+            uint8_t step_mul = (button == BTN_L_LONG) ? 5 : 1;
+            if (cursor == C_ROOM_SIZE) {
+                uint8_t val = reverb.getRoomSize();
+                val = max((int)val - ROOM_STEP * step_mul, 0);
+                reverb.setRoomSize(val);
+                changed = true;
+            }
+            else if (cursor == C_DAMPING) {
+                uint8_t val = reverb.getDamping();
+                val = max((int)val - DAMP_STEP * step_mul, 0);
+                reverb.setDamping(val);
+                changed = true;
+            }
+            else if (cursor == C_MIX) {
+                Gain_t val = reverb.getMix();
+                val = max((int32_t)val - MIX_STEP, (int32_t)0);
+                reverb.setMix(val);
+                changed = true;
+            }
+        }
+
+        if (moved || changed) {
+            if (changed) needsFullRedraw = true;
+            manager->invalidate();
+        }
+    }
+
+    void draw(GFXcanvas16& canvas) override {
+        if (needsFullRedraw) {
+            canvas.fillScreen(Color::BLACK);
+            canvas.setTextSize(1);
+            canvas.setTextColor(Color::CYAN);
+            canvas.setCursor(4, 3);
+            canvas.print("REVERB");
+            canvas.drawFastHLine(0, HEADER_H, SCREEN_WIDTH, Color::WHITE);
+            manager->transferPartial(0, 0, SCREEN_WIDTH, HEADER_H + 1);
+            needsFullRedraw = false;
+        }
+
+        Reverb& reverb = passthrough.getReverb();
+
+        drawBoolItem(canvas, "ENABLED", passthrough.isReverbEnabled(), 0, cursor == C_ENABLED);
+        drawParamItem(canvas, "ROOM", reverb.getRoomSize(), "", 1, cursor == C_ROOM_SIZE);
+        drawParamItem(canvas, "DAMP", reverb.getDamping(), "", 2, cursor == C_DAMPING);
+        drawPercentItem(canvas, "MIX", reverb.getMix(), 3, cursor == C_MIX);
+        drawBackButton(canvas, cursor == C_BACK);
+    }
+
+    void drawSingleItem(GFXcanvas16& canvas, int cursorPos, bool isSelected) {
+        Reverb& reverb = passthrough.getReverb();
+        if (cursorPos == C_ENABLED) drawBoolItem(canvas, "ENABLED", passthrough.isReverbEnabled(), 0, isSelected);
+        else if (cursorPos == C_ROOM_SIZE) drawParamItem(canvas, "ROOM", reverb.getRoomSize(), "", 1, isSelected);
+        else if (cursorPos == C_DAMPING) drawParamItem(canvas, "DAMP", reverb.getDamping(), "", 2, isSelected);
+        else if (cursorPos == C_MIX) drawPercentItem(canvas, "MIX", reverb.getMix(), 3, isSelected);
+        else if (cursorPos == C_BACK) drawBackButton(canvas, isSelected);
+    }
+
+private:
+    void drawBoolItem(GFXcanvas16& canvas, const char* name, bool value, int index, bool selected) {
+        int16_t y = HEADER_H + 2 + (index * ITEM_H);
+        canvas.fillRect(0, y, SCREEN_WIDTH, ITEM_H, Color::BLACK);
+        canvas.setTextSize(1);
+        if (selected) canvas.fillRect(2, y + 2, 3, 8, Color::WHITE);
+        canvas.setTextColor(selected ? Color::WHITE : Color::MD_GRAY);
+        canvas.setCursor(10, y + 4);
+        canvas.print(name);
+        canvas.setCursor(80, y + 4);
+        canvas.setTextColor(value ? Color::CYAN : Color::MD_GRAY);
+        canvas.print(value ? "ON" : "OFF");
+        manager->transferPartial(0, y, SCREEN_WIDTH, ITEM_H);
+    }
+
+    void drawParamItem(GFXcanvas16& canvas, const char* name, int32_t value, const char* unit, int index, bool selected) {
+        int16_t y = HEADER_H + 2 + (index * ITEM_H);
+        canvas.fillRect(0, y, SCREEN_WIDTH, ITEM_H, Color::BLACK);
+        canvas.setTextSize(1);
+        if (selected) canvas.fillRect(2, y + 2, 3, 8, Color::WHITE);
+        canvas.setTextColor(selected ? Color::WHITE : Color::MD_GRAY);
+        canvas.setCursor(10, y + 4);
+        canvas.print(name);
+        canvas.setCursor(80, y + 4);
+        canvas.setTextColor(Color::WHITE);
+        char valStr[16];
+        sprintf(valStr, "%ld%s", value, unit);
+        canvas.print(valStr);
+        manager->transferPartial(0, y, SCREEN_WIDTH, ITEM_H);
+    }
+
+    void drawPercentItem(GFXcanvas16& canvas, const char* name, Gain_t value, int index, bool selected) {
+        int16_t y = HEADER_H + 2 + (index * ITEM_H);
+        canvas.fillRect(0, y, SCREEN_WIDTH, ITEM_H, Color::BLACK);
+        canvas.setTextSize(1);
+        if (selected) canvas.fillRect(2, y + 2, 3, 8, Color::WHITE);
+        canvas.setTextColor(selected ? Color::WHITE : Color::MD_GRAY);
+        canvas.setCursor(10, y + 4);
+        canvas.print(name);
+        canvas.setCursor(80, y + 4);
+        canvas.setTextColor(Color::WHITE);
+        char valStr[16];
+        sprintf(valStr, "%d%%", (int)((int32_t)value * 100 / Q15_MAX));
+        canvas.print(valStr);
+        manager->transferPartial(0, y, SCREEN_WIDTH, ITEM_H);
+    }
+
+    void drawBackButton(GFXcanvas16& canvas, bool selected) {
+        int16_t x = 2;
+        int16_t y = FOOTER_Y + 2;
+        int16_t w = 24;
+        int16_t h = 10;
+        canvas.fillRect(x, y, w, h, Color::BLACK);
+        if (selected) canvas.drawRect(x, y, w, h, Color::WHITE);
+        canvas.setTextColor(selected ? Color::WHITE : Color::MD_GRAY);
+        canvas.setCursor(x + 2, y + 1);
+        canvas.print("<");
+        manager->transferPartial(x, y, w, h);
+    }
+};

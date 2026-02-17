@@ -83,6 +83,25 @@ struct EffectPreset {
     uint8_t chorus_rate = 20;           // LFO速度 (1-99 → 0.1-10Hz)
     uint8_t chorus_depth = 50;          // 変調深さ (0-99)
     Gain_t chorus_mix = 16384;          // ウェットミックス (Q15: 50% = 16384)
+
+    // リバーブ設定
+    bool reverb_enabled = false;
+    uint8_t reverb_room_size = 50;      // ルームサイズ (0-99)
+    uint8_t reverb_damping = 50;        // ダンピング (0-99)
+    Gain_t reverb_mix = 8192;           // ウェットミックス (Q15: 25% = 8192)
+};
+
+/**
+ * @brief マスタープリセット構造体
+ *
+ * シンセサイザーのグローバル設定:
+ * - Level: マスターボリューム (Q15形式, 0-32767)
+ * - Transpose: トランスポーズ (-24 ～ +24 半音)
+ */
+struct MasterPreset {
+    Gain_t level = static_cast<Gain_t>(Q15_MAX * 0.707);  // マスターレベル (デフォルト: -3dB ≈ 23170)
+    int8_t transpose = 0;                                  // トランスポーズ (-24 ～ +24)
+    uint8_t feedback = 0;                                  // フィードバック量 (0-7)
 };
 
 /**
@@ -110,10 +129,10 @@ struct LfoPreset {
 struct SynthPreset {
     const char* name;                        // プリセット名
     uint8_t algorithm_id = 0;                // アルゴリズムID
-    uint8_t feedback = 0;                    // フィードバック量 (0-7)
     std::array<OperatorPreset, 6> operators; // 6つのオペレーター設定
     EffectPreset effects;                    // エフェクト設定
     LfoPreset lfo;                           // LFO設定
+    MasterPreset master;                     // マスター設定
 };
 
 // デフォルトプリセット管理クラス
@@ -146,7 +165,6 @@ private:
         {
             "Simple Sine",  // name
             0,              // algorithm_id
-            0,              // feedback
             {{              // operators
                 // Operator 0
                 {
@@ -170,13 +188,13 @@ private:
                 {}   // Operator 5 (無効・デフォルト値)
             }},
             {}, // effects (default)
-            {}  // lfo (default)
+            {}, // lfo (default)
+            {}  // master (default)
         },
         // --- Preset 2: Melodrama ---
         {
             "Melodrama",    // name
             1,              // algorithm_id
-            7,              // feedback
             {{              // operators
                 // Operator 0
                 {
@@ -270,13 +288,13 @@ private:
                 }
             }},
             {}, // effects (default)
-            {}  // lfo (default)
+            {}, // lfo (default)
+            { static_cast<Gain_t>(Q15_MAX * 0.707), 0, 7 }  // master (feedback=7)
         },
         // --- Preset 3: KinzkHarp ---
         {
             "KinzkHarp",    // name
             2,              // algorithm_id
-            7,              // feedback
             {{              // operators
                 // Operator 0
                 {
@@ -370,13 +388,13 @@ private:
                 }
             }},
             {}, // effects (default)
-            {}  // lfo (default)
+            {}, // lfo (default)
+            { static_cast<Gain_t>(Q15_MAX * 0.707), 0, 7 }  // master (feedback=7)
         },
         // --- Preset 4: TUB BELLS ---
         {
             "TUB BELLS",    // name
             4,              // algorithm_id
-            7,              // feedback
             {{              // operators
                 // Operator 0
                 {
@@ -470,13 +488,13 @@ private:
                 }
             }},
             {}, // effects (default)
-            {}  // lfo (default)
+            {}, // lfo (default)
+            { static_cast<Gain_t>(Q15_MAX * 0.707), 0, 7 }  // master (feedback=7)
         },
         // --- Preset 5: E.PIANO 1 ---
         {
             "E.PIANO 1",    // name
             4,              // algorithm_id
-            6,              // feedback
             {{              // operators
                 // Operator 0
                 {
@@ -570,13 +588,13 @@ private:
                 }
             }},
             {}, // effects (default)
-            {}  // lfo (default)
+            {}, // lfo (default)
+            { static_cast<Gain_t>(Q15_MAX * 0.707), 0, 6 }  // master (feedback=6)
         },
-        // --- Preset 6: KinzkHarp ---
+        // --- Preset 6: KinzkHarp EF ---
         {
             "KinzkHarp EF",    // name
             2,              // algorithm_id
-            7,              // feedback
             {{              // operators
                 // Operator 0
                 {
@@ -686,7 +704,8 @@ private:
                 12,     // pm_depth
                 0,      // am_depth
                 2       // pitch_mod_sens
-            }  // lfo
+            },  // lfo
+            { static_cast<Gain_t>(Q15_MAX * 0.707), -12, 7 }  // master (feedback=7)
         },
     };
 };

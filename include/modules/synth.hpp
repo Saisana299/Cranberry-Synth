@@ -9,6 +9,7 @@
 #include "modules/delay.hpp"
 #include "modules/filter.hpp"
 #include "modules/chorus.hpp"
+#include "modules/reverb.hpp"
 #include "modules/lfo.hpp"
 #include "utils/algorithm.hpp"
 #include "utils/state.hpp"
@@ -54,6 +55,9 @@ private:
 
     Chorus* chorus_ptr_ = nullptr;  // 共有インスタンス (main.cpp で生成)
     bool chorus_enabled = false;
+
+    Reverb* reverb_ptr_ = nullptr;  // 共有インスタンス (main.cpp で生成)
+    bool reverb_enabled = false;
 
     Lfo lfo_;
     bool osc_key_sync_ = true;
@@ -113,6 +117,12 @@ private:
         if (chorus_enabled && chorus_ptr_) {
             tail = std::max(tail, static_cast<uint32_t>(CHORUS_BUFFER_SIZE));
         }
+        if (reverb_enabled && reverb_ptr_) {
+            // Freeverb の最長コムフィルタ長 × フィードバック減衰回数
+            // ~1617 samples × ~30 repeats ≈ 1.1秒
+            uint32_t reverb_tail = (SAMPLE_RATE * 3); // 概算3秒
+            tail = std::max(tail, reverb_tail);
+        }
         return tail;
     }
 
@@ -127,7 +137,7 @@ public:
         return instance;
     };
 
-    void init(Delay& shared_delay, Filter& shared_filter, Chorus& shared_chorus);
+    void init(Delay& shared_delay, Filter& shared_filter, Chorus& shared_chorus, Reverb& shared_reverb);
     FASTRUN void update();
     void noteOn(uint8_t note, uint8_t velocity, uint8_t channel);
     void noteOff(uint8_t note, uint8_t channel);
@@ -169,6 +179,7 @@ public:
     bool isLpfEnabled() const { return lpf_enabled; }
     bool isHpfEnabled() const { return hpf_enabled; }
     bool isChorusEnabled() const { return chorus_enabled; }
+    bool isReverbEnabled() const { return reverb_enabled; }
 
     // エフェクトパラメータ取得
     int32_t getDelayTime() const { return delay_ptr_->getTime(); }
@@ -198,16 +209,26 @@ public:
         if (!chorus_enabled && enabled) chorus_ptr_->reset();
         chorus_enabled = enabled;
     }
+    void setReverbEnabled(bool enabled) {
+        if (!reverb_enabled && enabled) reverb_ptr_->reset();
+        reverb_enabled = enabled;
+    }
 
-    // Delay/Filter/Chorus オブジェクトへの直接アクセス（設定用）
+    // Delay/Filter/Chorus/Reverb オブジェクトへの直接アクセス（設定用）
     Delay& getDelay() { return *delay_ptr_; }
     Filter& getFilter() { return *filter_ptr_; }
     Chorus& getChorus() { return *chorus_ptr_; }
+    Reverb& getReverb() { return *reverb_ptr_; }
 
     // コーラスパラメータ取得
     uint8_t getChorusRate() const { return chorus_ptr_->getRate(); }
     uint8_t getChorusDepth() const { return chorus_ptr_->getDepth(); }
     Gain_t getChorusMix() const { return chorus_ptr_->getMix(); }
+
+    // リバーブパラメータ取得
+    uint8_t getReverbRoomSize() const { return reverb_ptr_->getRoomSize(); }
+    uint8_t getReverbDamping() const { return reverb_ptr_->getDamping(); }
+    Gain_t getReverbMix() const { return reverb_ptr_->getMix(); }
 
     // LFO
     Lfo& getLfo() { return lfo_; }

@@ -128,12 +128,17 @@ void Chorus::process(Sample16_t& left, Sample16_t& right) {
     delay_r_q8 = std::clamp(delay_r_q8, MIN_DELAY_Q8, MAX_DELAY_Q8);
 
     // 補間読み出し
-    Sample16_t wet_l = readInterpolated(buffer_L, delay_l_q8);
-    Sample16_t wet_r = readInterpolated(buffer_R, delay_r_q8);
+    Sample16_t raw_wet_l = readInterpolated(buffer_L, delay_l_q8);
+    Sample16_t raw_wet_r = readInterpolated(buffer_R, delay_r_q8);
+
+    // L/Rウェット信号をクロスブレンド (93.75:6.25 = 15:1)
+    // 位相干渉による片チャンネルのキャンセルを防止
+    int32_t wet_l = (static_cast<int32_t>(raw_wet_l) * 15 + static_cast<int32_t>(raw_wet_r)) >> 4;
+    int32_t wet_r = (static_cast<int32_t>(raw_wet_r) * 15 + static_cast<int32_t>(raw_wet_l)) >> 4;
 
     // ドライ + ウェット × mix (Q15乗算)
-    int32_t out_l = static_cast<int32_t>(left) + ((static_cast<int32_t>(wet_l) * mix) >> Q15_SHIFT);
-    int32_t out_r = static_cast<int32_t>(right) + ((static_cast<int32_t>(wet_r) * mix) >> Q15_SHIFT);
+    int32_t out_l = static_cast<int32_t>(left) + ((wet_l * mix) >> Q15_SHIFT);
+    int32_t out_r = static_cast<int32_t>(right) + ((wet_r * mix) >> Q15_SHIFT);
 
     left = static_cast<Sample16_t>(std::clamp<int32_t>(out_l, SAMPLE16_MIN, SAMPLE16_MAX));
     right = static_cast<Sample16_t>(std::clamp<int32_t>(out_r, SAMPLE16_MIN, SAMPLE16_MAX));
