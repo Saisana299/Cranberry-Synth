@@ -3,6 +3,7 @@
 #include "ui/ui.hpp"
 #include "ui/screens/passthrough.hpp"
 #include "ui/screens/midi_player_screen.hpp"
+#include "ui/screens/oscilloscope.hpp"
 
 class MenuScreen : public Screen {
 private:
@@ -15,6 +16,7 @@ private:
     enum CursorPos {
         C_PASSTHROUGH = 0,
         C_MIDI_PLAYER,
+        C_OSCILLOSCOPE,
         C_BACK,
         C_MAX
     };
@@ -55,6 +57,10 @@ public:
             }
             else if (cursor == C_MIDI_PLAYER) {
                 manager->pushScreen(new MIDIPlayerScreen());
+                return;
+            }
+            else if (cursor == C_OSCILLOSCOPE) {
+                manager->pushScreen(new OscilloscopeScreen());
                 return;
             }
             else if (cursor == C_BACK) {
@@ -117,6 +123,7 @@ private:
     void drawAllItems(GFXcanvas16& canvas) {
         drawNavItem(canvas, "PASSTHROUGH", 0, cursor == C_PASSTHROUGH);
         drawNavItem(canvas, "MIDI PLAYER", 1, cursor == C_MIDI_PLAYER);
+        drawNavItem(canvas, "OSCILLOSCOPE", 2, cursor == C_OSCILLOSCOPE);
     }
 
     void drawFooter(GFXcanvas16& canvas) {
@@ -129,6 +136,7 @@ private:
         switch (pos) {
             case C_PASSTHROUGH: drawNavItem(canvas, "PASSTHROUGH", 0, sel); break;
             case C_MIDI_PLAYER: drawNavItem(canvas, "MIDI PLAYER", 1, sel); break;
+            case C_OSCILLOSCOPE: drawNavItem(canvas, "OSCILLOSCOPE", 2, sel); break;
             case C_BACK:        drawBackButton(canvas, sel); break;
         }
     }
