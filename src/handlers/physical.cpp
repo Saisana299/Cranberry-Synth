@@ -109,12 +109,8 @@ void PhysicalHandler::process() {
         accumulated_delta %= 4;  // 余りを保持
 
         if(delta != 0) {
-            // エンコーダー回転を左右ボタンとして処理
-            if(delta > 0) {
-                state_.setBtnState(BTN_R);  // 右回転 = 右ボタン
-            } else {
-                state_.setBtnState(BTN_L);  // 左回転 = 左ボタン
-            }
+            // エンコーダー回転量をそのまま蓄積（UIで一括処理）
+            state_.addEncoderDelta(static_cast<int16_t>(delta));
         }
 
         last_encoder_debounce_time = now;

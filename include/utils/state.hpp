@@ -1,5 +1,7 @@
 #pragma once
 
+#include <atomic>
+
 /* Mode State */
 constexpr uint8_t MODE_TITLE       = 0x00;
 constexpr uint8_t MODE_SYNTH       = 0x01;
@@ -52,6 +54,14 @@ public:
     float getCpuUsage() const { return cpu_usage; }
     void setCpuUsage(float value) { cpu_usage = value; }
 
+    // エンコーダーデルタ（回転量蓄積）
+    void addEncoderDelta(int16_t d) {
+        encoder_delta_.fetch_add(d, std::memory_order_relaxed);
+    }
+    int16_t consumeEncoderDelta() {
+        return encoder_delta_.exchange(0, std::memory_order_acq_rel);
+    }
+
 private:
     bool led_midi = false;
     bool led_audio = false;
@@ -59,4 +69,5 @@ private:
     uint8_t mode_state = MODE_TITLE;
     uint8_t btn_state = BTN_NONE;
     float cpu_usage = 0.0f;
+    std::atomic<int16_t> encoder_delta_{0};
 };

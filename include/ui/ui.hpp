@@ -98,6 +98,13 @@ public:
             state_.setBtnState(BTN_NONE);
         }
 
+        // エンコーダー回転処理（FPS制限の影響を受けない）
+        int16_t enc_delta = state_.consumeEncoderDelta();
+        if (enc_delta != 0 && !screenStack.empty()) {
+            screenStack.top()->handleEncoder(enc_delta);
+            invalidate();
+        }
+
         // FPS制限
         uint32_t now = millis();
         if (now - lastFrameTime < MIN_FRAME_TIME) {
