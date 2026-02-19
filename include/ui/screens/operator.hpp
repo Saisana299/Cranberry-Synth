@@ -388,7 +388,7 @@ private:
 
     enum CursorPos {
         C_MODE = 0,   // RATIO/FIXED
-        C_TUNE,       // Detune (±7)
+        C_TUNE,       // Detune (±50)
         C_COARSE,     // 周波数比
         C_FINE,       // 微調整
         C_BACK,
@@ -509,7 +509,7 @@ private:
         const char* modeStr = osc.isFixed() ? "FIXED" : "RATIO";
         drawTextItem(canvas, "MODE", modeStr, 0, cursor == C_MODE);
 
-        // TUNE表示 (Detune ±7)
+        // TUNE表示 (Detune ±50)
         char tuneStr[8];
         sprintf(tuneStr, "%+d", osc.getDetune());
         drawTextItem(canvas, "TUNE", tuneStr, 1, cursor == C_TUNE);
@@ -609,12 +609,12 @@ private:
                 break;
             }
             case C_TUNE: {
-                // TUNE (Detune ±7)
+                // TUNE (Detune ±50)
                 int8_t currentDetune = osc.getDetune();
-                int8_t step = (direction == 1 || direction == -1) ? 1 : 3;
+                int8_t step = (direction == 1 || direction == -1) ? 1 : 10;
                 int8_t newDetune = currentDetune + (direction > 0 ? step : -step);
-                if (newDetune < -7) newDetune = -7;
-                if (newDetune > 7) newDetune = 7;
+                if (newDetune < -50) newDetune = -50;
+                if (newDetune > 50) newDetune = 50;
                 osc.setDetune(newDetune);
                 break;
             }

@@ -16,6 +16,7 @@ private:
         C_LEVEL = 0,
         C_TRANSPOSE,
         C_FEEDBACK,
+        C_VEL_CURVE,
         C_LFO,
         C_BACK,
         C_MAX
@@ -152,8 +153,13 @@ private:
         sprintf(fbStr, "%d", fb);
         drawTextItem(canvas, "FEEDBACK", fbStr, 2, cursor == C_FEEDBACK);
 
+        // VEL CURVE
+        static const char* CURVE_NAMES[] = {"LINEAR", "EXP", "LOG", "FIXED"};
+        uint8_t curve_id = static_cast<uint8_t>(synth.getVelocityCurve());
+        drawTextItem(canvas, "VEL CURVE", CURVE_NAMES[curve_id], 3, cursor == C_VEL_CURVE);
+
         // LFO (サブメニュー)
-        drawNavItem(canvas, "LFO", 3, cursor == C_LFO);
+        drawNavItem(canvas, "LFO", 4, cursor == C_LFO);
     }
 
     void drawFooter(GFXcanvas16& canvas) {
@@ -187,8 +193,13 @@ private:
             sprintf(fbStr, "%d", fb);
             drawTextItem(canvas, "FEEDBACK", fbStr, 2, isSelected);
         }
+        else if (cursorPos == C_VEL_CURVE) {
+            static const char* CURVE_NAMES[] = {"LINEAR", "EXP", "LOG", "FIXED"};
+            uint8_t curve_id = static_cast<uint8_t>(synth.getVelocityCurve());
+            drawTextItem(canvas, "VEL CURVE", CURVE_NAMES[curve_id], 3, isSelected);
+        }
         else if (cursorPos == C_LFO) {
-            drawNavItem(canvas, "LFO", 3, isSelected);
+            drawNavItem(canvas, "LFO", 4, isSelected);
         }
         else if (cursorPos == C_BACK) {
             drawBackButton(canvas, isSelected);
@@ -285,6 +296,15 @@ private:
                 if (newFb < 0) newFb = 0;
                 if (newFb > 7) newFb = 7;
                 synth.setFeedback(newFb);
+                break;
+            }
+            case C_VEL_CURVE: {
+                int8_t curve = static_cast<int8_t>(synth.getVelocityCurve());
+                int8_t step = (direction > 0) ? 1 : -1;
+                curve += step;
+                if (curve < 0) curve = static_cast<int8_t>(VelocityCurve::COUNT) - 1;
+                if (curve >= static_cast<int8_t>(VelocityCurve::COUNT)) curve = 0;
+                synth.setVelocityCurve(static_cast<uint8_t>(curve));
                 break;
             }
         }

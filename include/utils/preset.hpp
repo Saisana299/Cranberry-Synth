@@ -102,6 +102,7 @@ struct MasterPreset {
     Gain_t level = static_cast<Gain_t>(Q15_MAX * 0.707);  // マスターレベル (デフォルト: -3dB ≈ 23170)
     int8_t transpose = 0;                                  // トランスポーズ (-24 ～ +24)
     uint8_t feedback = 0;                                  // フィードバック量 (0-7)
+    uint8_t velocity_curve = 0;                            // ベロシティカーブ (0=Linear, 1=Exp, 2=Log, 3=Fixed)
 };
 
 /**

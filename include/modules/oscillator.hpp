@@ -31,7 +31,7 @@ public:
     void setWavetable(uint8_t table_id);
     void setCoarse(float coarse);
     void setFine(float fine_level);
-    void setDetune(int8_t detune_cents);
+    void setDetune(int8_t detune_cents);  // -50 to +50 cents
 
     // レベルテーブル (Level 0-99 → Q15スケール 0-32767)
     // AudioMath::levelToLinear() を使用してキャッシュ
@@ -198,7 +198,7 @@ private:
     }
 
     static inline int8_t clamp_detune(int8_t value) {
-        return std::clamp<int8_t>(value, -7, 7);
+        return std::clamp<int8_t>(value, -50, 50);
     }
 
     // OSC設定

@@ -383,6 +383,9 @@ void Synth::updateOrder(uint8_t removed) {
  * @param channel MIDIチャンネル
  */
 void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
+    // ベロシティカーブを適用
+    velocity = AudioMath::applyVelocityCurve(velocity, velocity_curve_);
+
     // LFO KEY SYNC——ノートオン毎にディレイカウンターをリセット（key_sync_ trueなら位相も）
     lfo_.keyOn();
 
@@ -663,6 +666,7 @@ void Synth::loadPreset(uint8_t preset_id) {
     const MasterPreset& master_p = preset.master;
     transpose = std::clamp<int8_t>(master_p.transpose, -24, 24);
     master_volume = std::clamp<Gain_t>(master_p.level, 0, Q15_MAX);
+    velocity_curve_ = static_cast<VelocityCurve>(master_p.velocity_curve < static_cast<uint8_t>(VelocityCurve::COUNT) ? master_p.velocity_curve : 0);
 
     // マスタースケールを調整
     if (active_carriers == 0) active_carriers = 1; // 0除算防止

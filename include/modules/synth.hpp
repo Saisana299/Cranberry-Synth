@@ -82,6 +82,7 @@ private:
     uint8_t feedback_amount = 0; // 0=disable, 1~7
     uint8_t current_preset_id = 0; // 現在ロードされているプリセットID
     int8_t transpose = 0; // トランスポーズ (-24 ～ +24)
+    VelocityCurve velocity_curve_ = VelocityCurve::Linear; // ベロシティカーブ
 
     FASTRUN void generate();
     void updateOrder(uint8_t removed);
@@ -260,6 +261,14 @@ public:
     // トランスポーズ
     int8_t getTranspose() const { return transpose; }
     void setTranspose(int8_t t) { transpose = std::clamp<int8_t>(t, -24, 24); }
+
+    // ベロシティカーブ
+    VelocityCurve getVelocityCurve() const { return velocity_curve_; }
+    void setVelocityCurve(VelocityCurve curve) { velocity_curve_ = curve; }
+    void setVelocityCurve(uint8_t curve_id) {
+        if (curve_id < static_cast<uint8_t>(VelocityCurve::COUNT))
+            velocity_curve_ = static_cast<VelocityCurve>(curve_id);
+    }
 
     // int16_t getMasterPan() const { return master_pan; }
     // void setMasterPan(int16_t pan) { master_pan = std::clamp<int16_t>(pan, 0, 200); }

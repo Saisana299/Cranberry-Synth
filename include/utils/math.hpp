@@ -3,6 +3,15 @@
 #include <Arduino.h>
 #include "types.hpp"
 
+/** ベロシティカーブの種類 */
+enum class VelocityCurve : uint8_t {
+    Linear      = 0,  // 線形: そのまま
+    Exponential = 1,  // 指数: 弱打が静か、強打でグッと出る
+    Logarithmic = 2,  // 対数: 弱打でも音量が出やすい
+    Fixed       = 3,  // 固定: ベロシティ無視、常に最大
+    COUNT       = 4
+};
+
 class AudioMath {
 public:
     // 0 = L100%, 100 = C, 200 = R100%
@@ -208,6 +217,53 @@ public:
 
         // 254を1.0にマッピング
         return vel_val * (1.0f / 254.0f);
+    }
+
+    /**
+     * @brief ベロシティカーブを適用して変換
+     *
+     * MIDIベロシティ (1-127) をカーブに応じて変換し、
+     * 新しいベロシティ (1-127) を返す。
+     * velocity=0 はノートオフなのでそのまま返す。
+     *
+     * @param velocity MIDIベロシティ (0-127)
+     * @param curve ベロシティカーブの種類
+     * @return uint8_t 変換後のベロシティ (0-127)
+     */
+    static inline uint8_t applyVelocityCurve(uint8_t velocity, VelocityCurve curve) {
+        if (velocity == 0) return 0;
+        if (velocity > 127) velocity = 127;
+
+        switch (curve) {
+            case VelocityCurve::Linear:
+                // そのまま返す
+                return velocity;
+
+            case VelocityCurve::Exponential: {
+                // v_out = (v_in / 127)^2 * 127
+                // 弱打が静か、強打で急激に音量が上がる
+                float normalized = velocity * ONE_OVER_127;
+                float result = normalized * normalized * 127.0f;
+                uint8_t out = static_cast<uint8_t>(result + 0.5f);
+                return (out == 0 && velocity > 0) ? 1 : out;
+            }
+
+            case VelocityCurve::Logarithmic: {
+                // v_out = sqrt(v_in / 127) * 127
+                // 弱打でも音量が出やすい
+                float normalized = velocity * ONE_OVER_127;
+                float result = sqrtf(normalized) * 127.0f;
+                uint8_t out = static_cast<uint8_t>(result + 0.5f);
+                return (out > 127) ? 127 : out;
+            }
+
+            case VelocityCurve::Fixed:
+                // 固定: 常にベロシティ127
+                return 127;
+
+            default:
+                return velocity;
+        }
     }
 
     /**
