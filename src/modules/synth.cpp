@@ -627,17 +627,21 @@ void Synth::loadPreset(uint8_t preset_id) {
     // ディレイ設定（タイム変更で古いパターンが不自然になるためリセット）
     delay_enabled = false;
     delay_ptr_->reset();
-    delay_ptr_->setDelay(fx.delay_time, fx.delay_level, fx.delay_feedback);
+    delay_ptr_->setDelay(fx.delay_time,
+                         EffectPreset::toQ15(fx.delay_level),
+                         EffectPreset::toQ15(fx.delay_feedback));
     delay_enabled = fx.delay_enabled;
 
     // フィルタ設定（古い状態変数がクリックノイズの原因になるためリセット）
     lpf_enabled = false;
     hpf_enabled = false;
     filter_ptr_->reset();
-    filter_ptr_->setLowPass(fx.lpf_cutoff, fx.lpf_resonance);
-    filter_ptr_->setLpfMix(fx.lpf_mix);
-    filter_ptr_->setHighPass(fx.hpf_cutoff, fx.hpf_resonance);
-    filter_ptr_->setHpfMix(fx.hpf_mix);
+    filter_ptr_->setLowPass(EffectPreset::cutoffToHz(fx.lpf_cutoff),
+                            EffectPreset::resonanceToQ(fx.lpf_resonance));
+    filter_ptr_->setLpfMix(EffectPreset::toQ15(fx.lpf_mix));
+    filter_ptr_->setHighPass(EffectPreset::cutoffToHz(fx.hpf_cutoff),
+                             EffectPreset::resonanceToQ(fx.hpf_resonance));
+    filter_ptr_->setHpfMix(EffectPreset::toQ15(fx.hpf_mix));
     lpf_enabled = fx.lpf_enabled;
     hpf_enabled = fx.hpf_enabled;
 
@@ -645,14 +649,14 @@ void Synth::loadPreset(uint8_t preset_id) {
     chorus_enabled = false;
     chorus_ptr_->setRate(fx.chorus_rate);
     chorus_ptr_->setDepth(fx.chorus_depth);
-    chorus_ptr_->setMix(fx.chorus_mix);
+    chorus_ptr_->setMix(EffectPreset::toQ15(fx.chorus_mix));
     chorus_enabled = fx.chorus_enabled;
 
     // リバーブ設定（残響テールは自然減衰させる方が音楽的）
     reverb_enabled = false;
     reverb_ptr_->setRoomSize(fx.reverb_room_size);
     reverb_ptr_->setDamping(fx.reverb_damping);
-    reverb_ptr_->setMix(fx.reverb_mix);
+    reverb_ptr_->setMix(EffectPreset::toQ15(fx.reverb_mix));
     reverb_enabled = fx.reverb_enabled;
 
     // LFO設定を適用
@@ -670,7 +674,7 @@ void Synth::loadPreset(uint8_t preset_id) {
     // マスター設定を適用
     const MasterPreset& master_p = preset.master;
     transpose = std::clamp<int8_t>(master_p.transpose, -24, 24);
-    master_volume = std::clamp<Gain_t>(master_p.level, 0, Q15_MAX);
+    master_volume = EffectPreset::toQ15(std::clamp<uint8_t>(master_p.level, 0, 99));
     velocity_curve_ = static_cast<VelocityCurve>(master_p.velocity_curve < static_cast<uint8_t>(VelocityCurve::COUNT) ? master_p.velocity_curve : 0);
 
     // マスタースケールを調整

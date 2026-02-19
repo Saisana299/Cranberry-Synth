@@ -31,8 +31,11 @@
 - **16-Voice Polyphony** – 16 simultaneous notes across 16 MIDI channels
 - **4-Rate / 4-Level Envelopes** – Per-operator with rate scaling and keyboard level scaling
 - **LFO** – 6 waveforms, pitch/amplitude modulation, per-operator AMS, key sync
-- **Real-time Effects** – Delay (300ms), Biquad LPF/HPF
-- **Passthrough Mode** – External audio input (PCM1802 ADC) with effects processing
+- **Velocity Curves** – Linear, Exponential, Logarithmic, Fixed
+- **Real-time Effects** – Delay, Biquad LPF/HPF, Chorus, Reverb (Freeverb)
+- **10 Built-in Presets** – Basic waves, SUPERSAW, FM patches + random generator
+- **Passthrough Mode** – External audio input (PCM1802 ADC) with full effects chain
+- **Visualization** – Oscilloscope (L/R/L+R, freeze, zero-cross trigger) & Envelope Monitor
 - **OLED Display** – 128×128 16-bit RGB (SSD1351) @ 15 FPS
 - **MIDI Support** – Hardware MIDI IN (Serial7), USB MIDI, SMF playback from SD card
 
@@ -118,10 +121,10 @@ Cranberry-Synth/
 ├── include/
 │   ├── display/        # OLED & LED control
 │   ├── handlers/       # Audio, MIDI, Input handlers
-│   ├── modules/        # Synth engine (oscillator, envelope, filter, delay, LFO)
+│   ├── modules/        # Synth engine (oscillator, envelope, filter, delay, chorus, reverb, LFO)
 │   ├── tools/          # MIDI file player
-│   ├── ui/             # UI manager & screens
-│   └── utils/          # Algorithms, presets, wavetables
+│   ├── ui/             # UI manager & screens (preset, operator, FX, oscilloscope, etc.)
+│   └── utils/          # Algorithms, presets, wavetables, math
 ├── src/                # Implementation files
 ├── lib/MD_MIDIFile/    # MIDI file library
 └── platformio.ini
@@ -135,9 +138,10 @@ Cranberry-Synth/
 
 | Parameter | Range | Description |
 |:---|:---:|:---|
-| Level | 0-100 | Master output level (default: 71 ≈ -3dB) |
+| Level | 0-99 | Master output level |
 | Transpose | -24 – +24 | Transpose in semitones |
 | Feedback | 0-7 | Operator feedback amount |
+| Velocity Curve | 0-3 | Linear, Exponential, Logarithmic, Fixed |
 
 ### Operator
 
@@ -192,13 +196,16 @@ Cranberry-Synth/
 
 ### Effects
 
-| Effect | Parameters |
-|:---|:---|
-| Delay | Time (1-300ms), Level (0-100%), Feedback (0-100%) |
-| LPF | Cutoff (20-20kHz), Resonance (0.1-10.0), Mix (0-100%) |
-| HPF | Cutoff (100-20kHz), Resonance (0.1-10.0), Mix (0-100%) |
+| Effect | Parameters | Description |
+|:---|:---|:---|
+| Delay | Time (1-300ms), Level (0-99%), Feedback (0-99%) | Echo with adjustable feedback |
+| LPF | Cutoff (20-20kHz), Resonance (0.1-10.0), Mix (0-99%) | Biquad low-pass filter |
+| HPF | Cutoff (100-20kHz), Resonance (0.1-10.0), Mix (0-99%) | Biquad high-pass filter |
+| Chorus | Rate (0.1-10Hz), Depth (0-99), Mix (0-99%) | Stereo chorus with L/R phase offset |
+| Reverb | Room Size (0-99), Damping (0-99), Mix (0-99%) | Freeverb (8 comb + 4 allpass filters) |
 
 ---
+
 
 ## Specifications
 
@@ -212,6 +219,8 @@ Cranberry-Synth/
 | Polyphony | 16 voices |
 | MIDI Channels | 16 |
 | LFO Waveforms | 6 |
+| Effects | 5 (Delay, LPF, HPF, Chorus, Reverb) |
+| Presets | 10 + Random |
 | Display | 128×128 RGB @ 15 FPS |
 
 ---
