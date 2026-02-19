@@ -624,31 +624,36 @@ void Synth::loadPreset(uint8_t preset_id) {
     // エフェクト設定を適用
     const EffectPreset& fx = preset.effects;
 
-    // ディレイ設定
-    delay_enabled = fx.delay_enabled;
+    // ディレイ設定（タイム変更で古いパターンが不自然になるためリセット）
+    delay_enabled = false;
+    delay_ptr_->reset();
     delay_ptr_->setDelay(fx.delay_time, fx.delay_level, fx.delay_feedback);
+    delay_enabled = fx.delay_enabled;
 
-    // ローパスフィルタ設定
-    lpf_enabled = fx.lpf_enabled;
+    // フィルタ設定（古い状態変数がクリックノイズの原因になるためリセット）
+    lpf_enabled = false;
+    hpf_enabled = false;
+    filter_ptr_->reset();
     filter_ptr_->setLowPass(fx.lpf_cutoff, fx.lpf_resonance);
     filter_ptr_->setLpfMix(fx.lpf_mix);
-
-    // ハイパスフィルタ設定
-    hpf_enabled = fx.hpf_enabled;
     filter_ptr_->setHighPass(fx.hpf_cutoff, fx.hpf_resonance);
     filter_ptr_->setHpfMix(fx.hpf_mix);
+    lpf_enabled = fx.lpf_enabled;
+    hpf_enabled = fx.hpf_enabled;
 
-    // コーラス設定
-    chorus_enabled = fx.chorus_enabled;
+    // コーラス設定（短いバッファは自然に更新されるためリセット不要）
+    chorus_enabled = false;
     chorus_ptr_->setRate(fx.chorus_rate);
     chorus_ptr_->setDepth(fx.chorus_depth);
     chorus_ptr_->setMix(fx.chorus_mix);
+    chorus_enabled = fx.chorus_enabled;
 
-    // リバーブ設定
-    reverb_enabled = fx.reverb_enabled;
+    // リバーブ設定（残響テールは自然減衰させる方が音楽的）
+    reverb_enabled = false;
     reverb_ptr_->setRoomSize(fx.reverb_room_size);
     reverb_ptr_->setDamping(fx.reverb_damping);
     reverb_ptr_->setMix(fx.reverb_mix);
+    reverb_enabled = fx.reverb_enabled;
 
     // LFO設定を適用
     const LfoPreset& lfo_p = preset.lfo;

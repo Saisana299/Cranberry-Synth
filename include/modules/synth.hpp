@@ -196,7 +196,11 @@ public:
 
     // エフェクト設定
     void setDelayEnabled(bool enabled) {
-        if (!delay_enabled && enabled) delay_ptr_->reset();
+        if (!delay_enabled && enabled) {
+            delay_ptr_->reset();
+            // reset()後にインターバルを再適用（reset()でwrite_idxが初期化されるため）
+            delay_ptr_->setTime(delay_ptr_->getTime());
+        }
         delay_enabled = enabled;
     }
     void setLpfEnabled(bool enabled) {
@@ -269,6 +273,39 @@ public:
     void setVelocityCurve(uint8_t curve_id) {
         if (curve_id < static_cast<uint8_t>(VelocityCurve::COUNT))
             velocity_curve_ = static_cast<VelocityCurve>(curve_id);
+    }
+
+    // エンベロープモニター用データ
+    struct EnvMonitorInfo {
+        EnvGain_t levels[MAX_OPERATORS];
+        Envelope::EnvelopeState states[MAX_OPERATORS];
+        uint8_t note;
+        uint8_t velocity;
+    };
+
+    void getEnvMonitorInfo(EnvMonitorInfo& info) const {
+        info.note = 255;
+        info.velocity = 0;
+
+        int8_t latest_idx = -1;
+        for (uint8_t i = 0; i < MAX_NOTES; ++i) {
+            if (order_max > 0 && notes[i].order == order_max) {
+                latest_idx = i;
+                info.note = notes[i].note;
+                info.velocity = notes[i].velocity;
+                break;
+            }
+        }
+
+        for (uint8_t op = 0; op < MAX_OPERATORS; ++op) {
+            if (latest_idx >= 0) {
+                info.levels[op] = ope_states[op].env_mems[latest_idx].current_level;
+                info.states[op] = ope_states[op].env_mems[latest_idx].state;
+            } else {
+                info.levels[op] = 0;
+                info.states[op] = Envelope::EnvelopeState::Idle;
+            }
+        }
     }
 
     // int16_t getMasterPan() const { return master_pan; }

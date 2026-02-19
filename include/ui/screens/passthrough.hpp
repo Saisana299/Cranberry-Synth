@@ -369,6 +369,18 @@ private:
         if (cleaned_) return;
         passthrough.end();
         manager->getState().setModeState(MODE_SYNTH);
+
+        // パススルーで共有エフェクトのパラメータが変わっている可能性があるため
+        // 現在のシンセプリセットを再ロードしてエフェクト設定を復元する
+        Synth& synth = Synth::getInstance();
+        uint8_t preset_id = synth.getCurrentPresetId();
+        if (preset_id == 255) {
+            // ランダムプリセットの場合はエフェクトリセットのみ
+            // （ランダムプリセットは再現不可能なため）
+        } else {
+            synth.loadPreset(preset_id);
+        }
+
         cleaned_ = true;
     }
 
