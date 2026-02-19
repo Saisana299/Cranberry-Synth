@@ -147,6 +147,7 @@ public:
     void setAlgorithm(uint8_t algo_id);
     void setFeedback(uint8_t amount);
     void loadPreset(uint8_t preset_id);
+    void randomizePreset();
 
     // --- 状態取得関数 ---
     uint8_t getActiveNoteCount() const {

@@ -129,7 +129,13 @@ public:
 
         // ENTERボタン：決定/実行
         else if (button == BTN_ET) {
-            if (cursor == C_POLY) {
+            if (cursor == C_PRESET) {
+                // ランダムプリセット生成
+                synth.randomizePreset();
+                needsFullRedraw = true;
+                manager->invalidate();
+            }
+            else if (cursor == C_POLY) {
                 // 緊急リセット
                 synth.reset();
                 manager->invalidate();
@@ -287,9 +293,13 @@ private:
 
         // 実際のSynth状態から表示
         char headerStr[32];
-        sprintf(headerStr, "%03d:%s",
-                synth.getCurrentPresetId() + 1,  // 1-indexed表示
-                synth.getCurrentPresetName());
+        if (synth.getCurrentPresetId() == 255) {
+            sprintf(headerStr, "RND:%s", synth.getCurrentPresetName());
+        } else {
+            sprintf(headerStr, "%03d:%s",
+                    synth.getCurrentPresetId() + 1,  // 1-indexed表示
+                    synth.getCurrentPresetName());
+        }
         canvas.print(headerStr);
 
         // 部分転送予約
@@ -387,7 +397,9 @@ private:
         bool hasFx = (str == "FX") &&
                      (synth.isDelayEnabled() ||
                       synth.isLpfEnabled() ||
-                      synth.isHpfEnabled());
+                      synth.isHpfEnabled() ||
+                      synth.isChorusEnabled() ||
+                      synth.isReverbEnabled());
 
         if (selected) {
             canvas.fillRect(bgX, bgY, bgW, bgH, Color::WHITE);

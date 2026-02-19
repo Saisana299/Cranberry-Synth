@@ -674,6 +674,7 @@ void Synth::loadPreset(uint8_t preset_id) {
 }
 
 const char* Synth::getCurrentPresetName() const {
+    if (current_preset_id == 255) return "RANDOM";
     return DefaultPresets::get(current_preset_id).name;
 }
 
@@ -686,4 +687,187 @@ uint8_t Synth::getCurrentAlgorithmId() const {
         }
     }
     return 0; // デフォルト
+}
+
+/**
+ * @brief ランダムプリセットを生成してロード
+ *
+ * アルゴリズム、オペレーター設定、エンベロープ、エフェクト、LFOを
+ * ランダムに設定する。音楽的に意味のある結果を得やすいように
+ * パラメータ範囲を調整している。
+ */
+void Synth::randomizePreset() {
+    // ノートをリセット
+    reset();
+
+    // === アルゴリズム ===
+    uint8_t algo_id = random(0, 32);
+    setAlgorithm(algo_id);
+    setFeedback(random(0, 8));  // 0-7
+
+    // === オペレーター設定 ===
+    active_carriers = 0;
+    for (uint8_t i = 0; i < MAX_OPERATORS; ++i) {
+        auto& osc = operators[i].osc;
+        auto& env = operators[i].env;
+
+        // 全オペレーターを有効化
+        osc.enable();
+
+        // 波形: ランダム (0-3: sine, triangle, saw, square)
+        osc.setWavetable(random(0, 4));
+
+        // レベル: キャリアは高め、モジュレーターは幅広く
+        bool is_carrier = current_algo && (current_algo->output_mask & (1 << i));
+        if (is_carrier) {
+            osc.setLevelNonLinear(random(85, 100)); // 85-99
+            active_carriers++;
+        } else {
+            osc.setLevelNonLinear(random(40, 100)); // 40-99
+        }
+
+        // コース: 倍音関係を保つ整数比を優先
+        // キャリアは基本1x、モジュレーターは倍音系の比率
+        if (is_carrier) {
+            // キャリア: 1x を基本に、たまに 2x
+            float carrier_coarse[] = {1.0f, 1.0f, 1.0f, 2.0f};
+            osc.setCoarse(carrier_coarse[random(0, 4)]);
+        } else {
+            // モジュレーター: 倍音関係の整数比
+            float mod_coarse[] = {1.0f, 1.0f, 2.0f, 2.0f, 3.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 10.0f, 12.0f, 14.0f};
+            osc.setCoarse(mod_coarse[random(0, 14)]);
+        }
+
+        // ファイン: 基本は0（倍音を保つ）、20%の確率で軽い味付け
+        if (random(0, 5) == 0) {
+            osc.setFine(static_cast<float>(random(0, 15))); // 0-14 の控えめな範囲
+        } else {
+            osc.setFine(0.0f);
+        }
+
+        // デチューン: 控えめ (-7～+7 基本、たまに広め)
+        if (random(0, 4) == 0) {
+            osc.setDetune(random(-20, 21));  // 25%の確率で広め
+        } else {
+            osc.setDetune(random(-7, 8));    // 75%は従来のDX7互換範囲
+        }
+
+        // FIXEDモード: 基本的にRATIO
+        osc.setFixed(false);
+
+        // === エンベロープ ===
+        if (is_carrier) {
+            // キャリア: 音量を維持するためサステイン高め
+            env.setRate1(random(80, 100));       // アタック: 速め
+            env.setRate2(random(30, 80));         // ディケイ1
+            env.setRate3(random(10, 60));         // ディケイ2: ゆっくりめ
+            env.setRate4(random(30, 80));         // リリース
+
+            env.setLevel1(99);                   // アタックは常に最大
+            env.setLevel2(random(85, 100));       // ディケイ1到達: 高め
+            env.setLevel3(random(70, 99));        // サステイン: 必ず音が残る
+            env.setLevel4(0);
+        } else {
+            // モジュレーター: 音色変化のため幅広い範囲
+            env.setRate1(random(60, 100));
+            env.setRate2(random(20, 100));
+            env.setRate3(random(10, 80));
+            env.setRate4(random(20, 99));
+
+            env.setLevel1(random(80, 100));
+            env.setLevel2(random(50, 100));
+            env.setLevel3(random(0, 90));        // 減衰OK（音色が変わるだけ）
+            env.setLevel4(0);
+        }
+
+        // Rate Scaling: 0-3 (税めに)
+        env.setRateScaling(random(0, 4));
+
+        // KLS: ランダムで開くか無効か
+        env.setBreakPoint(random(30, 50));
+        if (random(0, 3) == 0) { // 1/3の確率でKLS有効
+            env.setLeftDepth(random(0, 50));
+            env.setRightDepth(random(0, 50));
+            env.setLeftCurve(random(0, 4));
+            env.setRightCurve(random(0, 4));
+        } else {
+            env.setLeftDepth(0);
+            env.setRightDepth(0);
+            env.setLeftCurve(0);
+            env.setRightCurve(0);
+        }
+
+        // ベロシティ感度: 3-7 (不感になりすぎないように)
+        env.setVelocitySens(random(3, 8));
+
+        // AMS: 0-3
+        op_ams_gain_[i] = Lfo::AMS_TAB[random(0, 4)];
+    }
+
+    // === エフェクト ===
+    // ディレイ: 50%の確率で有効
+    delay_enabled = (random(0, 2) == 0);
+    if (delay_enabled) {
+        delay_ptr_->setDelay(
+            random(30, 250),                            // time: 30-250ms
+            static_cast<Gain_t>(random(3000, 16384)),   // level: ~10-50%
+            static_cast<Gain_t>(random(6554, 22938))    // feedback: 20-70%
+        );
+    }
+
+    // LPF: 40%の確率で有効
+    lpf_enabled = (random(0, 5) < 2);
+    if (lpf_enabled) {
+        float cutoff = 500.0f + random(0, 15000);  // 500-15500 Hz
+        filter_ptr_->setLowPass(cutoff, 0.7f + random(0, 30) * 0.1f); // Q: 0.7-3.7
+        filter_ptr_->setLpfMix(Q15_MAX);
+    }
+
+    // HPF: 20%の確率で有効
+    hpf_enabled = (random(0, 5) == 0);
+    if (hpf_enabled) {
+        float cutoff = 60.0f + random(0, 500);  // 60-560 Hz
+        filter_ptr_->setHighPass(cutoff, 0.707f);
+        filter_ptr_->setHpfMix(Q15_MAX);
+    }
+
+    // コーラス: 30%の確率で有効
+    chorus_enabled = (random(0, 10) < 3);
+    if (chorus_enabled) {
+        chorus_ptr_->setRate(random(10, 60));
+        chorus_ptr_->setDepth(random(20, 80));
+        chorus_ptr_->setMix(static_cast<Gain_t>(random(6554, 19661))); // 20-60%
+    }
+
+    // リバーブ: 40%の確率で有効
+    reverb_enabled = (random(0, 5) < 2);
+    if (reverb_enabled) {
+        reverb_ptr_->setRoomSize(random(20, 80));
+        reverb_ptr_->setDamping(random(20, 80));
+        reverb_ptr_->setMix(static_cast<Gain_t>(random(3277, 13107))); // 10-40%
+    }
+
+    // === LFO ===
+    lfo_.setWave(random(0, 6));        // 0-5
+    lfo_.setSpeed(random(10, 70));     // 10-69
+    lfo_.setDelay(random(0, 50));      // 0-49
+    // PM/AMは控えめに（ピッチの揺れを抑える）
+    lfo_.setPmDepth(random(0, 15));     // ビブラート控えめ
+    lfo_.setAmDepth(random(0, 20));
+    lfo_.setPitchModSens(random(0, 4)); // 0-3
+    lfo_.setKeySync(random(0, 2) == 0);
+    osc_key_sync_ = (random(0, 3) != 0); // 2/3でOSC KEY SYNC ON
+    lfo_.reset();
+
+    // === マスター ===
+    transpose = 0;
+    velocity_curve_ = VelocityCurve::Linear;
+    master_volume = static_cast<Gain_t>(Q15_MAX * 0.707); // -3dB
+
+    // マスタースケールを調整
+    if (active_carriers == 0) active_carriers = 1;
+    output_scale = static_cast<Gain_t>((static_cast<int32_t>(master_volume / active_carriers) * polyphony_divisor) >> Q15_SHIFT);
+
+    // プリセット名は"RANDOM"を示すため、IDは特殊値に
+    current_preset_id = 255;
 }
