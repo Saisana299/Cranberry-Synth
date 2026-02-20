@@ -5,9 +5,11 @@ void MIDIHandler::begin() {
     usbMIDI.setHandleNoteOn(handleNoteOnStatic);
     usbMIDI.setHandleNoteOff(handleNoteOffStatic);
     usbMIDI.setHandlePitchChange(handlePitchBendStaticUsb);
+    usbMIDI.setHandleControlChange(handleControlChangeStaticUsb);
     MIDI.setHandleNoteOn(handleNoteOnStatic);
     MIDI.setHandleNoteOff(handleNoteOffStatic);
     MIDI.setHandlePitchBend(handlePitchBendStaticSerial);
+    MIDI.setHandleControlChange(handleControlChangeStaticSerial);
     MIDI.begin(MIDI_CHANNEL_OMNI);
 }
 
@@ -17,19 +19,32 @@ void MIDIHandler::stop() {
     usbMIDI.setHandleNoteOn(nullptr);
     usbMIDI.setHandleNoteOff(nullptr);
     usbMIDI.setHandlePitchChange(nullptr);
+    usbMIDI.setHandleControlChange(nullptr);
     MIDI.setHandleNoteOn(nullptr);
     MIDI.setHandleNoteOff(nullptr);
     MIDI.setHandlePitchBend(nullptr);
+    MIDI.setHandleControlChange(nullptr);
 }
 
 /**
  * @brief ノートON受信時の処理
+ *
+ * NoteOn velocity=0 は MIDI規格上 NoteOff として扱う。
+ * Teensy usbMIDI はこの変換を自動で行わないため、ここで明示的に処理する。
+ * Arduino MIDI Library (Serial) は HandleNullVelocityNoteOnAsNoteOff=true がデフォルトだが
+ * 安全のためこちらでも対応する。
  *
  * @param ch チャンネル番号
  * @param note ノート番号
  * @param velocity ベロシティ
  */
 void MIDIHandler::handleNoteOn(uint8_t ch, uint8_t note, uint8_t velocity) {
+    // NoteOn velocity=0 → NoteOff として処理
+    if (note <= MIDI_MAX_NOTE && velocity == 0) {
+        handleNoteOff(ch, note, velocity);
+        return;
+    }
+
     if(!isValidNoteOn(note, velocity)) return;
 
     if (state_.getModeState() == MODE_SYNTH) {
@@ -99,5 +114,46 @@ void MIDIHandler::handlePitchBendStaticUsb(uint8_t ch, int bend) {
 void MIDIHandler::handlePitchBendStaticSerial(uint8_t ch, int bend) {
     if (instance && instance->state_.getModeState() == MODE_SYNTH) {
         Synth::getInstance().setPitchBend(static_cast<int16_t>(bend));
+    }
+}
+
+/**
+ * @brief USB MIDI Control Changeコールバック
+ * CC#120: All Sound Off — 全ノートを即座にリセット
+ * CC#123: All Notes Off — 全ノートをリリース
+ */
+void MIDIHandler::handleControlChangeStaticUsb(uint8_t ch, uint8_t cc, uint8_t value) {
+    if (instance && instance->state_.getModeState() == MODE_SYNTH) {
+        instance->handleControlChange(ch, cc, value);
+    }
+}
+
+/**
+ * @brief Serial MIDI Control Changeコールバック
+ */
+void MIDIHandler::handleControlChangeStaticSerial(uint8_t ch, uint8_t cc, uint8_t value) {
+    if (instance && instance->state_.getModeState() == MODE_SYNTH) {
+        instance->handleControlChange(ch, cc, value);
+    }
+}
+
+/**
+ * @brief Control Change処理
+ *
+ * @param ch チャンネル番号
+ * @param cc CC番号
+ * @param value 値
+ */
+void MIDIHandler::handleControlChange(uint8_t ch, uint8_t cc, uint8_t value) {
+    switch (cc) {
+        case 120: // All Sound Off — 即座に全ノートリセット
+            Synth::getInstance().reset();
+            Synth::getInstance().setPitchBend(0);
+            break;
+        case 123: // All Notes Off — 全ノートをリリース
+            Synth::getInstance().allNotesOff();
+            break;
+        default:
+            break;
     }
 }

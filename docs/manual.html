@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cranberry Synth 操作マニュアル</title>
+    <style>
+
+@page {
+    size: A4;
+    margin: 20mm 18mm 20mm 18mm;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: "Segoe UI", "Meiryo", "Yu Gothic", "Hiragino Sans", sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.7;
+    color: #1a1a1a;
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 30px 20px;
+    background: #fff;
+}
+
+h1 {
+    font-size: 20pt;
+    color: #b22234;
+    border-bottom: 3px solid #b22234;
+    padding-bottom: 8px;
+    margin-top: 40px;
+    margin-bottom: 16px;
+    page-break-after: avoid;
+}
+
+h1:first-of-type {
+    text-align: center;
+    font-size: 26pt;
+    border-bottom: none;
+    margin-top: 60px;
+    margin-bottom: 4px;
+}
+
+h2 {
+    font-size: 14pt;
+    color: #333;
+    border-left: 4px solid #b22234;
+    padding-left: 10px;
+    margin-top: 28px;
+    margin-bottom: 10px;
+    page-break-after: avoid;
+}
+
+h3 {
+    font-size: 12pt;
+    color: #444;
+    margin-top: 20px;
+    margin-bottom: 8px;
+    page-break-after: avoid;
+}
+
+p {
+    margin: 8px 0;
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 12px 0;
+    font-size: 9.5pt;
+    page-break-inside: avoid;
+}
+
+th, td {
+    border: 1px solid #ccc;
+    padding: 6px 10px;
+    text-align: left;
+}
+
+th {
+    background: #f2f2f2;
+    font-weight: 600;
+    color: #333;
+}
+
+tr:nth-child(even) {
+    background: #fafafa;
+}
+
+code {
+    font-family: "Consolas", "Source Code Pro", monospace;
+    background: #f5f5f5;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-size: 9pt;
+}
+
+pre {
+    background: #f5f5f5;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 14px;
+    overflow-x: auto;
+    font-size: 8.5pt;
+    line-height: 1.5;
+    page-break-inside: avoid;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+blockquote {
+    border-left: 4px solid #d4a843;
+    background: #fffbe6;
+    margin: 14px 0;
+    padding: 10px 16px;
+    color: #5a4a00;
+    border-radius: 0 5px 5px 0;
+    page-break-inside: avoid;
+}
+
+blockquote p {
+    margin: 4px 0;
+}
+
+strong {
+    color: #333;
+}
+
+hr {
+    border: none;
+    border-top: 1px solid #ddd;
+    margin: 30px 0;
+}
+
+ul, ol {
+    padding-left: 24px;
+}
+
+li {
+    margin: 4px 0;
+}
+
+/* 目次スタイル */
+h1 + ol, h1 + ul {
+    columns: 2;
+    column-gap: 30px;
+}
+
+@media print {
+    body {
+        padding: 0;
+        max-width: none;
+    }
+
+    h1 {
+        page-break-before: always;
+    }
+
+    h1:first-of-type {
+        page-break-before: avoid;
+    }
+
+    pre, blockquote, table {
+        page-break-inside: avoid;
+    }
+}
+
+    </style>
+</head>
+<body>
+<h1>Cranberry Synth 操作マニュアル</h1>
+<h2>6オペレーター FM シンセサイザー</h2>
+<hr />
+<h1>目次</h1>
+<ol>
+<li>はじめに</li>
+<li>ボタン操作の基本</li>
+<li>LED インジケーター</li>
+<li>画面遷移マップ</li>
+<li>タイトル画面</li>
+<li>プリセット画面（メインハブ）</li>
+<li>オペレーター設定</li>
+<li>マスター設定</li>
+<li>LFO 設定</li>
+<li>エフェクト設定</li>
+<li>メニュー画面</li>
+<li>オシロスコープ</li>
+<li>エンベロープモニター</li>
+<li>パススルーモード</li>
+<li>MIDI プレイヤー</li>
+<li>MIDI 接続</li>
+<li>FM 合成の基礎知識</li>
+<li>パラメータ一覧表</li>
+</ol>
+<hr />
+<h1>1. はじめに</h1>
+<p><strong>Cranberry Synth</strong> は Teensy 4.1 上で動作する 6 オペレーター FM シンセサイザーです。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">項目</th>
+<th style="text-align: left;">仕様</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">オペレーター数</td>
+<td style="text-align: left;">6</td>
+</tr>
+<tr>
+<td style="text-align: left;">アルゴリズム数</td>
+<td style="text-align: left;">32</td>
+</tr>
+<tr>
+<td style="text-align: left;">同時発音数</td>
+<td style="text-align: left;">16 音</td>
+</tr>
+<tr>
+<td style="text-align: left;">サンプルレート</td>
+<td style="text-align: left;">44,100 Hz</td>
+</tr>
+<tr>
+<td style="text-align: left;">内部演算</td>
+<td style="text-align: left;">24 bit (Q23)</td>
+</tr>
+<tr>
+<td style="text-align: left;">出力</td>
+<td style="text-align: left;">16 bit</td>
+</tr>
+<tr>
+<td style="text-align: left;">エフェクト</td>
+<td style="text-align: left;">Delay, LPF, HPF, Chorus, Reverb</td>
+</tr>
+<tr>
+<td style="text-align: left;">ディスプレイ</td>
+<td style="text-align: left;">128×128 RGB OLED</td>
+</tr>
+<tr>
+<td style="text-align: left;">MIDI 入力</td>
+<td style="text-align: left;">USB MIDI / ハードウェア MIDI IN</td>
+</tr>
+</tbody>
+</table>
+<p><strong>FM 合成</strong>とは、あるオシレーター（モジュレーター）の出力で別のオシレーター（キャリア）の周波数を変調する合成方式です。シンプルなサイン波の組み合わせから、金属的なベル音、ブラス、ストリングスなど多彩な音色を作ることができます。</p>
+<hr />
+<h1>2. ボタン操作の基本</h1>
+<p>本シンセサイザーには、<strong>ロータリーエンコーダー 1 個</strong>と<strong>ボタン 6 個</strong>があります。</p>
+<h2>ボタンの役割</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">ボタン</th>
+<th style="text-align: left;">主な役割</th>
+<th style="text-align: left;">長押し時</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;"><strong>▲ UP</strong></td>
+<td style="text-align: left;">カーソルを上に移動</td>
+<td style="text-align: left;">連続移動</td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>▼ DOWN</strong></td>
+<td style="text-align: left;">カーソルを下に移動</td>
+<td style="text-align: left;">連続移動</td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>◀ LEFT</strong></td>
+<td style="text-align: left;">パラメータ値を下げる（−1）</td>
+<td style="text-align: left;">大きいステップで下げる（−5〜12）</td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>▶ RIGHT</strong></td>
+<td style="text-align: left;">パラメータ値を上げる（+1）</td>
+<td style="text-align: left;">大きいステップで上げる（+5〜12）</td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>ENTER</strong></td>
+<td style="text-align: left;">決定 / 画面遷移 / トグル切替</td>
+<td style="text-align: left;">―</td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>CANCEL</strong></td>
+<td style="text-align: left;">前の画面に戻る</td>
+<td style="text-align: left;">―</td>
+</tr>
+</tbody>
+</table>
+<h2>ロータリーエンコーダー</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">操作</th>
+<th style="text-align: left;">動作</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>右回転</strong></td>
+<td style="text-align: left;">RIGHT ボタンと同じ（値を上げる）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>左回転</strong></td>
+<td style="text-align: left;">LEFT ボタンと同じ（値を下げる）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>押し込み（クリック）</strong></td>
+<td style="text-align: left;">ENTER ボタンと同じ</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>ヒント</strong>: エンコーダーを回すとパラメータ値を素早く変更できます。ボタンの短押しで微調整、長押しで大きく変更するのがおすすめです。</p>
+</blockquote>
+<hr />
+<h1>3. LED インジケーター</h1>
+<p>本体には 4 つの LED があります。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">LED</th>
+<th style="text-align: left;">場所</th>
+<th style="text-align: left;">動作</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Power</strong></td>
+<td style="text-align: left;">電源表示</td>
+<td style="text-align: left;">起動時に点灯（常時 ON）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>MIDI</strong></td>
+<td style="text-align: left;">MIDI 入力</td>
+<td style="text-align: left;">MIDI データ受信時に点滅</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Audio</strong></td>
+<td style="text-align: left;">オーディオ出力</td>
+<td style="text-align: left;">音声出力中に点灯</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Status</strong></td>
+<td style="text-align: left;">状態表示</td>
+<td style="text-align: left;">パススルーモード中：常時点灯 / MIDI Player 再生中：点滅</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h1>4. 画面遷移マップ</h1>
+<p>電源を入れるとタイトル画面が表示されます。ENTER を押すとプリセット画面（メインハブ）に移動します。</p>
+<pre><code>タイトル画面
+  └─ [ENTER] → プリセット画面（メインハブ）
+                  │
+                  ├─ OP1〜OP6 → オペレーター設定
+                  │                ├─ ピッチ設定
+                  │                ├─ エンベロープ設定
+                  │                └─ 感度設定
+                  │
+                  ├─ M（マスター）→ マスター設定
+                  │                    └─ LFO 設定
+                  │
+                  ├─ FX → エフェクト一覧
+                  │         ├─ Delay
+                  │         ├─ Chorus
+                  │         ├─ Reverb
+                  │         ├─ LPF
+                  │         └─ HPF
+                  │
+                  └─ MENU → メニュー
+                              ├─ パススルーモード
+                              ├─ MIDI プレイヤー
+                              ├─ オシロスコープ
+                              └─ エンベロープモニター
+</code></pre>
+<p><strong>どの画面からでも CANCEL ボタンで前の画面に戻れます。</strong></p>
+<hr />
+<h1>5. タイトル画面</h1>
+<p>電源を入れると最初に表示される画面です。</p>
+<ul>
+<li>画面に「<strong>Cranberry</strong>」と「<strong>FM SYNTHESIZER</strong>」が表示されます</li>
+<li>背景にはサイン波のアニメーションが流れています</li>
+<li><strong>ENTER を押す</strong>とプリセット画面に移動します</li>
+</ul>
+<hr />
+<h1>6. プリセット画面（メインハブ）</h1>
+<p>シンセサイザーの中心となる画面です。ここからすべての設定にアクセスできます。</p>
+<h2>画面構成</h2>
+<pre><code>┌────────────────────────┐
+│ 001:INIT_SINE          │  ← プリセット名
+│ Algorithm: 1           │  ← アルゴリズム番号
+│ ┌──┐ ┌──┐ ┌──┐        │
+│ │ 1│ │ 2│ │ 3│        │  ← オペレーターボックス
+│ └──┘ └──┘ └──┘        │
+│ ┌──┐ ┌──┐ ┌──┐        │    色が付いている＝有効
+│ │ 4│ │ 5│ │ 6│  [M]   │  ← [M]=マスター設定
+│ └──┘ └──┘ └──┘        │
+│ FX     POLY:0    MENU  │  ← フッター
+│                DSP:12% │  ← CPU 使用率
+└────────────────────────┘
+</code></pre>
+<h2>操作方法</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">選択項目</th>
+<th style="text-align: left;">操作</th>
+<th style="text-align: left;">動作</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>PRESET</strong></td>
+<td style="text-align: left;">◀▶</td>
+<td style="text-align: left;">プリセットを切り替え（ループ）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>PRESET</strong></td>
+<td style="text-align: left;">ENTER</td>
+<td style="text-align: left;">ランダムプリセットを生成</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>ALGO</strong></td>
+<td style="text-align: left;">◀▶</td>
+<td style="text-align: left;">アルゴリズムを変更（1〜32）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>OP1〜OP6</strong></td>
+<td style="text-align: left;">ENTER</td>
+<td style="text-align: left;">そのオペレーターの設定画面へ</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>M</strong></td>
+<td style="text-align: left;">ENTER</td>
+<td style="text-align: left;">マスター設定画面へ</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>FX</strong></td>
+<td style="text-align: left;">ENTER</td>
+<td style="text-align: left;">エフェクト設定画面へ</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>POLY</strong></td>
+<td style="text-align: left;">ENTER</td>
+<td style="text-align: left;">緊急リセット（音が止まらない時に）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>MENU</strong></td>
+<td style="text-align: left;">ENTER</td>
+<td style="text-align: left;">メニュー画面へ</td>
+</tr>
+</tbody>
+</table>
+<h3>アルゴリズム図について</h3>
+<p>画面中央にはオペレーター同士の接続関係が図で表示されます。</p>
+<ul>
+<li><strong>線でつながったボックス</strong> → 上のオペレーターが下のオペレーターの音を変調しています</li>
+<li><strong>下部のバスライン（横線）に繋がるオペレーター</strong> → 最終出力（キャリア）</li>
+<li><strong>矢印付きの丸</strong> → フィードバック（自分自身を変調）</li>
+</ul>
+<blockquote>
+<p><strong>ヒント</strong>: まずはプリセットを切り替えて色々な音を聴いてみましょう。気に入った音が見つかったら、オペレーターやエフェクトを少しずつ調整してオリジナルの音色を作ってみてください。</p>
+</blockquote>
+<hr />
+<h1>7. オペレーター設定</h1>
+<p>プリセット画面で OP1〜OP6 を選んで ENTER を押すと開きます。</p>
+<h2>メイン画面</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">項目</th>
+<th style="text-align: left;">操作</th>
+<th style="text-align: left;">説明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>ENABLED</strong></td>
+<td style="text-align: left;">ENTER</td>
+<td style="text-align: left;">オペレーターの ON/OFF を切替</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>WAVE</strong></td>
+<td style="text-align: left;">◀▶</td>
+<td style="text-align: left;">波形を選択：SINE（正弦波）、TRI（三角波）、SAW（のこぎり波）、SQR（矩形波）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>LEVEL</strong></td>
+<td style="text-align: left;">◀▶</td>
+<td style="text-align: left;">出力レベル（0〜99）。音量の大きさを決めます</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>PITCH</strong></td>
+<td style="text-align: left;">ENTER</td>
+<td style="text-align: left;">ピッチ設定のサブ画面へ</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>ENV</strong></td>
+<td style="text-align: left;">ENTER</td>
+<td style="text-align: left;">エンベロープ設定のサブ画面へ</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>SENS</strong></td>
+<td style="text-align: left;">ENTER</td>
+<td style="text-align: left;">感度設定のサブ画面へ</td>
+</tr>
+</tbody>
+</table>
+<h2>ピッチ設定（PITCH）</h2>
+<p>オペレーターの周波数を決める設定です。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">項目</th>
+<th style="text-align: center;">範囲</th>
+<th style="text-align: left;">説明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>MODE</strong></td>
+<td style="text-align: center;">RATIO / FIXED</td>
+<td style="text-align: left;">RATIO＝基音の倍率で指定、FIXED＝固定周波数</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>COARSE</strong></td>
+<td style="text-align: center;">0〜31</td>
+<td style="text-align: left;">大まかな周波数比（0 = 0.5倍、1 = 1倍、2 = 2倍…）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>FINE</strong></td>
+<td style="text-align: center;">0〜99</td>
+<td style="text-align: left;">微調整（COARSE × (1 + FINE/100)）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>DETUNE</strong></td>
+<td style="text-align: center;">−7〜+7</td>
+<td style="text-align: left;">デチューン（わずかな音程のずれ。音に厚みが出ます）</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>例</strong>: COARSE=2, FINE=0 なら基音の 2 倍の周波数（1 オクターブ上）になります。</p>
+</blockquote>
+<h2>エンベロープ設定（ENV）</h2>
+<p>音の時間変化を 4 つのフェーズ（段階）で設定します。</p>
+<pre><code>音量
+ ▲     L1
+ │    ╱╲
+ │   ╱  ╲  L2
+ │  ╱    ╲───╲  L3
+ │ ╱           ╲────────
+ │╱                     ╲  L4
+ └──────────────────────────→ 時間
+   R1   R2    R3         R4
+  攻撃  減衰1  減衰2     解放
+</code></pre>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">項目</th>
+<th style="text-align: center;">範囲</th>
+<th style="text-align: left;">説明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>R1</strong></td>
+<td style="text-align: center;">0〜99</td>
+<td style="text-align: left;">アタックの速さ（大きいほど速い）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>R2</strong></td>
+<td style="text-align: center;">0〜99</td>
+<td style="text-align: left;">ディケイ 1 の速さ</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>R3</strong></td>
+<td style="text-align: center;">0〜99</td>
+<td style="text-align: left;">ディケイ 2（サステイン移行）の速さ</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>R4</strong></td>
+<td style="text-align: center;">0〜99</td>
+<td style="text-align: left;">リリースの速さ（鍵盤を離した後）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>L1</strong></td>
+<td style="text-align: center;">0〜99</td>
+<td style="text-align: left;">アタック到達レベル（通常 99）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>L2</strong></td>
+<td style="text-align: center;">0〜99</td>
+<td style="text-align: left;">ディケイ 1 到達レベル</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>L3</strong></td>
+<td style="text-align: center;">0〜99</td>
+<td style="text-align: left;">サステインレベル（鍵盤を押し続けた時の音量）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>L4</strong></td>
+<td style="text-align: center;">0〜99</td>
+<td style="text-align: left;">リリース到達レベル（通常 0）</td>
+</tr>
+</tbody>
+</table>
+<p>画面下部にはエンベロープの形が<strong>リアルタイムでグラフ表示</strong>されます。</p>
+<h2>感度設定（SENS）</h2>
+<p>音の応答特性を細かく調整する上級者向けの設定です。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">項目</th>
+<th style="text-align: center;">範囲</th>
+<th style="text-align: left;">説明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>AMS</strong></td>
+<td style="text-align: center;">0〜3</td>
+<td style="text-align: left;">LFO 振幅変調の感度（0=OFF）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>VEL SENS</strong></td>
+<td style="text-align: center;">0〜7</td>
+<td style="text-align: left;">ベロシティ感度（0=一定音量、7=強弱が最大限反映）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>RATE SCL</strong></td>
+<td style="text-align: center;">0〜7</td>
+<td style="text-align: left;">レートスケーリング（高い音ほどエンベロープが速くなる）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>BP</strong></td>
+<td style="text-align: center;">0〜99</td>
+<td style="text-align: left;">ブレークポイント（スケーリングの基準ノート）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>L DEPTH</strong></td>
+<td style="text-align: center;">0〜99</td>
+<td style="text-align: left;">ブレークポイントより低い音のスケーリング深度</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>R DEPTH</strong></td>
+<td style="text-align: center;">0〜99</td>
+<td style="text-align: left;">ブレークポイントより高い音のスケーリング深度</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>L CURVE</strong></td>
+<td style="text-align: center;">4 種</td>
+<td style="text-align: left;">低音側カーブ：-LN, -EX, +EX, +LN</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>R CURVE</strong></td>
+<td style="text-align: center;">4 種</td>
+<td style="text-align: left;">高音側カーブ：-LN, -EX, +EX, +LN</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h1>8. マスター設定</h1>
+<p>プリセット画面で <strong>M</strong> を選んで ENTER を押すと開きます。シンセサイザー全体に関わる設定です。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">項目</th>
+<th style="text-align: center;">範囲</th>
+<th style="text-align: left;">操作</th>
+<th style="text-align: left;">説明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>LEVEL</strong></td>
+<td style="text-align: center;">0〜100%</td>
+<td style="text-align: left;">◀▶ (±1% / ±10%)</td>
+<td style="text-align: left;">マスターボリューム</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>TRANSPOSE</strong></td>
+<td style="text-align: center;">−24〜+24</td>
+<td style="text-align: left;">◀▶</td>
+<td style="text-align: left;">トランスポーズ（半音単位で音程を上下）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>FEEDBACK</strong></td>
+<td style="text-align: center;">0〜7</td>
+<td style="text-align: left;">◀▶</td>
+<td style="text-align: left;">フィードバック量（オペレーターの自己変調。大きいほど倍音が増えます）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>VEL CURVE</strong></td>
+<td style="text-align: center;">4 種</td>
+<td style="text-align: left;">◀▶</td>
+<td style="text-align: left;">ベロシティカーブ：LINEAR（リニア）、EXP（指数）、LOG（対数）、FIXED（固定）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>LFO</strong></td>
+<td style="text-align: center;">―</td>
+<td style="text-align: left;">ENTER</td>
+<td style="text-align: left;">LFO 設定画面へ</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h1>9. LFO 設定</h1>
+<p>マスター設定画面で <strong>LFO</strong> を選んで ENTER を押すと開きます。</p>
+<p>LFO（Low Frequency Oscillator）は、ビブラートやトレモロなどの<strong>ゆっくりとした音の揺れ</strong>を作るための機能です。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">項目</th>
+<th style="text-align: center;">範囲</th>
+<th style="text-align: left;">説明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>WAVE</strong></td>
+<td style="text-align: center;">6 種</td>
+<td style="text-align: left;">波形：TRI（三角波）、SAW↓ / SAW↑（のこぎり波）、SQR（矩形波）、SIN（正弦波）、S&amp;H（サンプル&amp;ホールド）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>SPEED</strong></td>
+<td style="text-align: center;">0〜99</td>
+<td style="text-align: left;">揺れの速さ（約 0.06〜50 Hz）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>DELAY</strong></td>
+<td style="text-align: center;">0〜99</td>
+<td style="text-align: left;">ノートオン後、LFO が効き始めるまでの遅延（0〜5秒）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>PM DEPTH</strong></td>
+<td style="text-align: center;">0〜99</td>
+<td style="text-align: left;">ピッチモジュレーションの深さ（ビブラートの強さ）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>AM DEPTH</strong></td>
+<td style="text-align: center;">0〜99</td>
+<td style="text-align: left;">アンプリチュードモジュレーションの深さ（トレモロの強さ）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>P.M.SENS</strong></td>
+<td style="text-align: center;">0〜7</td>
+<td style="text-align: left;">ピッチモジュレーション感度</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>KEY SYNC</strong></td>
+<td style="text-align: center;">ON/OFF</td>
+<td style="text-align: left;">ON にすると鍵盤を押すたびに LFO がリセットされます</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>OSC SYNC</strong></td>
+<td style="text-align: center;">ON/OFF</td>
+<td style="text-align: left;">ON にすると鍵盤を押すたびにオシレーターの位相がリセットされます</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>初心者向け</strong>: ビブラートをかけるには PM DEPTH を上げてください（20〜40 くらいから試す）。SPEED は 30 前後が自然です。</p>
+</blockquote>
+<hr />
+<h1>10. エフェクト設定</h1>
+<p>プリセット画面で <strong>FX</strong> を選んで ENTER を押すとエフェクト一覧が表示されます。有効なエフェクトにはシアン色の丸印がつきます。</p>
+<h2>Delay（ディレイ / エコー）</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">項目</th>
+<th style="text-align: center;">範囲</th>
+<th style="text-align: left;">説明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>ENABLED</strong></td>
+<td style="text-align: center;">ON/OFF</td>
+<td style="text-align: left;">ディレイの有効/無効</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>TIME</strong></td>
+<td style="text-align: center;">1〜300 ms</td>
+<td style="text-align: left;">エコーの間隔（5ms 刻み）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>LEVEL</strong></td>
+<td style="text-align: center;">0〜99%</td>
+<td style="text-align: left;">エコー音の音量</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>FEEDBACK</strong></td>
+<td style="text-align: center;">0〜99%</td>
+<td style="text-align: left;">エコーの繰り返し量（高いほど長く残る）</td>
+</tr>
+</tbody>
+</table>
+<h2>LPF（ローパスフィルター）</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">項目</th>
+<th style="text-align: center;">範囲</th>
+<th style="text-align: left;">説明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>ENABLED</strong></td>
+<td style="text-align: center;">ON/OFF</td>
+<td style="text-align: left;">フィルターの有効/無効</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>CUTOFF</strong></td>
+<td style="text-align: center;">20Hz〜20kHz</td>
+<td style="text-align: left;">カットオフ周波数（これより上の音を削る）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Q</strong></td>
+<td style="text-align: center;">0.1〜10.0</td>
+<td style="text-align: left;">レゾナンス（カットオフ付近を強調）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>MIX</strong></td>
+<td style="text-align: center;">0〜100%</td>
+<td style="text-align: left;">効果の適用量</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>操作のコツ</strong>: CUTOFF は対数スケールで変わります（低い周波数帯では細かく、高い周波数帯では大きく変化）。</p>
+</blockquote>
+<h2>HPF（ハイパスフィルター）</h2>
+<p>LPF と同じ構成ですが、カットオフ周波数<strong>より下</strong>の音を削ります。</p>
+<h2>Chorus（コーラス）</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">項目</th>
+<th style="text-align: center;">範囲</th>
+<th style="text-align: left;">説明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>ENABLED</strong></td>
+<td style="text-align: center;">ON/OFF</td>
+<td style="text-align: left;">コーラスの有効/無効</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>RATE</strong></td>
+<td style="text-align: center;">―</td>
+<td style="text-align: left;">揺れの速さ</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>DEPTH</strong></td>
+<td style="text-align: center;">―</td>
+<td style="text-align: left;">揺れの深さ</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>MIX</strong></td>
+<td style="text-align: center;">0〜100%</td>
+<td style="text-align: left;">効果の適用量</td>
+</tr>
+</tbody>
+</table>
+<h2>Reverb（リバーブ）</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">項目</th>
+<th style="text-align: center;">範囲</th>
+<th style="text-align: left;">説明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>ENABLED</strong></td>
+<td style="text-align: center;">ON/OFF</td>
+<td style="text-align: left;">リバーブの有効/無効</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>ROOM</strong></td>
+<td style="text-align: center;">0〜99</td>
+<td style="text-align: left;">部屋の広さ（大きいほど残響が長い）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>DAMP</strong></td>
+<td style="text-align: center;">0〜99</td>
+<td style="text-align: left;">ダンピング（高域の減衰。大きいほど柔らかい残響に）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>MIX</strong></td>
+<td style="text-align: center;">0〜100%</td>
+<td style="text-align: left;">効果の適用量</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h1>11. メニュー画面</h1>
+<p>プリセット画面で <strong>MENU</strong> を選んで ENTER を押すと開きます。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">項目</th>
+<th style="text-align: left;">説明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>PASSTHROUGH</strong></td>
+<td style="text-align: left;">パススルーモード（外部入力をそのまま出力）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>MIDI PLAYER</strong></td>
+<td style="text-align: left;">SD カードの MIDI ファイルを再生</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>OSCILLOSCOPE</strong></td>
+<td style="text-align: left;">リアルタイム波形表示</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>ENV MONITOR</strong></td>
+<td style="text-align: left;">エンベロープの動作をリアルタイム監視</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h1>12. オシロスコープ</h1>
+<p>出力波形をリアルタイムで表示する画面です。音作りの確認に便利です。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">操作</th>
+<th style="text-align: left;">機能</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>▲ / ▼</strong></td>
+<td style="text-align: left;">表示チャンネル切替：L+R → L のみ → R のみ</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>◀ / ▶</strong></td>
+<td style="text-align: left;">表示倍率の変更：x1, x2, x4, x6, x8, x12, x16</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>ENTER</strong></td>
+<td style="text-align: left;">フリーズ（波形の一時停止）/ 解除</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>CANCEL</strong></td>
+<td style="text-align: left;">前画面に戻る</td>
+</tr>
+</tbody>
+</table>
+<p>画面下部の操作ガイド：<code>↑↓:CH ←→:AMP ET:FRZ</code></p>
+<hr />
+<h1>13. エンベロープモニター</h1>
+<p>6 つのオペレーターのエンベロープの動作を同時にリアルタイムで監視できます。</p>
+<ul>
+<li>画面は <strong>2 行 × 3 列</strong>のグリッドに分かれ、各セルに 1 オペレーターが表示されます</li>
+<li><strong>シアン色</strong> = キャリア（音の出力に直結するオペレーター）</li>
+<li><strong>イエロー色</strong> = モジュレーター（他のオペレーターを変調する役割）</li>
+<li>各オペレーターの現在のフェーズ（A=アタック、D1、D2、R=リリース、−=アイドル）が表示されます</li>
+<li>白いクロスマーカーが現在のエンベロープ位置を示します</li>
+</ul>
+<p>鍵盤を弾きながらこの画面を見ると、各オペレーターがどのように動作しているかを視覚的に理解できます。</p>
+<hr />
+<h1>14. パススルーモード</h1>
+<p>メニューから <strong>PASSTHROUGH</strong> を選ぶと、PCM1802 ADC からの<strong>外部オーディオ入力</strong>をそのまま DAC に出力するモードに入ります。</p>
+<ul>
+<li>FM シンセサイザーは一時停止し、MIDI 入力も停止します</li>
+<li><strong>Status LED</strong> が常時点灯します</li>
+<li>ボリューム調整とエフェクト（LPF, HPF, Delay, Chorus, Reverb）を適用できます</li>
+<li><strong>CANCEL</strong> を押すとシンセモードに復帰します</li>
+</ul>
+<p>ギターやマイクなどの外部音源にエフェクトをかけるのに使えます。</p>
+<hr />
+<h1>15. MIDI プレイヤー</h1>
+<p>メニューから <strong>MIDI PLAYER</strong> を選ぶと、SD カードに保存した MIDI ファイル（.mid）を再生できます。</p>
+<h2>操作方法</h2>
+<ol>
+<li>microSD カードのルートディレクトリに <strong>.mid ファイル</strong>を入れておきます</li>
+<li>MIDI PLAYER 画面を開くとファイル一覧が表示されます</li>
+<li><strong>▲ / ▼</strong> でファイルを選択</li>
+<li><strong>ENTER</strong> で再生開始</li>
+<li><strong>STOP</strong> を選んで <strong>ENTER</strong> で再生停止</li>
+</ol>
+<p>再生中は Status LED が点滅します。</p>
+<hr />
+<h1>16. MIDI 接続</h1>
+<p>Cranberry Synth は以下の 2 つの方法で MIDI 入力を受け取ります。</p>
+<h2>USB MIDI</h2>
+<p>USB ケーブルで PC や iPad に接続すると、DAW やソフトウェアから直接演奏できます。</p>
+<h2>ハードウェア MIDI IN</h2>
+<p>5 ピン DIN コネクタ（または 3.5mm TRS）を使って、キーボードや MIDI コントローラーを接続できます。Serial7 ポートを使用しています。</p>
+<h2>対応メッセージ</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">メッセージ</th>
+<th style="text-align: left;">説明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>ノートオン</strong></td>
+<td style="text-align: left;">鍵盤を押す（音を鳴らす）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>ノートオフ</strong></td>
+<td style="text-align: left;">鍵盤を離す（音を止める）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>ピッチベンド</strong></td>
+<td style="text-align: left;">音程を滑らかに変化</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>全 16 チャンネルを受信します（OMNI モード）</li>
+<li>USB MIDI とハードウェア MIDI は同時に使用できます</li>
+</ul>
+<hr />
+<h1>17. FM 合成の基礎知識</h1>
+<h2>オペレーターとは？</h2>
+<p>FM シンセサイザーの基本単位です。1 つのオペレーターは <strong>オシレーター（音を作る部分）</strong> と <strong>エンベロープ（音量の時間変化を決める部分）</strong> で構成されています。</p>
+<h2>キャリアとモジュレーター</h2>
+<ul>
+<li><strong>キャリア</strong>: 最終的に耳に聞こえる音を出すオペレーター</li>
+<li><strong>モジュレーター</strong>: キャリアの周波数を変調して音色を変えるオペレーター</li>
+</ul>
+<h2>アルゴリズム</h2>
+<p>6 つのオペレーターの接続方法のパターンを「アルゴリズム」と呼びます。全 32 種類あり、それぞれ異なる音色の特性があります。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">タイプ</th>
+<th style="text-align: left;">特徴</th>
+<th style="text-align: left;">例</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">直列接続が多い</td>
+<td style="text-align: left;">複雑な倍音構造 / 金属的な音</td>
+<td style="text-align: left;">ベル、チャイム</td>
+</tr>
+<tr>
+<td style="text-align: left;">並列接続が多い</td>
+<td style="text-align: left;">倍音加算的 / オルガンのような音</td>
+<td style="text-align: left;">オルガン、パッド</td>
+</tr>
+<tr>
+<td style="text-align: left;">混合型</td>
+<td style="text-align: left;">バランスの取れた音色</td>
+<td style="text-align: left;">ブラス、ストリングス</td>
+</tr>
+</tbody>
+</table>
+<h2>フィードバック</h2>
+<p>1 つのオペレーターが自分自身の出力で自分を変調する機能です。フィードバック量を上げるとノコギリ波に近い波形になり、倍音が豊かになります。</p>
+<h2>簡単な音作りのステップ</h2>
+<ol>
+<li><strong>プリセットを選ぶ</strong>: まずは内蔵プリセットを試して好みの方向性を見つけます</li>
+<li><strong>アルゴリズムを理解する</strong>: プリセット画面の図を見て「どのオペレーターがキャリアか」を確認します</li>
+<li><strong>レベルを調整する</strong>: モジュレーターのレベルを変えると音色が大きく変わります</li>
+<li><strong>周波数比を変える</strong>: モジュレーターの COARSE を 1, 2, 3... と変えると倍音構成が変わります</li>
+<li><strong>エンベロープで動きをつける</strong>: モジュレーターのエンベロープを変えると、時間とともに音色が変化します</li>
+<li><strong>エフェクトを追加</strong>: Reverb や Chorus で空間的な広がりを加えます</li>
+</ol>
+<hr />
+<h1>18. パラメータ一覧表</h1>
+<h2>オペレーター</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">パラメータ</th>
+<th style="text-align: center;">範囲</th>
+<th style="text-align: left;">説明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Enabled</td>
+<td style="text-align: center;">ON/OFF</td>
+<td style="text-align: left;">オペレーターの有効/無効</td>
+</tr>
+<tr>
+<td style="text-align: left;">Wave</td>
+<td style="text-align: center;">SINE/TRI/SAW/SQR</td>
+<td style="text-align: left;">波形選択</td>
+</tr>
+<tr>
+<td style="text-align: left;">Level</td>
+<td style="text-align: center;">0-99</td>
+<td style="text-align: left;">出力レベル</td>
+</tr>
+<tr>
+<td style="text-align: left;">Mode</td>
+<td style="text-align: center;">RATIO/FIXED</td>
+<td style="text-align: left;">周波数モード</td>
+</tr>
+<tr>
+<td style="text-align: left;">Coarse</td>
+<td style="text-align: center;">0-31</td>
+<td style="text-align: left;">周波数比（粗調整）</td>
+</tr>
+<tr>
+<td style="text-align: left;">Fine</td>
+<td style="text-align: center;">0-99</td>
+<td style="text-align: left;">周波数比（微調整）</td>
+</tr>
+<tr>
+<td style="text-align: left;">Detune</td>
+<td style="text-align: center;">−7〜+7</td>
+<td style="text-align: left;">デチューン</td>
+</tr>
+</tbody>
+</table>
+<h2>エンベロープ</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">パラメータ</th>
+<th style="text-align: center;">範囲</th>
+<th style="text-align: left;">説明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Rate 1-4</td>
+<td style="text-align: center;">0-99</td>
+<td style="text-align: left;">各フェーズの速さ</td>
+</tr>
+<tr>
+<td style="text-align: left;">Level 1-4</td>
+<td style="text-align: center;">0-99</td>
+<td style="text-align: left;">各フェーズの目標レベル</td>
+</tr>
+<tr>
+<td style="text-align: left;">Rate Scaling</td>
+<td style="text-align: center;">0-7</td>
+<td style="text-align: left;">高音ほどエンベロープが速くなる</td>
+</tr>
+</tbody>
+</table>
+<h2>キーボードレベルスケーリング</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">パラメータ</th>
+<th style="text-align: center;">範囲</th>
+<th style="text-align: left;">説明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Break Point</td>
+<td style="text-align: center;">0-99</td>
+<td style="text-align: left;">基準ノート</td>
+</tr>
+<tr>
+<td style="text-align: left;">Left/Right Depth</td>
+<td style="text-align: center;">0-99</td>
+<td style="text-align: left;">スケーリングの深さ</td>
+</tr>
+<tr>
+<td style="text-align: left;">Left/Right Curve</td>
+<td style="text-align: center;">-LN/-EX/+EX/+LN</td>
+<td style="text-align: left;">カーブの種類</td>
+</tr>
+</tbody>
+</table>
+<h2>LFO</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">パラメータ</th>
+<th style="text-align: center;">範囲</th>
+<th style="text-align: left;">説明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Wave</td>
+<td style="text-align: center;">TRI/SAW↓/SAW↑/SQR/SIN/S&amp;H</td>
+<td style="text-align: left;">波形</td>
+</tr>
+<tr>
+<td style="text-align: left;">Speed</td>
+<td style="text-align: center;">0-99</td>
+<td style="text-align: left;">速さ</td>
+</tr>
+<tr>
+<td style="text-align: left;">Delay</td>
+<td style="text-align: center;">0-99</td>
+<td style="text-align: left;">遅延時間</td>
+</tr>
+<tr>
+<td style="text-align: left;">PM Depth</td>
+<td style="text-align: center;">0-99</td>
+<td style="text-align: left;">ピッチ変調の深さ</td>
+</tr>
+<tr>
+<td style="text-align: left;">AM Depth</td>
+<td style="text-align: center;">0-99</td>
+<td style="text-align: left;">振幅変調の深さ</td>
+</tr>
+<tr>
+<td style="text-align: left;">P.M.Sens</td>
+<td style="text-align: center;">0-7</td>
+<td style="text-align: left;">ピッチ変調感度</td>
+</tr>
+<tr>
+<td style="text-align: left;">Key Sync</td>
+<td style="text-align: center;">ON/OFF</td>
+<td style="text-align: left;">ノートオン時リセット</td>
+</tr>
+<tr>
+<td style="text-align: left;">OSC Sync</td>
+<td style="text-align: center;">ON/OFF</td>
+<td style="text-align: left;">オシレーター位相リセット</td>
+</tr>
+</tbody>
+</table>
+<h2>マスター</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">パラメータ</th>
+<th style="text-align: center;">範囲</th>
+<th style="text-align: left;">説明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Level</td>
+<td style="text-align: center;">0-100%</td>
+<td style="text-align: left;">マスターボリューム</td>
+</tr>
+<tr>
+<td style="text-align: left;">Transpose</td>
+<td style="text-align: center;">−24〜+24</td>
+<td style="text-align: left;">トランスポーズ</td>
+</tr>
+<tr>
+<td style="text-align: left;">Feedback</td>
+<td style="text-align: center;">0-7</td>
+<td style="text-align: left;">フィードバック量</td>
+</tr>
+<tr>
+<td style="text-align: left;">Velocity Curve</td>
+<td style="text-align: center;">LINEAR/EXP/LOG/FIXED</td>
+<td style="text-align: left;">ベロシティカーブ</td>
+</tr>
+</tbody>
+</table>
+<h2>エフェクト</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">エフェクト</th>
+<th style="text-align: left;">パラメータ</th>
+<th style="text-align: center;">範囲</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Delay</td>
+<td style="text-align: left;">Time / Level / Feedback</td>
+<td style="text-align: center;">1-300ms / 0-99% / 0-99%</td>
+</tr>
+<tr>
+<td style="text-align: left;">LPF</td>
+<td style="text-align: left;">Cutoff / Q / Mix</td>
+<td style="text-align: center;">20Hz-20kHz / 0.1-10.0 / 0-100%</td>
+</tr>
+<tr>
+<td style="text-align: left;">HPF</td>
+<td style="text-align: left;">Cutoff / Q / Mix</td>
+<td style="text-align: center;">20Hz-20kHz / 0.1-10.0 / 0-100%</td>
+</tr>
+<tr>
+<td style="text-align: left;">Chorus</td>
+<td style="text-align: left;">Rate / Depth / Mix</td>
+<td style="text-align: center;">― / ― / 0-100%</td>
+</tr>
+<tr>
+<td style="text-align: left;">Reverb</td>
+<td style="text-align: left;">Room / Damp / Mix</td>
+<td style="text-align: center;">0-99 / 0-99 / 0-100%</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>Cranberry Synth — 6-Operator FM Synthesizer on Teensy 4.1</em></p>
+<p><em>Made by Saisana299</em></p>
+</body>
+</html>

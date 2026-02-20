@@ -113,13 +113,14 @@ void Chorus::process(Sample16_t& left, Sample16_t& right) {
 
     // LFO値 (-32767~+32767) → モジュレーション量 (Q8サンプル数)
     // delay = base_delay + lfo_value * mod_range / 32767
-    // Q8形式で計算 (小数部8bit)
-    int32_t mod_l = (static_cast<int32_t>(lfo_l) * static_cast<int32_t>(mod_range)) / Q15_MAX;
-    int32_t mod_r = (static_cast<int32_t>(lfo_r) * static_cast<int32_t>(mod_range)) / Q15_MAX;
+    // Q8形式で計算 (小数部8bit) — サブサンプル精度でジッパーノイズを防止
+    int32_t mod_range_q8 = static_cast<int32_t>(mod_range << 8);
+    int32_t mod_l_q8 = (static_cast<int32_t>(lfo_l) * mod_range_q8) / Q15_MAX;
+    int32_t mod_r_q8 = (static_cast<int32_t>(lfo_r) * mod_range_q8) / Q15_MAX;
 
     uint32_t base_delay_q8 = BASE_DELAY_SAMPLES << 8;
-    uint32_t delay_l_q8 = static_cast<uint32_t>(static_cast<int32_t>(base_delay_q8) + (mod_l << 8));
-    uint32_t delay_r_q8 = static_cast<uint32_t>(static_cast<int32_t>(base_delay_q8) + (mod_r << 8));
+    uint32_t delay_l_q8 = static_cast<uint32_t>(static_cast<int32_t>(base_delay_q8) + mod_l_q8);
+    uint32_t delay_r_q8 = static_cast<uint32_t>(static_cast<int32_t>(base_delay_q8) + mod_r_q8);
 
     // 安全範囲にクランプ (1 ~ CHORUS_BUFFER_SIZE-2 サンプル, Q8)
     constexpr uint32_t MIN_DELAY_Q8 = 1 << 8;

@@ -15,11 +15,13 @@ private:
     MIDI_NAMESPACE::SerialMIDI<HardwareSerial> serialMIDI = Serial7;
     MIDI_NAMESPACE::MidiInterface<MIDI_NAMESPACE::SerialMIDI<HardwareSerial>> MIDI = serialMIDI;
 
-    // Callback (Note On/Off + Pitch Bend)
+    // Callback (Note On/Off + Pitch Bend + Control Change)
     static void handleNoteOnStatic(uint8_t ch, uint8_t note, uint8_t velocity);
     static void handleNoteOffStatic(uint8_t ch, uint8_t note, uint8_t velocity);
     static void handlePitchBendStaticUsb(uint8_t ch, int bend);
     static void handlePitchBendStaticSerial(uint8_t ch, int bend);
+    static void handleControlChangeStaticUsb(uint8_t ch, uint8_t cc, uint8_t value);
+    static void handleControlChangeStaticSerial(uint8_t ch, uint8_t cc, uint8_t value);
 
     // インスタンス保持用
     static inline MIDIHandler* instance = nullptr;
@@ -52,6 +54,15 @@ private:
      * @param velocity ベロシティ
      */
     void handleNoteOff(uint8_t ch, uint8_t note, uint8_t velocity);
+
+    /**
+     * @brief Control Change受信時の処理
+     *
+     * @param ch チャンネル番号
+     * @param cc CC番号
+     * @param value 値
+     */
+    void handleControlChange(uint8_t ch, uint8_t cc, uint8_t value);
 
 public:
     MIDIHandler(State& state) : state_(state) {

@@ -509,10 +509,29 @@ void Synth::noteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
 void Synth::noteOff(uint8_t note, uint8_t channel) {
     if (midi_note_to_index[note] != -1) {
         uint8_t i = midi_note_to_index[note];
-        for(uint8_t op = 0; op < MAX_OPERATORS; ++op) {
-            auto& oper = operators[op];
-            auto& env_mem = ope_states[op].env_mems[i];
-            oper.env.release(env_mem);
+        // スロットが有効範囲内かつ、実際にそのノートが割り当てられていることを検証
+        if (i < MAX_NOTES && notes[i].note == note && notes[i].order > 0) {
+            for(uint8_t op = 0; op < MAX_OPERATORS; ++op) {
+                auto& oper = operators[op];
+                auto& env_mem = ope_states[op].env_mems[i];
+                oper.env.release(env_mem);
+            }
+        }
+    }
+}
+
+/**
+ * @brief 全ノートをリリースに移行（All Notes Off）
+ *
+ * エンベロープのリリースフェーズを経由して自然に消音する。
+ * CC#123 (All Notes Off) 受信時に使用。
+ */
+void Synth::allNotesOff() {
+    for (uint8_t i = 0; i < MAX_NOTES; ++i) {
+        if (notes[i].order > 0) {
+            for (uint8_t op = 0; op < MAX_OPERATORS; ++op) {
+                operators[op].env.release(ope_states[op].env_mems[i]);
+            }
         }
     }
 }

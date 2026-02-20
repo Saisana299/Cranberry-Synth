@@ -77,7 +77,7 @@ public:
                 if (preset_id > 0) {
                     preset_id--;
                 } else {
-                    preset_id = 31; // 最後のプリセットへ
+                    preset_id = DefaultPresets::count() - 1; // 最後のプリセットへ
                 }
                 synth.reset(); // ノートをリセット
                 synth.loadPreset(preset_id);
@@ -102,7 +102,7 @@ public:
             if (cursor == C_PRESET) {
                 // プリセット変更（次へ）
                 uint8_t preset_id = synth.getCurrentPresetId();
-                if (preset_id < 31) {
+                if (preset_id < DefaultPresets::count() - 1) {
                     preset_id++;
                 } else {
                     preset_id = 0; // 最初のプリセットへ

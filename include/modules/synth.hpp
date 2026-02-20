@@ -148,6 +148,7 @@ public:
     FASTRUN void update();
     void noteOn(uint8_t note, uint8_t velocity, uint8_t channel);
     void noteOff(uint8_t note, uint8_t channel);
+    void allNotesOff();
     void reset();
 
     void setAlgorithm(uint8_t algo_id);
