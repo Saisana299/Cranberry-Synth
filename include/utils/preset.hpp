@@ -2876,7 +2876,7 @@ private:
                 },
                 // Operator 6 (OP6)
                 {
-                    0, 49, 2.5f, 60.0f, 0, false,
+                    0, 49, 2.0f, 60.0f, 0, true,
                     99, 49, 28, 12,  // rate
                     91, 82, 0, 0,  // level
                     3,               // rate_scaling
@@ -2985,7 +2985,7 @@ private:
             {{
                 // Operator 1 (OP1)
                 {
-                    0, 90, 3.5f, 32.0f, 0, false,
+                    0, 90, 3.0f, 32.0f, 0, true,
                     60, 39, 28, 49,  // rate
                     99, 99, 99, 0,  // level
                     4,               // rate_scaling
@@ -2996,7 +2996,7 @@ private:
                 },
                 // Operator 2 (OP2)
                 {
-                    0, 93, 9.5f, 53.0f, 0, false,
+                    0, 93, 9.0f, 53.0f, 0, true,
                     60, 39, 28, 45,  // rate
                     99, 99, 99, 0,  // level
                     4,               // rate_scaling
@@ -3007,7 +3007,7 @@ private:
                 },
                 // Operator 3 (OP3)
                 {
-                    0, 66, 1.5f, 67.0f, 0, false,
+                    0, 66, 1.0f, 67.0f, 0, true,
                     60, 39, 8, 0,  // rate
                     99, 99, 99, 0,  // level
                     4,               // rate_scaling
@@ -3018,7 +3018,7 @@ private:
                 },
                 // Operator 4 (OP4)
                 {
-                    0, 75, 7.5f, 82.0f, 0, false,
+                    0, 75, 7.0f, 82.0f, 0, true,
                     94, 68, 24, 55,  // rate
                     96, 89, 0, 0,  // level
                     1,               // rate_scaling
@@ -3029,7 +3029,7 @@ private:
                 },
                 // Operator 5 (OP5)
                 {
-                    0, 64, 4.5f, 0.0f, 0, false,
+                    0, 64, 4.0f, 0.0f, 0, true,
                     99, 0, 0, 0,  // rate
                     99, 0, 0, 0,  // level
                     0,               // rate_scaling
@@ -3040,7 +3040,7 @@ private:
                 },
                 // Operator 6 (OP6)
                 {
-                    0, 78, 5.5f, 0.0f, 0, false,
+                    0, 78, 5.0f, 0.0f, 0, true,
                     94, 56, 24, 55,  // rate
                     96, 78, 0, 0,  // level
                     1,               // rate_scaling
@@ -3171,7 +3171,7 @@ private:
                 },
                 // Operator 3 (OP3)
                 {
-                    0, 99, 13.0f, 57.0f, 2, true,
+                    0, 99, 22.0f, 57.0f, 2, true,
                     98, 29, 28, 33,  // rate
                     99, 0, 0, 0,  // level
                     0,               // rate_scaling
@@ -3182,7 +3182,7 @@ private:
                 },
                 // Operator 4 (OP4)
                 {
-                    0, 89, 10.5f, 99.0f, -2, false,
+                    0, 89, 10.0f, 99.0f, -2, true,
                     98, 29, 28, 27,  // rate
                     99, 0, 0, 0,  // level
                     0,               // rate_scaling
