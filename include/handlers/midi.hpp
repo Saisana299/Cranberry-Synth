@@ -15,9 +15,11 @@ private:
     MIDI_NAMESPACE::SerialMIDI<HardwareSerial> serialMIDI = Serial7;
     MIDI_NAMESPACE::MidiInterface<MIDI_NAMESPACE::SerialMIDI<HardwareSerial>> MIDI = serialMIDI;
 
-    // Callback
+    // Callback (Note On/Off + Pitch Bend)
     static void handleNoteOnStatic(uint8_t ch, uint8_t note, uint8_t velocity);
     static void handleNoteOffStatic(uint8_t ch, uint8_t note, uint8_t velocity);
+    static void handlePitchBendStaticUsb(uint8_t ch, int bend);
+    static void handlePitchBendStaticSerial(uint8_t ch, int bend);
 
     // インスタンス保持用
     static inline MIDIHandler* instance = nullptr;

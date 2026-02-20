@@ -84,6 +84,11 @@ private:
     int8_t transpose = 0; // トランスポーズ (-24 ～ +24)
     VelocityCurve velocity_curve_ = VelocityCurve::Linear; // ベロシティカーブ
 
+    // ピッチベンド
+    volatile int16_t pitch_bend_raw_ = 0;     // 生値 (-8192 ～ +8191)　コールバックから書き込み
+    volatile int32_t pitch_bend_mod_ = 0;     // Q15 位相変調量（generate()で使用）LTO対策でvolatile
+    uint8_t pitch_bend_range_ = 2;            // ベンドレンジ（半音単位、デフォルト±2）
+
     FASTRUN void generate();
     void updateOrder(uint8_t removed);
     void noteReset(uint8_t index);
@@ -266,6 +271,16 @@ public:
     // トランスポーズ
     int8_t getTranspose() const { return transpose; }
     void setTranspose(int8_t t) { transpose = std::clamp<int8_t>(t, -24, 24); }
+
+    // ピッチベンド
+    void setPitchBend(int16_t value);  // コールバックから呼ばれる（値格納のみ）
+    int16_t getPitchBendRaw() const { return pitch_bend_raw_; }
+    uint8_t getPitchBendRange() const { return pitch_bend_range_; }
+    void setPitchBendRange(uint8_t semitones) {
+        pitch_bend_range_ = std::clamp<uint8_t>(semitones, 0, 24);
+        // レンジ変更時に現在のベンド値で再計算
+        setPitchBend(pitch_bend_raw_);
+    }
 
     // ベロシティカーブ
     VelocityCurve getVelocityCurve() const { return velocity_curve_; }

@@ -4,8 +4,10 @@
 void MIDIHandler::begin() {
     usbMIDI.setHandleNoteOn(handleNoteOnStatic);
     usbMIDI.setHandleNoteOff(handleNoteOffStatic);
+    usbMIDI.setHandlePitchChange(handlePitchBendStaticUsb);
     MIDI.setHandleNoteOn(handleNoteOnStatic);
     MIDI.setHandleNoteOff(handleNoteOffStatic);
+    MIDI.setHandlePitchBend(handlePitchBendStaticSerial);
     MIDI.begin(MIDI_CHANNEL_OMNI);
 }
 
@@ -14,8 +16,10 @@ void MIDIHandler::stop() {
     state_.setLedMidi(false);
     usbMIDI.setHandleNoteOn(nullptr);
     usbMIDI.setHandleNoteOff(nullptr);
+    usbMIDI.setHandlePitchChange(nullptr);
     MIDI.setHandleNoteOn(nullptr);
     MIDI.setHandleNoteOff(nullptr);
+    MIDI.setHandlePitchBend(nullptr);
 }
 
 /**
@@ -52,12 +56,14 @@ void MIDIHandler::handleNoteOff(uint8_t ch, uint8_t note, uint8_t velocity) {
 void MIDIHandler::process() {
     bool midi_activity = false;
 
-    if(usbMIDI.read()) {
-        // コールバックで自動処理
+    // USB MIDI: バッファ内の全メッセージを処理（whileで排出）
+    // Note On/Off, Pitch Bend はすべてコールバックで自動処理
+    while(usbMIDI.read()) {
         midi_activity = true;
     }
-    if(MIDI.read()) {
-        // コールバックで自動処理
+
+    // Serial MIDI: バッファ内の全メッセージを処理
+    while(MIDI.read()) {
         midi_activity = true;
     }
 
@@ -74,4 +80,24 @@ void MIDIHandler::handleNoteOnStatic(uint8_t ch, uint8_t note, uint8_t velocity)
 /** @brief instance->handleNoteOff */
 void MIDIHandler::handleNoteOffStatic(uint8_t ch, uint8_t note, uint8_t velocity) {
     if (instance) instance->handleNoteOff(ch, note, velocity);
+}
+
+/**
+ * @brief USB MIDIピッチベンドコールバック
+ * Teensy usbMIDI.setHandlePitchChange: 値は 0-16383 (中心=8192)
+ */
+void MIDIHandler::handlePitchBendStaticUsb(uint8_t ch, int bend) {
+    if (instance && instance->state_.getModeState() == MODE_SYNTH) {
+        Synth::getInstance().setPitchBend(static_cast<int16_t>(bend - 8192));
+    }
+}
+
+/**
+ * @brief Serial MIDIピッチベンドコールバック
+ * Arduino MIDI Library setHandlePitchBend: 値は -8192～+8191 (中心=0)
+ */
+void MIDIHandler::handlePitchBendStaticSerial(uint8_t ch, int bend) {
+    if (instance && instance->state_.getModeState() == MODE_SYNTH) {
+        Synth::getInstance().setPitchBend(static_cast<int16_t>(bend));
+    }
 }

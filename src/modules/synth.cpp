@@ -60,6 +60,12 @@ FASTRUN void Synth::generate() {
     const int32_t lfo_pitch_mod = lfo_.getPitchMod();   // 符号付き Q15
     const Gain_t  lfo_amp_mod   = lfo_.getAmpMod();     // [0, Q15_MAX]
 
+    // ピッチベンド変調量を読み取り（バッファにつき1回のみ）
+    const int32_t pb_mod = pitch_bend_mod_;
+
+    // ピッチ変調合計 (LFO + ピッチベンド)
+    const int32_t total_pitch_mod = lfo_pitch_mod + pb_mod;
+
     // リセット待ちのノートを記録
     uint8_t notes_to_reset[MAX_NOTES];
     uint8_t reset_count = 0;
@@ -151,10 +157,10 @@ FASTRUN void Synth::generate() {
 
                 op_obj.osc.update(osc_mem);
 
-                // 6. LFO ピッチモジュレーション（位相オフセット追加）
-                if (lfo_pitch_mod != 0) {
+                // 6. LFO + ピッチベンド ピッチモジュレーション（位相オフセット追加）
+                if (total_pitch_mod != 0) {
                     osc_mem.phase += static_cast<Phase_t>(
-                        (static_cast<int64_t>(osc_mem.delta) * lfo_pitch_mod) >> Q15_SHIFT
+                        (static_cast<int64_t>(osc_mem.delta) * total_pitch_mod) >> Q15_SHIFT
                     );
                 }
             }
@@ -211,10 +217,10 @@ FASTRUN void Synth::generate() {
 
                 op_obj.osc.update(osc_mem);
 
-                // 6. LFO ピッチモジュレーション（位相オフセット追加）
-                if (lfo_pitch_mod != 0) {
+                // 6. LFO + ピッチベンド ピッチモジュレーション（位相オフセット追加）
+                if (total_pitch_mod != 0) {
                     osc_mem.phase += static_cast<Phase_t>(
-                        (static_cast<int64_t>(osc_mem.delta) * lfo_pitch_mod) >> Q15_SHIFT
+                        (static_cast<int64_t>(osc_mem.delta) * total_pitch_mod) >> Q15_SHIFT
                     );
                 }
             }
@@ -549,6 +555,30 @@ void Synth::reset() {
     for(uint8_t i = 0; i < MAX_NOTES; ++i) {
         noteReset(i);
     }
+}
+
+/**
+ * @brief ピッチベンド値を設定（コールバックから呼ばれる）
+ *
+ * 値の格納と Q15 変調量の事前計算のみ行う。
+ * 実際の周波数変更は generate() 内で位相オフセットとして適用される。
+ *
+ * @param value ピッチベンド生値 (-8192 ～ +8191)
+ */
+void Synth::setPitchBend(int16_t value) {
+    pitch_bend_raw_ = value;
+
+    if (value == 0 || pitch_bend_range_ == 0) {
+        pitch_bend_mod_ = 0;
+        return;
+    }
+
+    // 半音数を算出: bend_semitones = value * range / 8192
+    // 周波数比: ratio = 2^(bend_semitones / 12)
+    // Q15変調量: (ratio - 1) * 32767
+    const float semitones = (static_cast<float>(value) / 8192.0f) * pitch_bend_range_;
+    const float ratio = exp2f(semitones / 12.0f);
+    pitch_bend_mod_ = static_cast<int32_t>((ratio - 1.0f) * Q15_MAX);
 }
 
 void Synth::setAlgorithm(uint8_t algo_id) {
