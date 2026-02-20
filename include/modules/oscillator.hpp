@@ -168,9 +168,9 @@ private:
     // FM変調の位相シフト量
     // mod_input(Q23)を位相(2^32)スケールに変換
     // 位相2^32で1周期
-    // → Q23 << 8 = Q31 ≒ 2^32スケール (実質2^31で半周期)
-    // 微調整: 変調深度を合わせるため << 9
-    static constexpr int MOD_PHASE_SHIFT = 9;
+    // Q23 << 8 = Q31 ≒ 2^32スケール (実質2^31で半周期 ≈ π)
+    // 最大変調インデックス ≈ π
+    static constexpr int MOD_PHASE_SHIFT = 8;
 
     struct WavetableInfo {
         const Audio24_t* data;

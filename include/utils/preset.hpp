@@ -6,7 +6,7 @@
 #include "types.hpp"
 
 // プリセット最大数
-constexpr uint8_t MAX_PRESETS = 10;
+constexpr uint8_t MAX_PRESETS = 16;
 
 /**
  * @brief オペレータープリセット構造体
@@ -943,6 +943,479 @@ private:
                 2       // pitch_mod_sens
             },  // lfo
             { 70, -12, 7 }  // master (level=70, transpose=-12, feedback=7)
+        },
+
+        // =====================================================
+        // DX7 風プリセット
+        // =====================================================
+
+        // --- Preset 11: BRASS 1 ---
+        // DX7 ROM1A #1 "BRASS   1"
+        // Algorithm 22 (index 21)
+        {
+            "BRASS 1",
+            21,             // algorithm_id (algo 22)
+            {{
+                // Operator 1 (OP1)
+                {
+                    0, 98, 0.0f, 0.0f, 7, false,
+                    72, 76, 99, 71,  // rate
+                    99, 88, 96, 0,   // level
+                    0,               // rate_scaling
+                    39, 0, 14, 3, 3, // KLS: bp=39, ld=0, rd=14, lc=+LN, rc=+LN
+                    0,               // velocity_sens (KVS=0)
+                    true
+                },
+                // Operator 2 (OP2)
+                {
+                    0, 86, 0.0f, 0.0f, 7, false,
+                    62, 51, 29, 71,
+                    82, 95, 96, 0,
+                    0,
+                    27, 0, 7, 3, 1,  // KLS: bp=27, ld=0, rd=7, lc=+LN, rc=-EX
+                    0,
+                    true
+                },
+                // Operator 3 (OP3)
+                {
+                    0, 99, 1.0f, 0.0f, -2, false,
+                    77, 76, 82, 71,
+                    99, 98, 98, 0,
+                    0,
+                    39, 0, 0, 3, 3,
+                    2,
+                    true
+                },
+                // Operator 4 (OP4)
+                {
+                    0, 99, 1.0f, 0.0f, 0, false,
+                    77, 36, 41, 71,
+                    99, 98, 98, 0,
+                    0,
+                    39, 0, 0, 3, 3,
+                    2,
+                    true
+                },
+                // Operator 5 (OP5)
+                {
+                    0, 98, 1.0f, 0.0f, 1, false,
+                    77, 36, 41, 71,
+                    99, 98, 98, 0,
+                    0,
+                    39, 0, 0, 3, 3,
+                    2,
+                    true
+                },
+                // Operator 6 (OP6)
+                {
+                    0, 82, 1.0f, 0.0f, 0, false,
+                    49, 99, 28, 68,
+                    98, 98, 91, 0,
+                    4,
+                    39, 54, 50, 1, 1, // KLS: bp=39, ld=54, rd=50, lc=-EX, rc=-EX
+                    2,
+                    true
+                }
+            }},
+            {},  // effects
+            {
+                4, 37, 0,   // wave=Sine, speed=37, delay=0
+                5, 0,        // pm_depth=5, am_depth=0
+                3,            // pitch_mod_sens=3
+                false         // key_sync=false
+            },  // lfo
+            { 70, 0, 7 }  // master: level=70, transpose=0, feedback=7
+        },
+
+        // --- Preset 12: STRINGS 1 ---
+        // DX7 ROM1A #4 "STRINGS 1"
+        // Algorithm 2 (index 1): [1]->[0], [3]->[2], [5*]->[4]
+        {
+            "STRINGS 1",
+            1,              // algorithm_id (algo 2)
+            {{
+                // Operator 1 (OP1)
+                {
+                    0, 99, 1.0f, 0.0f, 0, false,
+                    45, 24, 20, 41,  // rate
+                    99, 85, 70, 0,   // level
+                    2,               // rate_scaling
+                    0, 0, 0, 0, 0,   // KLS: bp=0, ld=0, rd=0, lc=0, rc=0
+                    3,               // velocity_sens (KVS)
+                    true
+                },
+                // Operator 2 (OP2)
+                {
+                    0, 83, 1.0f, 0.0f, 0, false,
+                    75, 71, 17, 49,
+                    82, 92, 62, 0,
+                    1,
+                    54, 0, 0, 0, 0,
+                    0,
+                    true
+                },
+                // Operator 3 (OP3)
+                {
+                    0, 86, 1.0f, 0.0f, 0, false,
+                    44, 45, 20, 54,
+                    99, 85, 82, 0,
+                    0,
+                    56, 0, 97, 0, 0,
+                    7,
+                    true
+                },
+                // Operator 4 (OP4)
+                {
+                    0, 77, 1.0f, 0.0f, 0, false,
+                    96, 19, 20, 54,
+                    99, 92, 86, 0,
+                    2,
+                    0, 0, 0, 0, 0,
+                    2,
+                    true
+                },
+                // Operator 5 (OP5)
+                {
+                    0, 84, 3.0f, 0.0f, 0, false,
+                    53, 19, 20, 54,
+                    86, 92, 86, 0,
+                    2,
+                    0, 0, 0, 0, 0,
+                    2,
+                    true
+                },
+                // Operator 6 (OP6)
+                {
+                    0, 53, 14.0f, 0.0f, 0, false,
+                    53, 19, 20, 54,
+                    99, 92, 86, 0,
+                    2,
+                    0, 0, 0, 0, 0,
+                    2,
+                    true
+                }
+            }},
+            {},  // effects
+            {
+                0, 30, 0,   // wave=Triangle, speed=30, delay=0
+                8, 0,        // pm_depth=8, am_depth=0
+                2,            // pitch_mod_sens=2
+                false         // key_sync=false
+            },  // lfo
+            { 70, 0, 7 }  // master: level=70, transpose=0, feedback=7
+        },
+
+        // --- Preset 13: BASS 1 ---
+        // DX7 ROM1A #15 "BASS    1"
+        // Algorithm 16 (index 15)
+        {
+            "BASS 1",
+            15,             // algorithm_id (algo 16)
+            {{
+                // Operator 1 (OP1)
+                {
+                    0, 99, 0.0f, 0.0f, 0, false,
+                    95, 62, 17, 58,  // rate
+                    99, 95, 32, 0,   // level
+                    7,               // rate_scaling
+                    36, 57, 14, 3, 0,// KLS: bp=36, ld=57, rd=14, lc=-LN→3, rc=-LN→0
+                    0,               // velocity_sens
+                    true
+                },
+                // Operator 2 (OP2)
+                {
+                    0, 80, 0.0f, 0.0f, 0, false,
+                    99, 20, 0, 0,
+                    99, 0, 0, 0,
+                    7,
+                    41, 0, 0, 0, 0,
+                    0,
+                    true
+                },
+                // Operator 3 (OP3)
+                {
+                    0, 99, 0.0f, 0.0f, 0, false,
+                    88, 96, 32, 30,
+                    79, 65, 0, 0,
+                    6,
+                    0, 0, 0, 0, 0,
+                    3,
+                    true
+                },
+                // Operator 4 (OP4)
+                {
+                    0, 93, 5.0f, 0.0f, 0, false,
+                    90, 42, 7, 55,
+                    90, 30, 0, 0,
+                    5,
+                    0, 0, 0, 0, 0,
+                    5,
+                    true
+                },
+                // Operator 5 (OP5)
+                {
+                    0, 62, 0.0f, 0.0f, 0, false,
+                    99, 0, 0, 0,
+                    99, 0, 0, 0,
+                    7,
+                    52, 75, 0, 0, 0,
+                    3,
+                    true
+                },
+                // Operator 6 (OP6)
+                {
+                    0, 85, 9.0f, 0.0f, 0, false,
+                    94, 56, 24, 55,
+                    93, 28, 0, 0,
+                    1,
+                    0, 0, 0, 0, 0,
+                    7,
+                    true
+                }
+            }},
+            {},  // effects
+            {
+                0, 35, 0,   // wave=Triangle, speed=35, delay=0
+                0, 0,        // pm_depth=0, am_depth=0
+                3,            // pitch_mod_sens=3
+                false         // key_sync=false
+            },  // lfo
+            { 70, 0, 7 }  // master: level=70, transpose=0, feedback=7
+        },
+
+        // --- Preset 14: FLUTE 1 ---
+        // DX7 ROM1A #24 "FLUTE   1"
+        // Algorithm 16 (index 15)
+        {
+            "FLUTE 1",
+            15,             // algorithm_id (algo 16)
+            {{
+                // Operator 1 (OP1)
+                {
+                    0, 98, 1.0f, 0.0f, -2, false,
+                    61, 67, 70, 65,  // rate
+                    93, 89, 98, 0,   // level
+                    0,               // rate_scaling
+                    41, 0, 0, 0, 0,  // KLS
+                    2,               // velocity_sens
+                    true
+                },
+                // Operator 2 (OP2)
+                {
+                    0, 75, 1.0f, 0.0f, 4, false,
+                    99, 97, 62, 54,
+                    99, 99, 90, 0,
+                    4,
+                    0, 0, 0, 0, 0,
+                    2,
+                    true
+                },
+                // Operator 3 (OP3)
+                {
+                    0, 76, 1.0f, 0.0f, -3, false,
+                    53, 38, 75, 61,
+                    88, 44, 24, 0,
+                    0,
+                    46, 0, 0, 3, 0,  // KLS: bp=46, lc=3(+LN)
+                    0,               // velocity_sens
+                    true,
+                    1                // amp_mod_sens=1
+                },
+                // Operator 4 (OP4)
+                {
+                    0, 0, 2.0f, 0.0f, 0, false,
+                    61, 25, 25, 60,
+                    99, 99, 97, 0,
+                    3,
+                    60, 10, 10, 0, 0,
+                    0,
+                    true
+                },
+                // Operator 5 (OP5)
+                {
+                    0, 56, 2.0f, 0.0f, 0, false,
+                    65, 38, 0, 61,
+                    99, 0, 0, 0,
+                    0,
+                    53, 0, 43, 0, 0,
+                    0,
+                    true
+                },
+                // Operator 6 (OP6)
+                {
+                    0, 83, 1.0f, 53.0f, 4, false,
+                    99, 64, 98, 61,
+                    99, 67, 52, 0,
+                    0,
+                    46, 0, 0, 0, 3,  // KLS: bp=46, rc=3(+LN)
+                    2,
+                    true
+                }
+            }},
+            {},  // effects
+            {
+                0, 30, 23,   // wave=Triangle, speed=30, delay=23
+                8, 13,        // pm_depth=8, am_depth=13
+                1,            // pitch_mod_sens=1
+                false, false  // key_sync=false, osc_key_sync=false
+            },  // lfo
+            { 70, 0, 5 }  // master: level=70, transpose=0, feedback=5
+        },
+
+        // --- Preset 15: E.ORGAN 1 ---
+        // DX7 ROM1A #17 "E.ORGAN 1"
+        // Algorithm 32 (index 31): 全OP独立出力
+        {
+            "E.ORGAN 1",
+            31,             // algorithm_id (algo 32)
+            {{
+                // Operator 1 (OP1)
+                {
+                    0, 94, 0.0f, 0.0f, -2, false,
+                    99, 80, 22, 90,  // rate
+                    99, 99, 99, 0,   // level
+                    0,               // rate_scaling
+                    0, 0, 0, 0, 0,   // KLS
+                    0,               // velocity_sens
+                    true
+                },
+                // Operator 2 (OP2)
+                {
+                    0, 94, 1.0f, 1.0f, -6, false,
+                    99, 20, 22, 90,
+                    99, 99, 97, 0,
+                    0,
+                    0, 0, 10, 0, 0,
+                    0,
+                    true
+                },
+                // Operator 3 (OP3)
+                {
+                    0, 94, 1.0f, 50.0f, 4, false,
+                    99, 80, 54, 82,
+                    99, 99, 99, 0,
+                    0,
+                    0, 0, 0, 0, 0,
+                    0,
+                    true
+                },
+                // Operator 4 (OP4)
+                {
+                    0, 94, 0.0f, 0.0f, 5, false,
+                    99, 80, 22, 90,
+                    99, 99, 99, 0,
+                    0,
+                    0, 0, 0, 0, 0,
+                    0,
+                    true
+                },
+                // Operator 5 (OP5)
+                {
+                    0, 94, 1.0f, 0.0f, 2, false,
+                    99, 80, 22, 90,
+                    99, 99, 99, 0,
+                    0,
+                    0, 0, 0, 0, 0,
+                    0,
+                    true
+                },
+                // Operator 6 (OP6)
+                {
+                    0, 94, 3.0f, 0.0f, 0, false,
+                    99, 54, 22, 90,
+                    99, 0, 0, 0,
+                    0,
+                    0, 0, 0, 0, 0,
+                    0,
+                    true
+                }
+            }},
+            {},  // effects
+            {
+                0, 35, 0,   // wave=Triangle, speed=35, delay=0
+                0, 0,        // pm_depth=0, am_depth=0
+                4,            // pitch_mod_sens=4
+                false         // key_sync=false
+            },  // lfo
+            { 70, 0, 0 }  // master: level=70, transpose=0, feedback=0
+        },
+
+        // --- Preset 16: CLAV 1 ---
+        // DX7 ROM1A #20 "CLAV    1"
+        // Algorithm 3 (index 2)
+        {
+            "CLAV 1",
+            2,              // algorithm_id (algo 3)
+            {{
+                // Operator 1 (OP1)
+                {
+                    0, 99, 0.0f, 0.0f, 1, false,
+                    95, 92, 28, 60,  // rate
+                    99, 90, 0, 0,    // level
+                    3,               // rate_scaling
+                    32, 0, 0, 0, 0,  // KLS
+                    3,               // velocity_sens
+                    true
+                },
+                // Operator 2 (OP2)
+                {
+                    0, 99, 0.0f, 0.0f, -1, false,
+                    95, 95, 0, 0,
+                    99, 96, 89, 0,
+                    3,
+                    32, 0, 0, 0, 0,
+                    1,
+                    true
+                },
+                // Operator 3 (OP3)
+                {
+                    0, 71, 4.0f, 50.0f, 0, false,
+                    98, 87, 0, 0,
+                    87, 86, 0, 0,
+                    3,
+                    32, 0, 21, 0, 0,
+                    1,
+                    true
+                },
+                // Operator 4 (OP4)
+                {
+                    0, 99, 2.0f, 0.0f, 0, false,
+                    95, 92, 28, 60,
+                    99, 90, 0, 0,
+                    3,
+                    32, 0, 0, 0, 0,
+                    2,
+                    true
+                },
+                // Operator 5 (OP5)
+                {
+                    0, 99, 0.0f, 0.0f, -2, false,
+                    95, 95, 0, 0,
+                    99, 96, 89, 0,
+                    3,
+                    32, 0, 0, 0, 0,
+                    6,
+                    true
+                },
+                // Operator 6 (OP6)
+                {
+                    0, 78, 8.0f, 0.0f, 0, false,
+                    98, 87, 0, 0,
+                    87, 86, 0, 0,
+                    3,
+                    32, 0, 21, 0, 0,
+                    7,
+                    true
+                }
+            }},
+            {},  // effects
+            {
+                4, 30, 0,   // wave=Sine, speed=30, delay=0
+                0, 0,        // pm_depth=0, am_depth=0
+                2,            // pitch_mod_sens=2
+                false         // key_sync=false
+            },  // lfo
+            { 70, 0, 5 }  // master: level=70, transpose=0, feedback=5
         },
     };
 };

@@ -708,8 +708,7 @@ void Synth::loadPreset(uint8_t preset_id) {
     velocity_curve_ = static_cast<VelocityCurve>(master_p.velocity_curve < static_cast<uint8_t>(VelocityCurve::COUNT) ? master_p.velocity_curve : 0);
 
     // マスタースケールを調整
-    if (active_carriers == 0) active_carriers = 1; // 0除算防止
-    output_scale = static_cast<Gain_t>((static_cast<int32_t>(master_volume / active_carriers) * polyphony_divisor) >> Q15_SHIFT);
+    output_scale = static_cast<Gain_t>((static_cast<int32_t>(master_volume) * polyphony_divisor) >> Q15_SHIFT);
 }
 
 const char* Synth::getCurrentPresetName() const {
@@ -904,8 +903,7 @@ void Synth::randomizePreset() {
     master_volume = static_cast<Gain_t>(Q15_MAX * 0.707); // -3dB
 
     // マスタースケールを調整
-    if (active_carriers == 0) active_carriers = 1;
-    output_scale = static_cast<Gain_t>((static_cast<int32_t>(master_volume / active_carriers) * polyphony_divisor) >> Q15_SHIFT);
+    output_scale = static_cast<Gain_t>((static_cast<int32_t>(master_volume) * polyphony_divisor) >> Q15_SHIFT);
 
     // プリセット名は"RANDOM"を示すため、IDは特殊値に
     current_preset_id = 255;

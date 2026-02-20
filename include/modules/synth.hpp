@@ -68,10 +68,11 @@ private:
 
     Gain_t master_volume = static_cast<Gain_t>(Q15_MAX * 0.707); // 71% = 23170 (-3dB)
     Gain_t polyphony_divisor = Q15_MAX / MAX_NOTES; // 32767 / 16 = 2047
-    uint8_t active_carriers = 1; // アクティブなキャリア数（最低1）
+    uint8_t active_carriers = 1; // アクティブなキャリア数（表示用）
 
-    // 最終スケール = master_volume / キャリア数 × polyphony_divisor
-    Gain_t output_scale = static_cast<Gain_t>((static_cast<int32_t>(master_volume / active_carriers) * polyphony_divisor) >> Q15_SHIFT);
+    // 最終スケール = master_volume × polyphony_divisor
+    // キャリア数による除算は行わない
+    Gain_t output_scale = static_cast<Gain_t>((static_cast<int32_t>(master_volume) * polyphony_divisor) >> Q15_SHIFT);
 
     // チャンネル別のバッファ
     Audio24_t left[MAX_CHANNELS] = {};
@@ -264,8 +265,7 @@ public:
     Gain_t getMasterLevel() const { return master_volume; }
     void setMasterLevel(Gain_t level) {
         master_volume = std::clamp<Gain_t>(level, 0, Q15_MAX);
-        // キャリア数で割って正規化（loadPresetと同じ計算）
-        output_scale = static_cast<Gain_t>((static_cast<int32_t>(master_volume / active_carriers) * polyphony_divisor) >> Q15_SHIFT);
+        output_scale = static_cast<Gain_t>((static_cast<int32_t>(master_volume) * polyphony_divisor) >> Q15_SHIFT);
     }
 
     // トランスポーズ

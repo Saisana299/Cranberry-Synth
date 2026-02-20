@@ -49,8 +49,8 @@ FASTRUN void Envelope::update(Memory& mem) {
     const int8_t rs_delta = mem.rate_scaling_delta;
 
     // qrate計算とinc計算
-    // 係数: 58 (通常), 45 (リリース用 - より遅く)
-    auto calcInc = [rs_delta](uint8_t rate_param, int coef = 58) -> int32_t {
+    // 係数: 41
+    auto calcInc = [rs_delta](uint8_t rate_param, int coef = 41) -> int32_t {
         int qrate = (static_cast<int>(rate_param) * coef) >> 6;
         qrate += rs_delta;
         if (qrate < 0) qrate = 0;
@@ -89,8 +89,7 @@ FASTRUN void Envelope::update(Memory& mem) {
 
         case EnvelopeState::Phase2: {
             // Phase2: ディケイ1 (target_level1 → target_level2)
-            // 係数42で減衰
-            int32_t inc = calcInc(rate2_param, 42);
+            int32_t inc = calcInc(rate2_param);
             if (mem.level_ > tgt2) {
                 // falling (レベルを下げる)
                 mem.level_ -= inc;
@@ -116,8 +115,7 @@ FASTRUN void Envelope::update(Memory& mem) {
 
         case EnvelopeState::Phase3: {
             // Phase3: ディケイ2/サステイン (target_level2 → target_level3)
-            // 係数55で減衰
-            int32_t inc = calcInc(rate3_param, 55);
+            int32_t inc = calcInc(rate3_param);
             if (mem.level_ > tgt3) {
                 mem.level_ -= inc;
                 if (mem.level_ <= tgt3) {
@@ -138,8 +136,7 @@ FASTRUN void Envelope::update(Memory& mem) {
 
         case EnvelopeState::Phase4: {
             // Phase4: リリース (現在レベル → target_level4)
-            // リリース係数45（より遅く）
-            int32_t inc = calcInc(rate4_param, 45);
+            int32_t inc = calcInc(rate4_param);
             if (mem.level_ > tgt4) {
                 mem.level_ -= inc;
                 if (mem.level_ <= tgt4) {
