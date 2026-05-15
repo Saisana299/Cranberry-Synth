@@ -20,6 +20,7 @@ private:
         C_OSCILLOSCOPE,
         C_ENV_MONITOR,
         C_BACK,
+        C_RESTART,
         C_MAX
     };
     int8_t cursor = C_PASSTHROUGH;
@@ -71,6 +72,10 @@ public:
             }
             else if (cursor == C_BACK) {
                 manager->popScreen();
+                return;
+            }
+            else if (cursor == C_RESTART) {
+                SCB_AIRCR = 0x05FA0004;
                 return;
             }
         }
@@ -136,16 +141,18 @@ private:
     void drawFooter(GFXcanvas16& canvas) {
         canvas.drawFastHLine(0, FOOTER_Y, SCREEN_WIDTH, Color::WHITE);
         drawBackButton(canvas, cursor == C_BACK);
+        drawRestartButton(canvas, cursor == C_RESTART);
     }
 
     void updateCursorElement(GFXcanvas16& canvas, int8_t pos) {
         bool sel = (cursor == pos);
         switch (pos) {
-            case C_PASSTHROUGH: drawNavItem(canvas, "PASSTHROUGH", 0, sel); break;
-            case C_MIDI_PLAYER: drawNavItem(canvas, "MIDI PLAYER", 1, sel); break;
+            case C_PASSTHROUGH:  drawNavItem(canvas, "PASSTHROUGH", 0, sel); break;
+            case C_MIDI_PLAYER:  drawNavItem(canvas, "MIDI PLAYER", 1, sel); break;
             case C_OSCILLOSCOPE: drawNavItem(canvas, "OSCILLOSCOPE", 2, sel); break;
-            case C_ENV_MONITOR: drawNavItem(canvas, "ENV MONITOR", 3, sel); break;
-            case C_BACK:        drawBackButton(canvas, sel); break;
+            case C_ENV_MONITOR:  drawNavItem(canvas, "ENV MONITOR", 3, sel); break;
+            case C_BACK:         drawBackButton(canvas, sel); break;
+            case C_RESTART:      drawRestartButton(canvas, sel); break;
         }
     }
 
@@ -186,6 +193,25 @@ private:
         canvas.setTextColor(selected ? Color::WHITE : Color::MD_GRAY);
         canvas.setCursor(x + 2, y + 1);
         canvas.print("<");
+
+        manager->transferPartial(x, y, w, h);
+    }
+
+    void drawRestartButton(GFXcanvas16& canvas, bool selected) {
+        int16_t w = 24;
+        int16_t h = 10;
+        int16_t x = SCREEN_WIDTH - w - 2;
+        int16_t y = FOOTER_Y + 2;
+
+        canvas.fillRect(x, y, w, h, Color::BLACK);
+
+        if (selected) {
+            canvas.drawRect(x, y, w, h, Color::WHITE);
+        }
+
+        canvas.setTextColor(selected ? Color::WHITE : Color::MD_GRAY);
+        canvas.setCursor(x + 2, y + 1);
+        canvas.print("RST");
 
         manager->transferPartial(x, y, w, h);
     }

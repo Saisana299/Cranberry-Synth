@@ -105,6 +105,11 @@ public:
             invalidate();
         }
 
+        // 外部からのパラメータ変更（シリアルコマンドなど）を画面に反映
+        if (state_.consumeParamChanged() && !screenStack.empty()) {
+            screenStack.top()->notifyParamChanged();
+        }
+
         // FPS制限
         uint32_t now = millis();
         if (now - lastFrameTime < MIN_FRAME_TIME) {

@@ -81,7 +81,7 @@ void setup() {
 
     randomSeed(Entropy.random());
 
-    serial_hdl.begin();
+    serial_hdl.begin(state);
     gfx.begin();
     ui.pushScreen(new TitleScreen());
 

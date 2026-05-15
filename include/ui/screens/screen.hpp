@@ -28,6 +28,11 @@ public:
     virtual void draw(GFXcanvas16& canvas) = 0;
     virtual bool isAnimated() const { return false; }
 
+    // シリアルコマンドなど外部からのパラメータ変更を画面に通知する
+    virtual void notifyParamChanged() {
+        if (manager) onEnter(manager);
+    }
+
 protected:
     UIManager* manager = nullptr;
     uint8_t cursorPos = 0;

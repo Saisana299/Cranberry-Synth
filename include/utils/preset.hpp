@@ -105,6 +105,13 @@ struct EffectPreset {
         return 0.1f + static_cast<float>(value) / 99.0f * 9.9f;
     }
 
+    /** @brief Q値 0.1-10.0 → 0-99 (resonanceToQ の逆変換) */
+    static uint8_t qToResonance(float q) {
+        if (q <= 0.1f) return 0;
+        if (q >= 10.0f) return 99;
+        return static_cast<uint8_t>((q - 0.1f) / 9.9f * 99.0f + 0.5f);
+    }
+
     /** @brief パーセント 0-99 → Q15 (0-32767) */
     static Gain_t toQ15(uint8_t value) {
         return static_cast<Gain_t>(static_cast<int32_t>(value) * Q15_MAX / 99);
@@ -122,10 +129,6 @@ struct EffectPreset {
         return static_cast<uint8_t>(log10f(hz / 20.0f) / 3.0f * 99.0f + 0.5f);
     }
 
-    /** @brief Q値 → 0-99 レゾナンス (逆変換) */
-    static uint8_t qToResonance(float q) {
-        return static_cast<uint8_t>((q - 0.1f) / 9.9f * 99.0f + 0.5f);
-    }
 };
 
 /**

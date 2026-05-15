@@ -1,6 +1,7 @@
 #pragma once
 
 #include "display/gfx.hpp"
+#include "utils/state.hpp"
 
 constexpr uint8_t CMD_BUFFER_MAX = 64;
 constexpr uint8_t CMD_MIN_LENGTH = 1;
@@ -8,6 +9,7 @@ constexpr uint8_t CMD_MIN_LENGTH = 1;
 class SerialHandler {
 private:
     bool initialized = false;
+    State* state_ = nullptr;
     uint8_t command_buffer[CMD_BUFFER_MAX];
     uint8_t command_index = 0;
 
@@ -20,8 +22,9 @@ private:
 public:
     SerialHandler() {};
 
-    void begin() {
+    void begin(State& state) {
         if (!initialized) {
+            state_ = &state;
             Serial.begin(115200);
             initialized = true;
         }
@@ -55,7 +58,10 @@ public:
             // LF (\n) でコマンド確定
             if(inByte == '\n') {
                 if(command_index > CMD_MIN_LENGTH) {
+                    command_buffer[command_index] = '\0';  // atoi が古いバイトを読まないよう null 終端
+                    state_->setLedStatus(true);  // RX: コマンド受信
                     executeCommand(command_buffer, command_index);
+                    state_->setLedStatus(true);  // TX: 応答送信
                 }
                 resetBuffer(); // 処理が終わったらリセット
             } else {

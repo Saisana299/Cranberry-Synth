@@ -62,6 +62,10 @@ public:
         return encoder_delta_.exchange(0, std::memory_order_acq_rel);
     }
 
+    // シリアルコマンドなど外部からのパラメータ変更通知
+    void setParamChanged() { param_changed_.store(true, std::memory_order_relaxed); }
+    bool consumeParamChanged() { return param_changed_.exchange(false, std::memory_order_acq_rel); }
+
 private:
     bool led_midi = false;
     bool led_audio = false;
@@ -70,4 +74,5 @@ private:
     uint8_t btn_state = BTN_NONE;
     float cpu_usage = 0.0f;
     std::atomic<int16_t> encoder_delta_{0};
+    std::atomic<bool> param_changed_{false};
 };
