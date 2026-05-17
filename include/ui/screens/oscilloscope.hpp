@@ -10,26 +10,45 @@
  * @brief オシロスコープ画面
  * オーディオ出力波形をリアルタイム表示する。
  * L/R/L+R の3モード切り替え、フリーズ（一時停止）、
- * ゼロクロストリガーによる安定表示に対応。
+ * ゼロクロストリガーによる安定表示、時間軸ズームに対応。
+ *
+ * 操作:
+ *   UP / DN        : チャンネル切替 (L+R / L / R)
+ *   UP_LONG        : 時間軸ズームイン (波形を大きく表示)
+ *   DN_LONG        : 時間軸ズームアウト
+ *   LEFT / RIGHT   : 振幅ゲイン 下 / 上
+ *   ENTER          : フリーズ / 解除
+ *   CANCEL         : 戻る
  */
 class OscilloscopeScreen : public Screen {
 private:
     // === レイアウト定数 ===
-    static constexpr int16_t HEADER_H     = 12;
-    static constexpr int16_t FOOTER_H     = 12;
-    static constexpr int16_t WAVE_TOP     = HEADER_H + 1;
-    static constexpr int16_t WAVE_BOTTOM  = SCREEN_HEIGHT - FOOTER_H - 1;
-    static constexpr int16_t WAVE_HEIGHT  = WAVE_BOTTOM - WAVE_TOP;
-    static constexpr int16_t WAVE_CENTER  = WAVE_TOP + WAVE_HEIGHT / 2;
+    static constexpr int16_t HEADER_H    = 12;
+    static constexpr int16_t FOOTER_H    = 12;
+    static constexpr int16_t WAVE_TOP    = HEADER_H + 1;
+    static constexpr int16_t WAVE_BOTTOM = SCREEN_HEIGHT - FOOTER_H - 1;
+    static constexpr int16_t WAVE_HEIGHT = WAVE_BOTTOM - WAVE_TOP;
+    static constexpr int16_t WAVE_CENTER = WAVE_TOP + WAVE_HEIGHT / 2;
 
-    // サンプル数: 96（トリガー探索分を差し引いても常にデータが足りる）
+    // 最大描画サンプル数（トリガー探索32サンプル分を除いた残り）
     static constexpr int16_t SAMPLE_COUNT = BUFFER_SIZE - BUFFER_SIZE / 4; // 96
+
+    // トリガー探索範囲
+    static constexpr int16_t MAX_TRIGGER_SEARCH = BUFFER_SIZE / 4; // 32
+
+    // === 時間軸ズーム ===
+    // ズームインするほど少ないサンプルを128pxに引き伸ばす。
+    // 例: 48サンプルを128pxに → 1サンプルが約2.7pxになり波形が2倍大きく見える。
+    static constexpr uint8_t ZOOM_STEPS = 5;
+    static constexpr int16_t ZOOM_SAMPLES[ZOOM_STEPS] = { 96, 64, 48, 32, 24 };
+    static constexpr const char* ZOOM_LABELS[ZOOM_STEPS] = { "1x", "1.5x", "2x", "3x", "4x" };
+    uint8_t zoomIndex = 0;
 
     // === 表示モード ===
     enum DisplayMode : uint8_t {
-        MODE_LR = 0,   // L+R 同時表示
-        MODE_L,        // L のみ
-        MODE_R,        // R のみ
+        MODE_LR = 0,
+        MODE_L,
+        MODE_R,
         MODE_COUNT
     };
 
@@ -39,19 +58,14 @@ private:
     // 波形バッファ（描画用）
     int16_t waveL[SAMPLE_COUNT];
     int16_t waveR[SAMPLE_COUNT];
-    int16_t prevWaveL[SAMPLE_COUNT];
-    int16_t prevWaveR[SAMPLE_COUNT];
     bool hasData = false;
 
-    // トリガー探索範囲（先頭の最大25%で探す、残り75%以上を描画に確保）
-    static constexpr int16_t MAX_TRIGGER_SEARCH = BUFFER_SIZE / 4; // 32
-
-    // 手動ゲイン
+    // === 振幅ゲイン ===
     static constexpr uint8_t GAIN_STEPS = 7;
-    static constexpr int16_t GAIN_TABLE[GAIN_STEPS] = {1, 2, 4, 6, 8, 12, 16};
-    uint8_t gainIndex = 0;  // デフォルト x1
+    static constexpr int16_t GAIN_TABLE[GAIN_STEPS] = { 1, 2, 4, 6, 8, 12, 16 };
+    uint8_t gainIndex = 0;
 
-    // Y座標変換: 固定スケーリング + 手動ゲイン
+    // Y座標変換
     inline int16_t sampleToY(int16_t sample) const {
         int16_t halfH = WAVE_HEIGHT / 2;
         int32_t scaled = (static_cast<int32_t>(sample) * halfH * GAIN_TABLE[gainIndex]) / 32767;
@@ -59,56 +73,39 @@ private:
     }
 
     /**
-     * @brief ゼロクロストリガー（スナップショット内で検索）
+     * @brief ゼロクロストリガー
      * 先頭 MAX_TRIGGER_SEARCH サンプル内で負→正の交差を探しオフセットを返す。
-     * 見つからなければ 0（フリーラン）。
      */
     int16_t findTriggerOffset(const Sample16_t* buf) const {
         for (int16_t i = 1; i < MAX_TRIGGER_SEARCH; i++) {
-            if (buf[i - 1] < 0 && buf[i] >= 0) {
-                return i;
-            }
+            if (buf[i - 1] < 0 && buf[i] >= 0) return i;
         }
         return 0;
     }
 
     /**
-     * @brief 波形取得
-     * 128サンプルのスナップショットを取り、トリガー後の96サンプルを描画用バッファにコピー。
-     * 常にちょうど96点分の連続データが保証される。
+     * @brief 波形キャプチャ
+     * 128サンプルのスナップショットからトリガー後の96サンプルを取得。
      */
     void captureWaveform() {
-        // 前フレームのデータを保存
-        memcpy(prevWaveL, waveL, sizeof(waveL));
-        memcpy(prevWaveR, waveR, sizeof(waveR));
-
-        // スナップショット（128サンプル一括コピー）
         Sample16_t snapL[BUFFER_SIZE];
         Sample16_t snapR[BUFFER_SIZE];
         memcpy(snapL, samples_L, sizeof(snapL));
         memcpy(snapR, samples_R, sizeof(snapR));
 
-        // トリガーポイントを検出
-        const Sample16_t* trigBuf = snapL;
-        if (displayMode == MODE_R) trigBuf = snapR;
+        const Sample16_t* trigBuf = (displayMode == MODE_R) ? snapR : snapL;
         int16_t offset = findTriggerOffset(trigBuf);
 
-        // オフセットから96点コピー（常に offset + 96 <= 128）
         for (int16_t i = 0; i < SAMPLE_COUNT; i++) {
             waveL[i] = snapL[i + offset];
             waveR[i] = snapR[i + offset];
         }
-
         hasData = true;
     }
 
-    /**
-     * @brief 線形補間でサンプル値を取得
-     * 96サンプルを128ピクセルに引き伸ばすため、
-     * 浮動小数点インデックスから前後のサンプルを補間する。
-     */
+    /** @brief 線形補間でサンプル値を取得 */
     inline int16_t interpolateSample(const int16_t* wave, int32_t idx_x256) const {
-        int16_t idx = static_cast<int16_t>(idx_x256 >> 8);
+        int16_t idx  = static_cast<int16_t>(idx_x256 >> 8);
         int16_t frac = static_cast<int16_t>(idx_x256 & 0xFF);
         if (idx >= SAMPLE_COUNT - 1) return wave[SAMPLE_COUNT - 1];
         int32_t a = wave[idx];
@@ -116,17 +113,18 @@ private:
         return static_cast<int16_t>(a + ((b - a) * frac >> 8));
     }
 
-    // === 波形描画（96サンプル → 128px に引き伸ばし）===
+    /**
+     * @brief 波形描画
+     * ZOOM_SAMPLES[zoomIndex] サンプルを 128px に引き伸ばして描画。
+     * ズームインするほど少ないサンプルを画面幅に引き伸ばすため波形が拡大される。
+     */
     void drawWaveform(GFXcanvas16& canvas, const int16_t* wave, uint16_t color) {
-        // ステップ: (SAMPLE_COUNT-1) / (SCREEN_WIDTH-1) を固定小数点(8bit)で
-        // = 95 * 256 / 127 ≈ 191.37 → 191
-        static constexpr int32_t STEP_X256 = ((SAMPLE_COUNT - 1) * 256) / (SCREEN_WIDTH - 1);
+        const int16_t numSamples = ZOOM_SAMPLES[zoomIndex];
+        const int32_t step = ((numSamples - 1) * 256) / (SCREEN_WIDTH - 1);
 
-        int32_t sampleIdx = 0;
         int16_t prevY = sampleToY(interpolateSample(wave, 0));
-
         for (int16_t x = 1; x < SCREEN_WIDTH; x++) {
-            sampleIdx = static_cast<int32_t>(x) * STEP_X256;
+            int32_t sampleIdx = static_cast<int32_t>(x) * step;
             int16_t y = sampleToY(interpolateSample(wave, sampleIdx));
             canvas.drawLine(x - 1, prevY, x, y, color);
             prevY = y;
@@ -137,41 +135,44 @@ private:
     void drawHeader(GFXcanvas16& canvas) {
         canvas.fillRect(0, 0, SCREEN_WIDTH, HEADER_H, Color::BLACK);
         canvas.setTextSize(1);
+
+        // タイトル
         canvas.setTextColor(Color::WHITE);
         canvas.setCursor(2, 2);
         canvas.print("SCOPE");
 
-        // チャンネル表示
+        // チャンネル
         canvas.setCursor(42, 2);
         switch (displayMode) {
             case MODE_LR:
-                canvas.setTextColor(Color::CYAN);
-                canvas.print("L");
-                canvas.setTextColor(Color::MD_GRAY);
-                canvas.print("+");
-                canvas.setTextColor(Color::GREEN);
-                canvas.print("R");
+                canvas.setTextColor(Color::CYAN);   canvas.print("L");
+                canvas.setTextColor(Color::MD_GRAY); canvas.print("+");
+                canvas.setTextColor(Color::GREEN);  canvas.print("R");
                 break;
             case MODE_L:
-                canvas.setTextColor(Color::CYAN);
-                canvas.print("L");
-                break;
+                canvas.setTextColor(Color::CYAN);  canvas.print("L");  break;
             case MODE_R:
-                canvas.setTextColor(Color::GREEN);
-                canvas.print("R");
-                break;
+                canvas.setTextColor(Color::GREEN); canvas.print("R");  break;
             default: break;
         }
 
-        // フリーズ表示
+        // 時間軸ズーム（1x以外のとき表示）
+        if (zoomIndex > 0) {
+            canvas.setTextColor(Color::YELLOW);
+            canvas.setCursor(64, 2);
+            canvas.print("T");
+            canvas.print(ZOOM_LABELS[zoomIndex]);
+        }
+
+        // フリーズ
         if (frozen) {
             canvas.setTextColor(Color::MD_RED);
             canvas.setCursor(90, 2);
             canvas.print("FRZ");
         }
 
-        // ゲイン表示
-        canvas.setTextColor(Color::MD_YELLOW);
+        // ゲイン
+        canvas.setTextColor(Color::MD_GRAY);
         canvas.setCursor(110, 2);
         canvas.print("x");
         canvas.print(GAIN_TABLE[gainIndex]);
@@ -197,8 +198,6 @@ public:
     OscilloscopeScreen() {
         memset(waveL, 0, sizeof(waveL));
         memset(waveR, 0, sizeof(waveR));
-        memset(prevWaveL, 0, sizeof(prevWaveL));
-        memset(prevWaveR, 0, sizeof(prevWaveR));
     }
 
     void onEnter(UIManager* manager) override {
@@ -212,50 +211,56 @@ public:
     bool isAnimated() const override { return true; }
 
     void handleInput(uint8_t button) override {
-        // UP/DN: チャンネル切り替え
+        // UP / DN: チャンネル切替
         if (button == BTN_UP || button == BTN_DN) {
             displayMode = static_cast<DisplayMode>(
                 (static_cast<uint8_t>(displayMode) + 1) % MODE_COUNT
             );
             manager->invalidate();
         }
-        // ENTER: フリーズ/解除
-        else if (button == BTN_ET) {
-            frozen = !frozen;
+        // UP 長押し: 時間軸ズームイン（波形を拡大）
+        else if (button == BTN_UP_LONG) {
+            if (zoomIndex < ZOOM_STEPS - 1) zoomIndex++;
             manager->invalidate();
         }
-        // LEFT: ゲイン下げ
+        // DN 長押し: 時間軸ズームアウト
+        else if (button == BTN_DN_LONG) {
+            if (zoomIndex > 0) zoomIndex--;
+            manager->invalidate();
+        }
+        // LEFT: 振幅ゲイン下げ
         else if (button == BTN_L || button == BTN_L_LONG) {
             if (gainIndex > 0) gainIndex--;
             manager->invalidate();
         }
-        // RIGHT: ゲイン上げ
+        // RIGHT: 振幅ゲイン上げ
         else if (button == BTN_R || button == BTN_R_LONG) {
             if (gainIndex < GAIN_STEPS - 1) gainIndex++;
+            manager->invalidate();
+        }
+        // ENTER: フリーズ / 解除
+        else if (button == BTN_ET) {
+            frozen = !frozen;
             manager->invalidate();
         }
         // CANCEL: 戻る
         else if (button == BTN_CXL) {
             manager->popScreen();
-            return;
         }
     }
 
     void draw(GFXcanvas16& canvas) override {
-        // フリーズ中でなければ波形を取得
-        if (!frozen) {
-            captureWaveform();
-        }
+        if (!frozen) captureWaveform();
 
-        // 背景クリア（波形領域のみ）
+        // 波形エリアクリア
         canvas.fillRect(0, WAVE_TOP, SCREEN_WIDTH, WAVE_HEIGHT + 1, Color::BLACK);
 
-        // グリッド線（中心線 + 1/4線）
+        // グリッド（中心線 + 1/4線）
         canvas.drawFastHLine(0, WAVE_CENTER, SCREEN_WIDTH, Color::DARK_SLATE);
-        int16_t quarterH = WAVE_HEIGHT / 4;
+        int16_t qH = WAVE_HEIGHT / 4;
         for (int16_t i = 0; i < SCREEN_WIDTH; i += 4) {
-            canvas.drawPixel(i, WAVE_CENTER - quarterH, Color::CHARCOAL);
-            canvas.drawPixel(i, WAVE_CENTER + quarterH, Color::CHARCOAL);
+            canvas.drawPixel(i, WAVE_CENTER - qH, Color::CHARCOAL);
+            canvas.drawPixel(i, WAVE_CENTER + qH, Color::CHARCOAL);
         }
 
         // 波形描画
@@ -275,11 +280,8 @@ public:
             }
         }
 
-        // ヘッダー・フッター
         drawHeader(canvas);
         drawFooter(canvas);
-
-        // 全画面転送
         manager->triggerFullTransfer();
     }
 };
