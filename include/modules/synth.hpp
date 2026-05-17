@@ -33,6 +33,10 @@ private:
 
     volatile int8_t midi_note_to_index[128]; // MIDI番号ごとにノートのインデックスを記録　非発音時は-1
 
+    bool tail_active_ = false;       // エフェクトテール処理中フラグ
+    uint16_t tail_silence_count_ = 0; // テール無音連続フレーム数
+    uint32_t tail_total_count_ = 0;  // テール経過フレーム数（タイムアウト用）
+
     struct OperatorState {
         Oscillator::Memory osc_mems[MAX_NOTES];
         Envelope::Memory env_mems[MAX_NOTES];
@@ -46,7 +50,6 @@ private:
     Operator operators[MAX_OPERATORS] = {};
 
     Delay* delay_ptr_ = nullptr;    // 共有インスタンス (main.cpp で生成)
-    uint32_t fx_tail_remain = 0;     // エフェクトテール残りサンプル数
     bool delay_enabled = false;
 
     Filter* filter_ptr_ = nullptr;  // 共有インスタンス (main.cpp で生成)
@@ -93,45 +96,6 @@ private:
     FASTRUN void generate();
     void updateOrder(uint8_t removed);
     void noteReset(uint8_t index);
-
-    /**
-     * @brief エフェクトテール長を計算
-     * Delay (フィードバック減衰考慮) + Chorus バッファ長
-     * フィードバックレベルが -60dB (0.001) 以下になるまでの繰り返し回数で算出
-     */
-    uint32_t calcFxTail() const {
-        uint32_t tail = 0;
-        if (delay_enabled && delay_ptr_) {
-            // delay_length (getTotalSamples) は既にフィードバック考慮済みの総テール長
-            // reset() で 0 になる場合があるので、直接パラメータから計算する
-            int32_t time_ms = delay_ptr_->getTime();
-            Gain_t fb = delay_ptr_->getFeedback();
-            if (time_ms > 0 && fb > 0) {
-                float fb_ratio = static_cast<float>(fb) / Q15_MAX;
-                // -60dB (0.001) まで減衰するエコー回数
-                float repeats_f = (fb_ratio > 0.001f)
-                    ? (logf(0.001f) / logf(fb_ratio))
-                    : 1.0f;
-                if (repeats_f < 1.0f) repeats_f = 1.0f;
-                if (repeats_f > 500.0f) repeats_f = 500.0f;
-                uint32_t total_ms = static_cast<uint32_t>(repeats_f * time_ms);
-                tail = (total_ms * SAMPLE_RATE) / 1000;
-                // 上限 30秒 (テール中はノート合成なし、エフェクトチェーンのみで低CPU負荷)
-                constexpr uint32_t MAX_TAIL = SAMPLE_RATE * 30;
-                if (tail > MAX_TAIL) tail = MAX_TAIL;
-            }
-        }
-        if (chorus_enabled && chorus_ptr_) {
-            tail = std::max(tail, static_cast<uint32_t>(CHORUS_BUFFER_SIZE));
-        }
-        if (reverb_enabled && reverb_ptr_) {
-            // Freeverb の最長コムフィルタ長 × フィードバック減衰回数
-            // ~1617 samples × ~30 repeats ≈ 1.1秒
-            uint32_t reverb_tail = (SAMPLE_RATE * 3); // 概算3秒
-            tail = std::max(tail, reverb_tail);
-        }
-        return tail;
-    }
 
     Synth() {}
 

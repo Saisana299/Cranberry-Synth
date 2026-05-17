@@ -346,20 +346,45 @@ FASTRUN void Synth::generate() {
 
 /** @brief シンセ更新 */
 FASTRUN void Synth::update() {
-    // 有効なノートが存在すれば生成
     if(order_max > 0) {
-        // アクティブノートがある間はエフェクトテールを更新し続ける
-        fx_tail_remain = calcFxTail();
+        tail_silence_count_ = 0;
+        tail_total_count_ = 0;
+        tail_active_ = (delay_enabled || chorus_enabled || reverb_enabled);
         generate();
     }
-    // ノートが全終了してもエフェクトテールが残っていれば継続
-    // ※ samples_ready_flags チェック: update() はループから高頻度で呼ばれるが
-    //   generate() は前ブロック消費後にしか実行されない。
-    //   デクリメントも generate() 実行時のみ行うことで正確なテール時間を維持する。
-    else if(fx_tail_remain > 0 && !samples_ready_flags) {
-        if(fx_tail_remain <= BUFFER_SIZE) fx_tail_remain = 0;
-        else fx_tail_remain -= BUFFER_SIZE;
+    else if(tail_active_ && !samples_ready_flags) {
         generate();
+        // 出力レベルを監視してテール終了を判断
+        // -48dB (-48dBFS ≈ 128/32767) 以下を実用上の無音とみなす
+        // ROOM=99 のような超長テールは 30秒タイムアウトで強制終了
+        constexpr Sample16_t THRESHOLD = 128;
+        constexpr uint16_t SILENCE_FRAMES = 50;     // ~145ms 連続無音でテール終了
+        constexpr uint32_t MAX_TAIL_FRAMES = 10336;  // ~30秒タイムアウト (44100/128*30)
+
+        if(++tail_total_count_ >= MAX_TAIL_FRAMES) {
+            tail_active_ = false;
+            tail_silence_count_ = 0;
+            tail_total_count_ = 0;
+            return;
+        }
+
+        bool silent = true;
+        for(size_t i = 0; i < BUFFER_SIZE; ++i) {
+            if(samples_L[i] > THRESHOLD || samples_L[i] < -THRESHOLD ||
+               samples_R[i] > THRESHOLD || samples_R[i] < -THRESHOLD) {
+                silent = false;
+                break;
+            }
+        }
+        if(silent) {
+            if(++tail_silence_count_ >= SILENCE_FRAMES) {
+                tail_active_ = false;
+                tail_silence_count_ = 0;
+                tail_total_count_ = 0;
+            }
+        } else {
+            tail_silence_count_ = 0;
+        }
     }
 }
 
@@ -574,6 +599,13 @@ void Synth::reset() {
     for(uint8_t i = 0; i < MAX_NOTES; ++i) {
         noteReset(i);
     }
+    tail_active_ = false;
+    tail_silence_count_ = 0;
+    tail_total_count_ = 0;
+    if (delay_ptr_)  delay_ptr_->reset();
+    if (filter_ptr_) filter_ptr_->reset();
+    if (chorus_ptr_) chorus_ptr_->reset();
+    if (reverb_ptr_) reverb_ptr_->reset();
 }
 
 /**
